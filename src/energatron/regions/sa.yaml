@@ -1,0 +1,5 @@
+# South Australia. P1.5.1 completes `parsers` as the other parsers arrive (D3 §10.3).
+kind: region_profile
+schema_version: 1
+name: sa
+parsers: [sapn_interval]

@@ -9,10 +9,11 @@ import pytest
 
 from energatron.adapters import wiring
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
+from energatron.adapters.sources.sapn_nem12 import SAPN_INTERVAL
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
-from energatron.core.errors import BackupNotConfiguredError
+from energatron.core.errors import BackupNotConfiguredError, InternalError, InvalidInputError
 from energatron.core.models.catalog import SourceType
 from energatron.core.models.workspace import BackupPolicy
 from tests.unit.adapters._workspace import local_toml, make_workspace, write
@@ -32,7 +33,7 @@ def test_the_context_holds_the_workspace_and_its_configs(tmp_path: Path) -> None
     assert ctx.paths == paths
     assert ctx.config.region == "sa"
     assert ctx.private is not None
-    assert tuple(ctx.parsers) == ()
+    assert tuple(ctx.parsers) == (SAPN_INTERVAL,)  # the parsers `regions/sa.yaml` lists
     assert dict(ctx.offers) == {}
     assert isinstance(ctx.vcs, GitDvcVersionControl)
     assert isinstance(ctx.clock, wiring.SystemClock)
@@ -108,6 +109,31 @@ def test_the_runner_refreshes_with_the_live_fingerprint(tmp_path: Path, monkeypa
 
 def test_stage_code_is_the_live_entry_of_one_stage() -> None:
     assert wiring.stage_code("catalog_index") == wiring.code_fingerprint().stages["catalog_index"]
+
+
+def test_an_unknown_region_is_invalid_input(tmp_path: Path) -> None:
+    """D3 §10.3, D2 §6.1: the workspace names a region with no profile in the package."""
+    paths = make_workspace(tmp_path)
+    write(paths.root, ".energatron/workspace.toml", 'kind = "workspace_config"\nschema_version = 1\nregion = "zz"\n')
+    with pytest.raises(InvalidInputError) as caught:
+        wiring.build_context(paths)
+    assert caught.value.details["field"] == "region"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "kind: region_profile\nschema_version: 1\nname: bad\nparsers: [no_such_source]\n",  # invalid
+        "kind: region_profile\nschema_version: 99\nname: bad\nparsers: []\n",  # newer than the tool
+        "- not a mapping\n",
+        "kind: [unclosed\n",  # not YAML
+    ],
+)
+def test_a_broken_shipped_profile_is_internal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> None:
+    write(tmp_path, "regions/bad.yaml", text)
+    monkeypatch.setattr(wiring.importlib.resources, "files", lambda _package: tmp_path)
+    with pytest.raises(InternalError):
+        wiring.load_region_profile("bad")
 
 
 def test_the_system_clock_is_aware_utc() -> None:

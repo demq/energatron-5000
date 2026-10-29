@@ -2,11 +2,14 @@
 
 Driving adapters (the CLI now) reach the driven adapters only through here. The raw zone is `JsonlCatalog` and
 `FsBlobStore` (P1.2.2); the `PipelineRunner` is `DvcRunner` (P1.3.3). `code_fingerprint()` computes the live code
-fingerprint of every registered stage, and `stage_code()` one stage's live entry (D1 §11). `parsers` is empty until
-P1.4.1.
+fingerprint of every registered stage, and `stage_code()` one stage's live entry (D1 §11). `parsers` are the
+registered parsers the workspace region's profile lists (D3 §10.3).
 """
 
+import importlib.resources
 from datetime import UTC, datetime
+
+import yaml
 
 from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
@@ -14,6 +17,7 @@ from energatron.adapters.pipeline.fingerprint import InstalledDistributions, com
 from energatron.adapters.pipeline.fingerprint import read_fingerprint as read_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refresh_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
+from energatron.adapters.sources.registry import parsers_for
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
@@ -23,7 +27,9 @@ from energatron.adapters.workspace import (
     read_private_config,
     read_workspace_config,
 )
+from energatron.core.errors import InternalError, InvalidInputError, SchemaTooNewError
 from energatron.core.models.provenance import CodeFingerprint, StageCode
+from energatron.core.models.region import RegionProfile
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.ports.clock import Clock
 from energatron.services.context import ServiceContext
@@ -40,14 +46,15 @@ class SystemClock:
 def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> ServiceContext:
     """Read the workspace's config files and build every port for one run.
 
-    `workspace.toml` gives the region and the backup policy; `local.toml` the bundle folder, `~` expanded and
-    unchecked (None when unset; the real `backup` alone checks it, D2 §8.1 step 1); `private/config.toml` the private
-    config, or None when it's missing.
+    `workspace.toml` gives the region, whose profile picks the parsers (D3 §10.3), and the backup policy;
+    `local.toml` the bundle folder, `~` expanded and unchecked (None when unset; the real `backup` alone checks it,
+    D2 §8.1 step 1); `private/config.toml` the private config, or None when it's missing.
     """
     clock = clock if clock is not None else SystemClock()
     config = read_workspace_config(paths)
     bundle_dir = backup_bundle_dir(read_local_config(paths))
     private = read_private_config(paths)
+    parsers = parsers_for(load_region_profile(config.region))
     vcs = GitDvcVersionControl(paths, clock=clock, bundle_dir=bundle_dir, policy=config.backup)
     return ServiceContext(
         paths=paths,
@@ -55,11 +62,29 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
         private=private,
         catalog=JsonlCatalog(paths),
         blobs=FsBlobStore(paths),
-        parsers=(),
+        parsers=parsers,
         vcs=vcs,
         runner=DvcRunner(paths, fingerprint=lambda: code_fingerprint()),
         clock=clock,
     )
+
+
+def load_region_profile(name: str) -> RegionProfile:
+    """The region profile `regions/<name>.yaml` from package data (D3 §10.3).
+
+    No such profile → `E_INVALID_INPUT` with `details.field: "region"` (D2 §6.1). A profile the package ships that
+    can't be read or validated, or is newer than this tool, is a bug → `E_INTERNAL`.
+    """
+    resource = importlib.resources.files("energatron").joinpath("regions", f"{name}.yaml")
+    if not resource.is_file():
+        raise InvalidInputError("The workspace names a region with no profile in this version.", field="region")
+    try:
+        document = yaml.safe_load(resource.read_text(encoding="utf-8"))
+        if not isinstance(document, dict):
+            raise InternalError("A region profile isn't a YAML mapping.", region=name)
+        return RegionProfile.from_document(document)
+    except (yaml.YAMLError, InvalidInputError, SchemaTooNewError) as error:
+        raise InternalError("A region profile in the package is invalid.", region=name) from error
 
 
 def code_fingerprint() -> CodeFingerprint:
