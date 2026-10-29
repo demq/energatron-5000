@@ -5,15 +5,22 @@
 - Text is UTF-8 with LF line endings, written as given.
 - JSON documents: sorted keys, `indent=2`, a trailing newline. JSONL lines: compact canonical JSON (D1 §6.1).
 
-Parquet helpers arrive with the first stage that writes a table (P1). Errors are left to the caller, who knows
-which file it was; nothing here puts a path into a message.
+- Parquet tables: only through `write_parquet` (D1 §9.4): pyarrow, zstd, rows sorted, and exactly the metadata keys
+  `energatron.kind` and `energatron.schema_version` (D1 §5), so a rewrite of the same table gives the same bytes.
+
+Errors are left to the caller, who knows which file it was; nothing here puts a path into a message.
 """
 
+import io
 import json
 import os
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
+
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 
 from energatron.core.canonical import JSONValue, canonical_json
 
@@ -95,3 +102,31 @@ def read_jsonl(path: Path) -> list[JSONValue]:
         except ValueError:
             raise ValueError(f"line {number} is not valid JSON") from None
     return rows
+
+
+def write_parquet(
+    df: pd.DataFrame,
+    path: Path,
+    *,
+    kind: str,
+    schema_version: int,
+    sort_by: Sequence[str],
+    schema: pa.Schema,
+) -> None:
+    """Write `df` as a Parquet table, atomically (D1 §5, §9.4).
+
+    Rows are sorted by `sort_by` (stable, so ties keep their order) and the index is dropped. `schema` fixes every
+    column's type, so an empty table keeps its types. Its metadata is replaced by `energatron.kind` and
+    `energatron.schema_version` (string values), with no pandas metadata. Compression is zstd.
+    """
+    ordered = df.sort_values(list(sort_by), kind="stable").reset_index(drop=True)
+    table = pa.Table.from_pandas(ordered, schema=schema, preserve_index=False)
+    table = table.replace_schema_metadata({"energatron.kind": kind, "energatron.schema_version": str(schema_version)})
+    buffer = io.BytesIO()
+    pq.write_table(table, buffer, compression="zstd")
+    atomic_write_bytes(path, buffer.getvalue())
+
+
+def parquet_rows(path: Path) -> int:
+    """The row count in a Parquet file's metadata."""
+    return pq.ParquetFile(path).metadata.num_rows

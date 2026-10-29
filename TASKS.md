@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.2.2
-- Last commit: energatron-5000 `P1.2.2: add FsBlobStore and JsonlCatalog raw-zone adapters`; demq-elektric no change
-- Checks: `ruff check` passed; `ruff format --check` 112 files formatted; `pyright` 0 errors; `lint-imports` 5
-  kept; `pytest -q` 1088 passed; `pre-commit run --files` passed; privacy scan 0 violations
+- Last done: P1.3.1
+- Last commit: energatron-5000 `P1.3.1: add stage runner, registry, catalog_index and dvc.yaml emitter`; demq-elektric no change
+- Checks: `ruff check` passed; `ruff format --check` 120 files formatted; `pyright` 0 errors; `lint-imports` 5
+  kept; `pytest -q` 1154 passed; `pre-commit run --files` passed; privacy scan 0 violations
 - Review: none
-- Next: P1.3.1
+- Next: P1.3.2
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,25 +110,25 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
   list below.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
-- P1.1 and P1.2 ✅. P1.2.2 (2026-10-30): `adapters/storage/{fs_blobs,jsonl_catalog}.py`, wired into
-  `build_context()`; ports `BlobStore.keys`, `Catalog.missing_sources`, `Catalog.initialise`; core
-  `parse_catalog`; `services.files.make_dirs`.
+- P1.1, P1.2 ✅; P1.3.1 ✅ (2026-10-30): `services/stages/{runner,registry,catalog_index,dvc_yaml}.py`, golden
+  `tests/fixtures/golden/dvc.yaml`, `services.files.write_parquet`/`parquet_rows`, core `catalog_lines`.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3.
 
-**Read first** (for P1.3.1)
-- D1 = `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (rev 2): §9, §10, §13.
-- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §9, §10.1, §13.
-- `src/energatron/core/models/{catalog,pipeline,storage,workspace}.py`, `src/energatron/services/files.py`,
-  `src/energatron/adapters/storage/jsonl_catalog.py` (how it calls `parse_catalog`).
+**Read first** (for P1.3.2)
+- D1 = `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (rev 2): §8.8, §9.4, §11.1–11.3, §13
+  (`test_closure`, `test_fingerprint`, `test_stage_closure`, `test_stage_purity`).
+- `src/energatron/services/stages/{runner,registry,dvc_yaml}.py`, `src/energatron/core/models/provenance.py`
+  (`StageCode`), `src/energatron/adapters/wiring.py`.
 
 **Facts**
-- `core.models.catalog.parse_catalog(data, source)` is pure and holds every per-file catalog rule
-  (`E_CATALOG_CORRUPT` with `reason` `unterminated`/`crlf`/`wrong_source`, `details.source`/`line`; versions
-  upgraded in memory). `catalog_index` should call it rather than re-parse.
-- `services.files.make_dirs()` creates missing dirs and `fsync`s each parent; existing atomic-write helpers are
-  in the same module.
-- `FsBlobStore.keys(prefix)` lists the catalog file too and keeps hidden files (except `.DS_Store`), so stray
-  `.tmp` files show up. A symlink at or above a key → `E_CATALOG_CORRUPT` `reason: "symlink"`.
+- `run_stage(spec, inputs, params, outputs, *, code: StageCode, recorded_code)` raises `E_FINGERPRINT_STALE`
+  when `recorded_code != code.stage_sha256`; P1.3.2 supplies the live `StageCode` and the recorded entry.
+- `StageSpec` has `name`, `inputs`, `params`, `outputs`, `impl`, `package_data`; `registry.STAGES` is in
+  `dvc.yaml` order. `dvc_yaml.CODE_FINGERPRINT_PATH` = `.energatron/code_fingerprint.json`, each stage's params
+  list ends with `stages.<name>.stage_sha256` from it.
+- `StageResult` is still a plain model in `runner.py`; P1.3.3 makes it the `stage_result` kind (D1 §5).
+- Missing `params.yaml` → `E_PIPELINE_NOT_SYNCED`; a relative path override resolves under `root` (the P1.3.3
+  CLI should absolutise it).
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
   Standard checks: D2 §5.4, as the Rules list them. Every model change bumps `schema_version` and adds a
   migration; golden schemas in `tests/fixtures/schemas/`; fixtures come from `tests/fixtures/synthetic.py`.
@@ -139,9 +139,10 @@ Then clear the context and type `/next`.
 - none
 
 **Watch out**
-- Tests first: write them, see them fail, implement, see them pass. Layers point down; core does no I/O.
+- Tests first: write them, see them fail, implement, see them pass (P1.3.1's core test skipped the red run).
+  Layers point down; core does no I/O; stage modules can't import the registry.
 - `build_context()` keeps the `_NotYetPipelineRunner` placeholder until P1.3.3.
-- Record any file edited outside the sub-task's Files list as a deviation (P1.2.2's review nit).
+- Record any file edited outside the sub-task's Files list as a deviation.
 - `pre-commit run --files` skips ruff/import hooks for untracked files; run ruff and lint-imports directly too.
 - pytest takes ~2 minutes. A safety hook holds any command containing `rm`. Never print an identifier or a kWh
   or $ figure from the owner's files; scans print counts only. Agents never read `demq-elektric/private/`.
@@ -441,8 +442,8 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Handover: `FsBlobStore`/`JsonlCatalog` wired into `build_context()`, ports gain `keys`/`missing_sources`/`initialise`.
     Decision: per-file catalog rules in pure core `parse_catalog` (owner accepted extra files). Watch: `catalog_index` must reuse it.
 
-#### P1.3 Pipeline machinery ⬜
-- ⬜ **P1.3.1** Stage runner, registry, `catalog_index` and the generated `dvc.yaml`.
+#### P1.3 Pipeline machinery 🔄
+- ✅ **P1.3.1** Stage runner, registry, `catalog_index` and the generated `dvc.yaml`.
   - `services/stages/`: an empty `__init__.py`, `runner.py`, `registry.py`, `catalog_index.py`, `dvc_yaml.py`;
     the golden `tests/fixtures/golden/dvc.yaml` (D3 §10.1).
   - Refs: D1 §9, §10, §13 (`test_stages`, `test_run_stage`); D3 §9, §10.1, §13 (`test_catalog_index`).
@@ -451,6 +452,8 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
     `tests/unit/services/stages/test_catalog_index.py`, `tests/fixtures/golden/dvc.yaml`,
     `tests/fixtures/schemas/`.
   - Done when: the standard checks pass.
+  - Handover: D1 §9 runner/registry, `catalog_index` stage, byte-exact `dvc.yaml`, `write_parquet`; owner accepted the deviations
+    (extra files, `schema` arg, `id_consistent` guard, `E_PIPELINE_NOT_SYNCED`). Watch: `StageResult` plain until P1.3.3.
 - ⬜ **P1.3.2** Closure, code fingerprint and `energatron fingerprint`.
   - `adapters/pipeline/closure.py` and `fingerprint.py`; `wiring.code_fingerprint()`; `fingerprint [--check]`.
   - Refs: D1 §8.8, §9.4, §11.1–11.3, §13 (`test_closure`, `test_fingerprint`, `test_stage_closure`,
@@ -594,6 +597,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P1.3.1 · Stage runner (`run_stage`/`prepare_stage`, provenance, atomic promote), registry, `catalog_index` stage (`datasets.parquet`, six checks), `dvc.yaml` emitter + golden, `write_parquet`/`parquet_rows`, lazy core `catalog_lines` (1154 tests); review finding 1 and nits 2–3 fixed; owner accepted the recorded deviations · energatron-5000 `P1.3.1: add stage runner, registry, catalog_index and dvc.yaml emitter`
 - 2026-10-30 · P1.2.2 · `FsBlobStore` and `JsonlCatalog` raw-zone adapters wired into `build_context()`, port methods `keys`/`missing_sources`/`initialise`, core `parse_catalog`, `make_dirs` (1088 tests); review findings 1-5 and the nit fixed; owner accepted the deviations incl. the extra core/services files · energatron-5000 `P1.2.2: add FsBlobStore and JsonlCatalog raw-zone adapters`
 - 2026-10-30 · P1.2.1 · P1 core models (catalog record, raw-zone keys, provenance, params, region, repro log), P1 codes, `check_premises`/`mask_filename`, synthetic fixtures, 5 golden schemas (1006 tests); owner accepted deviations 1–3 and `<redacted>` (D3 unchanged); nits 2–3 fixed by the owner · energatron-5000 `P1.2.1: add P1 core models, codes and privacy helpers`
 - 2026-10-30 · P0.5.1 · P0 acceptance: D2 §13 check 2 passed in both repos (4/4 test commits rejected by the expected hook, labels only), `--history` 0 violations, link checks exit 0; owner verified one commit per repo and no scratch file · energatron-5000 `P0.5.1: record P0 acceptance of guard, links and history`

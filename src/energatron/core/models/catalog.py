@@ -5,6 +5,8 @@ Created in P0 because the `Catalog` and `SourceParser` ports name these models. 
 """
 
 import json
+from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum, unique
 from typing import Annotated, ClassVar, Final, Literal, Self
@@ -218,6 +220,45 @@ def _no_constant(_name: str) -> JSONValue:
     raise ValueError("NaN and infinities aren't JSON")
 
 
+@dataclass(frozen=True, slots=True)
+class CatalogLine:
+    """One line of a `_catalog.jsonl`: its 1-based number and either its record or why it was refused."""
+
+    number: int
+    record: CatalogRecord | None
+    error: CatalogCorruptError | None
+
+
+def catalog_lines(data: bytes) -> Iterator[CatalogLine]:
+    """Every line of a `_catalog.jsonl`, given its bytes, in file order, each parsed on its own (D3 §9).
+
+    The per-line rules `parse_catalog` applies, without stopping at the first bad line: a CRLF line (`crlf`), a last
+    line without its `\\n` (`unterminated`) or any `from_json_line` failure becomes that line's `error`, never its
+    text. A record's `source` isn't checked against the file here. A line from a newer energatron still raises
+    `E_SCHEMA_TOO_NEW` when it is reached: the tool is older than the data. An empty file has no lines. Lazy, so a
+    reader that stops at the first bad line never parses the lines after it.
+    """
+    if not data:
+        return
+    raw = data.split(b"\n")
+    terminated, last = raw[:-1], raw[-1]
+    for number, line in enumerate(terminated, start=1):
+        if line.endswith(b"\r"):
+            yield CatalogLine(
+                number, None, CatalogCorruptError("A catalog line ends in CRLF.", line=number, reason="crlf")
+            )
+            continue
+        try:
+            record = CatalogRecord.from_json_line(line, number=number)
+        except CatalogCorruptError as error:
+            yield CatalogLine(number, None, error)
+            continue
+        yield CatalogLine(number, record, None)
+    if last:
+        error = CatalogCorruptError("The catalog's last line is unterminated.", line=len(raw), reason="unterminated")
+        yield CatalogLine(len(raw), None, error)
+
+
 def parse_catalog(data: bytes, source: SourceType) -> list[CatalogRecord]:
     """Every record of one source's `_catalog.jsonl`, given its bytes, in file order (D1 §4.1; D3 §3.2).
 
@@ -226,29 +267,28 @@ def parse_catalog(data: bytes, source: SourceType) -> list[CatalogRecord]:
     an empty catalog. A last line without its `\\n` (`unterminated`), a CRLF line (`crlf`), a record of another
     source (`wrong_source`) or any `from_json_line` failure raises `E_CATALOG_CORRUPT` with `details.source` and
     `details.line`, never the line's text. A line from a newer energatron raises `E_SCHEMA_TOO_NEW`.
+    `catalog_lines` applies the same per-line rules without stopping at a bad line; this reader stops at the first
+    one, so a later line from a newer energatron doesn't mask it.
     """
     source = SourceType(source)
-    if not data:
-        return []
-    lines = data.split(b"\n")
-    if lines[-1]:
+    if data and not data.endswith(b"\n"):
         raise CatalogCorruptError(
-            "The catalog's last line is unterminated.", source=source.value, line=len(lines), reason="unterminated"
+            "The catalog's last line is unterminated.",
+            source=source.value,
+            line=data.count(b"\n") + 1,
+            reason="unterminated",
         )
     records: list[CatalogRecord] = []
-    for number, line in enumerate(lines[:-1], start=1):
-        if line.endswith(b"\r"):
-            raise CatalogCorruptError("A catalog line ends in CRLF.", source=source.value, line=number, reason="crlf")
-        try:
-            record = CatalogRecord.from_json_line(line, number=number)
-        except CatalogCorruptError as error:
-            raise CatalogCorruptError(error.message, source=source.value, **error.details) from None
-        if record.source != source:
+    for line in catalog_lines(data):
+        if line.error is not None:
+            raise CatalogCorruptError(line.error.message, source=source.value, **line.error.details) from None
+        assert line.record is not None
+        if line.record.source != source:
             raise CatalogCorruptError(
                 "A catalog line holds a record of another source.",
                 source=source.value,
-                line=number,
+                line=line.number,
                 reason="wrong_source",
             )
-        records.append(record)
+        records.append(line.record)
     return records

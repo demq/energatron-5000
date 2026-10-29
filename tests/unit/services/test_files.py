@@ -4,6 +4,9 @@ import json
 import os
 from pathlib import Path
 
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 
 from energatron.services import files
@@ -16,6 +19,7 @@ from energatron.services.files import (
     read_jsonl,
     write_json,
     write_jsonl,
+    write_parquet,
 )
 
 
@@ -112,3 +116,48 @@ def test_make_dirs_of_an_existing_directory_does_nothing(tmp_path: Path, monkeyp
     monkeypatch.setattr(files, "fsync_directory", synced.append)
     make_dirs(tmp_path)
     assert synced == []
+
+
+# Parquet (D1 §5, §9.4)
+
+_SCHEMA = pa.schema([("key", pa.string()), ("value", pa.int64())])
+
+
+def _frame() -> pd.DataFrame:
+    return pd.DataFrame({"key": ["b", "c", "a"], "value": [2, 3, 1]})
+
+
+def test_write_parquet_sorts_rows_and_records_kind_and_version(tmp_path: Path) -> None:
+    target = tmp_path / "table.parquet"
+    write_parquet(_frame(), target, kind="synthetic_table", schema_version=3, sort_by=["key"], schema=_SCHEMA)
+    table = pq.read_table(target)
+    assert table.column("key").to_pylist() == ["a", "b", "c"]
+    assert table.column("value").to_pylist() == [1, 2, 3]
+    metadata = table.schema.metadata or {}
+    assert metadata == {b"energatron.kind": b"synthetic_table", b"energatron.schema_version": b"3"}
+    assert pq.ParquetFile(target).metadata.row_group(0).column(0).compression == "ZSTD"
+    assert [path.name for path in tmp_path.iterdir()] == ["table.parquet"]
+
+
+def test_write_parquet_is_byte_identical_on_a_rewrite(tmp_path: Path) -> None:
+    first, second = tmp_path / "one.parquet", tmp_path / "two.parquet"
+    write_parquet(_frame(), first, kind="synthetic_table", schema_version=1, sort_by=["key"], schema=_SCHEMA)
+    write_parquet(
+        _frame().iloc[::-1], second, kind="synthetic_table", schema_version=1, sort_by=["key"], schema=_SCHEMA
+    )
+    assert first.read_bytes() == second.read_bytes()
+
+
+def test_write_parquet_writes_an_empty_table_with_its_schema(tmp_path: Path) -> None:
+    target = tmp_path / "empty.parquet"
+    empty = pd.DataFrame({"key": pd.Series([], dtype=object), "value": pd.Series([], dtype=object)})
+    write_parquet(empty, target, kind="synthetic_table", schema_version=1, sort_by=["key"], schema=_SCHEMA)
+    table = pq.read_table(target)
+    assert table.num_rows == 0
+    assert table.schema.remove_metadata() == _SCHEMA
+
+
+def test_parquet_rows_reads_the_row_count_from_metadata(tmp_path: Path) -> None:
+    target = tmp_path / "table.parquet"
+    write_parquet(_frame(), target, kind="synthetic_table", schema_version=1, sort_by=["key"], schema=_SCHEMA)
+    assert files.parquet_rows(target) == 3

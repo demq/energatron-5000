@@ -9,7 +9,7 @@ import pytest
 from energatron.core.canonical import JSONValue, canonical_json, sha256_hex
 from energatron.core.errors import CatalogCorruptError, Category, InternalError, InvalidInputError, SchemaTooNewError
 from energatron.core.ids import dataset_id
-from energatron.core.models.catalog import CatalogRecord, SourceType, blob_key, parse_catalog
+from energatron.core.models.catalog import CatalogRecord, SourceType, blob_key, catalog_lines, parse_catalog
 from energatron.core.models.storage import StoredBlob, check_blob_key
 from energatron.core.models.workspace import WorkspacePaths
 
@@ -290,3 +290,56 @@ def test_parse_catalog_refuses_a_record_of_another_source() -> None:
 def test_parse_catalog_passes_a_newer_version_on_as_schema_too_new() -> None:
     with pytest.raises(SchemaTooNewError):
         parse_catalog(line_of(record_doc(schema_version=2)), SourceType.SAPN_INTERVAL)
+
+
+# Line by line (`catalog_lines`): the same rules, but a bad line is reported, not raised (the catalog_index stage)
+
+
+def test_catalog_lines_reports_each_line_with_its_number() -> None:
+    first, second = record_doc(), other_doc(b"second")
+    content = line_of(first) + b"not json\n" + line_of(second).replace(b"\n", b"\r\n") + line_of(first).rstrip(b"\n")
+    lines = list(catalog_lines(content))
+    assert [line.number for line in lines] == [1, 2, 3, 4]
+    assert lines[0].record is not None and lines[0].record.dataset_id == first["dataset_id"]
+    assert lines[0].error is None
+    reasons = [line.error.details["reason"] if line.error is not None else None for line in lines]
+    assert reasons == [None, "invalid_json", "crlf", "unterminated"]
+    assert all(line.record is None for line in lines[1:])
+
+
+def test_catalog_lines_keeps_a_record_of_any_source() -> None:
+    (line,) = list(catalog_lines(line_of(record_doc())))
+    assert line.record is not None and line.record.source == SourceType.SAPN_INTERVAL
+
+
+def test_catalog_lines_of_an_empty_file_is_empty() -> None:
+    assert list(catalog_lines(b"")) == []
+
+
+def test_catalog_lines_passes_a_newer_version_on_as_schema_too_new() -> None:
+    with pytest.raises(SchemaTooNewError):
+        list(catalog_lines(line_of(record_doc()) + line_of(record_doc(schema_version=2))))
+
+
+@pytest.mark.parametrize(
+    ("first", "source", "reason"),
+    [
+        (b"not json\n", SourceType.SAPN_INTERVAL, "invalid_json"),
+        (line_of(record_doc()).replace(b"\n", b"\r\n"), SourceType.SAPN_INTERVAL, "crlf"),
+        (line_of(record_doc()), SourceType.SAPN_SUMMARY, "wrong_source"),
+    ],
+    ids=["invalid", "crlf", "wrong-source"],
+)
+def test_parse_catalog_stops_at_the_first_bad_line_before_a_newer_one(
+    first: bytes, source: SourceType, reason: str
+) -> None:
+    newer = line_of(other_doc(b"newer") | {"schema_version": 2})
+    with pytest.raises(CatalogCorruptError) as caught:
+        parse_catalog(first + newer, source)
+    assert (caught.value.details["line"], caught.value.details["reason"]) == (1, reason)
+
+
+def test_catalog_lines_is_lazy() -> None:
+    lines = catalog_lines(b"not json\n" + line_of(record_doc(schema_version=2)))
+    first = next(iter(lines))
+    assert first.error is not None and first.number == 1
