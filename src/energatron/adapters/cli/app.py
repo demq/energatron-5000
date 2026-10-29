@@ -13,7 +13,7 @@ from collections.abc import Sequence
 
 import typer
 
-from energatron.adapters.cli.commands import backup, denylist, version
+from energatron.adapters.cli.commands import backup, denylist, fingerprint, version
 from energatron.adapters.cli.output import (
     CommandOutput,
     Invocation,
@@ -36,6 +36,7 @@ app = typer.Typer(
 app.command("version")(version.version)
 app.command("denylist")(denylist.denylist)
 app.command("backup")(backup.backup)
+app.command("fingerprint")(fingerprint.fingerprint)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

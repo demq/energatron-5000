@@ -1,7 +1,8 @@
 """The workspace lock across processes (D1 §8.8; D2 §5.9, §14).
 
-Another process holds `.energatron/lock` through `workspace_lock()`. `denylist` and `backup` (their dry runs and
-`denylist --check` included) fail with `E_LOCKED` and change nothing; `backup --status` and `version` still run.
+Another process holds `.energatron/lock` through `workspace_lock()`. `denylist`, `backup` and `fingerprint` (their dry
+runs and `denylist --check` included) fail with `E_LOCKED` and change nothing; `backup --status`, `fingerprint --check`
+and `version` still run.
 """
 
 import subprocess
@@ -13,6 +14,7 @@ from pathlib import Path
 import pytest
 
 from energatron.core.models.workspace import WorkspacePaths
+from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 from tests.unit.adapters._cli import FakeVcsState, run_cli
 from tests.unit.adapters._workspace import make_workspace
 
@@ -21,6 +23,7 @@ import sys
 from pathlib import Path
 from energatron.adapters.workspace import workspace_lock
 from energatron.core.models.workspace import WorkspacePaths
+from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 with workspace_lock(WorkspacePaths(root=Path(sys.argv[1]))):
     print("held", flush=True)
     sys.stdin.read()
@@ -54,6 +57,8 @@ def held_by_another_process(paths: WorkspacePaths) -> Iterator[None]:
         ("denylist", "--dry-run"),
         ("backup",),
         ("backup", "--dry-run"),
+        ("fingerprint",),
+        ("fingerprint", "--dry-run"),
     ],
 )
 def test_a_locking_command_fails_while_another_process_holds_the_lock(
@@ -67,6 +72,7 @@ def test_a_locking_command_fails_while_another_process_holds_the_lock(
     assert envelope["error"]["code"] == "E_LOCKED"
     assert envelope["error"]["category"] == "state"
     assert not paths.denylist_generated.exists()
+    assert not (paths.root / CODE_FINGERPRINT_PATH).exists()
     assert fake_vcs.tracked == []
     assert fake_vcs.backups == 0
 
@@ -78,6 +84,8 @@ def test_backup_status_and_version_run_while_the_lock_is_held(
     with held_by_another_process(paths):
         status = run_cli(capsys, "backup", "--status", "--json", "--workspace", str(paths.root))
         version = run_cli(capsys, "version", "--json", "--workspace", str(paths.root))
+        check = run_cli(capsys, "fingerprint", "--check", "--json", "--workspace", str(paths.root))
+    assert check.envelope()["error"]["code"] == "E_FINGERPRINT_STALE"  # no recorded file yet; not E_LOCKED
     assert status.code == 0
     assert status.envelope()["data"]["kind"] == "backup_status_result"
     assert version.code == 0

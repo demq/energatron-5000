@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.3.1
-- Last commit: energatron-5000 `P1.3.1: add stage runner, registry, catalog_index and dvc.yaml emitter`; demq-elektric no change
-- Checks: `ruff check` passed; `ruff format --check` 120 files formatted; `pyright` 0 errors; `lint-imports` 5
-  kept; `pytest -q` 1154 passed; `pre-commit run --files` passed; privacy scan 0 violations
+- Last done: P1.3.2
+- Last commit: energatron-5000 `P1.3.2: add stage closure, code fingerprint and energatron fingerprint`; demq-elektric no change
+- Checks: `ruff check` passed; `ruff format --check` 127 files formatted; `pyright` 0 errors; `lint-imports` 5
+  kept; `pytest -q` 1270 passed; `pre-commit run --files` passed; privacy scan 0 violations
 - Review: none
-- Next: P1.3.2
+- Next: P1.3.3
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,25 +110,28 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
   list below.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
-- P1.1, P1.2 ✅; P1.3.1 ✅ (2026-10-30): `services/stages/{runner,registry,catalog_index,dvc_yaml}.py`, golden
-  `tests/fixtures/golden/dvc.yaml`, `services.files.write_parquet`/`parquet_rows`, core `catalog_lines`.
+- P1.1, P1.2 ✅; P1.3.1 ✅ (runner, registry, `catalog_index`, `dvc.yaml`); P1.3.2 ✅ (2026-10-30): closure,
+  code fingerprint, `energatron fingerprint`.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3.
 
-**Read first** (for P1.3.2)
-- D1 = `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (rev 2): §8.8, §9.4, §11.1–11.3, §13
-  (`test_closure`, `test_fingerprint`, `test_stage_closure`, `test_stage_purity`).
-- `src/energatron/services/stages/{runner,registry,dvc_yaml}.py`, `src/energatron/core/models/provenance.py`
-  (`StageCode`), `src/energatron/adapters/wiring.py`.
+**Read first** (for P1.3.3)
+- D1 = `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (rev 2): §4.5, §8.5, §9.5, §11.5, §13
+  (`test_dvc_runner`, `test_stage_loads`, `test_determinism`); D3 §13 (`test_dvc_assumptions`, `test_wiring`), §14.
+- `src/energatron/services/stages/runner.py`, `src/energatron/adapters/pipeline/fingerprint.py`,
+  `src/energatron/adapters/wiring.py`, `src/energatron/adapters/cli/commands/fingerprint.py`.
 
 **Facts**
 - `run_stage(spec, inputs, params, outputs, *, code: StageCode, recorded_code)` raises `E_FINGERPRINT_STALE`
-  when `recorded_code != code.stage_sha256`; P1.3.2 supplies the live `StageCode` and the recorded entry.
-- `StageSpec` has `name`, `inputs`, `params`, `outputs`, `impl`, `package_data`; `registry.STAGES` is in
-  `dvc.yaml` order. `dvc_yaml.CODE_FINGERPRINT_PATH` = `.energatron/code_fingerprint.json`, each stage's params
-  list ends with `stages.<name>.stage_sha256` from it.
-- `StageResult` is still a plain model in `runner.py`; P1.3.3 makes it the `stage_result` kind (D1 §5).
-- Missing `params.yaml` → `E_PIPELINE_NOT_SYNCED`; a relative path override resolves under `root` (the P1.3.3
-  CLI should absolutise it).
+  when `recorded_code != code.stage_sha256`. The live `StageCode` comes from `fingerprint.stage_code()` /
+  `wiring.code_fingerprint()`; the recorded entry from `read_fingerprint(path)` (None when missing).
+- `refresh_fingerprint(...)` is what `DvcRunner.repro()` calls before `dvc repro`; under `--check` stale/missing/
+  extra → `E_FINGERPRINT_STALE` `details.stages`, recording-only changes → `W_FINGERPRINT_METADATA`; writing
+  treats an invalid recorded file as missing and overwrites it. The CLI reaches it via the `wiring` re-export.
+- `fingerprint` takes the lock when writing or `--dry-run`, none under `--check`; `--check --dry-run` → `E_USAGE`.
+- `build_context()` still holds `_NotYetPipelineRunner`; P1.3.3 replaces it. `StageResult` is still a plain model
+  in `runner.py`; P1.3.3 makes it the `stage_result` kind (D1 §5) with a golden schema.
+- `dvc_yaml.CODE_FINGERPRINT_PATH` = `.energatron/code_fingerprint.json`. Missing `params.yaml` →
+  `E_PIPELINE_NOT_SYNCED`; a relative path override resolves under `root` (the `stage` CLI should absolutise it).
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
   Standard checks: D2 §5.4, as the Rules list them. Every model change bumps `schema_version` and adds a
   migration; golden schemas in `tests/fixtures/schemas/`; fixtures come from `tests/fixtures/synthetic.py`.
@@ -136,14 +139,16 @@ Then clear the context and type `/next`.
   remote or global installs.
 
 **Open questions for the owner**
-- none
+- none (if a D1 §11.5 or D3 §14 check fails, stop and ask)
 
 **Watch out**
-- Tests first: write them, see them fail, implement, see them pass (P1.3.1's core test skipped the red run).
-  Layers point down; core does no I/O; stage modules can't import the registry.
-- `build_context()` keeps the `_NotYetPipelineRunner` placeholder until P1.3.3.
+- In the tool's dev venv, `catalog_index`'s `packages` include dev tools pulled in as installed extras (pytest,
+  ruff …); owner decision: D1 unchanged, a known artefact, since the workspace venv has no dev group.
+- Tests first: write them, see them fail, implement, see them pass. Layers point down; core does no I/O;
+  stage modules can't import the registry (`test_stage_purity` enforces it).
 - Record any file edited outside the sub-task's Files list as a deviation.
 - `pre-commit run --files` skips ruff/import hooks for untracked files; run ruff and lint-imports directly too.
+  In zsh pass file lists as an array, not an unquoted string.
 - pytest takes ~2 minutes. A safety hook holds any command containing `rm`. Never print an identifier or a kWh
   or $ figure from the owner's files; scans print counts only. Agents never read `demq-elektric/private/`.
 
@@ -454,7 +459,7 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Done when: the standard checks pass.
   - Handover: D1 §9 runner/registry, `catalog_index` stage, byte-exact `dvc.yaml`, `write_parquet`; owner accepted the deviations
     (extra files, `schema` arg, `id_consistent` guard, `E_PIPELINE_NOT_SYNCED`). Watch: `StageResult` plain until P1.3.3.
-- ⬜ **P1.3.2** Closure, code fingerprint and `energatron fingerprint`.
+- ✅ **P1.3.2** Closure, code fingerprint and `energatron fingerprint`.
   - `adapters/pipeline/closure.py` and `fingerprint.py`; `wiring.code_fingerprint()`; `fingerprint [--check]`.
   - Refs: D1 §8.8, §9.4, §11.1–11.3, §13 (`test_closure`, `test_fingerprint`, `test_stage_closure`,
     `test_stage_purity`); P1.1.1's nits on symlinked directories and `numpy.random`.
@@ -462,6 +467,8 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
     `src/energatron/adapters/cli/`, `tests/unit/adapters/test_{closure,fingerprint}.py`,
     `tests/architecture/test_{stage_closure,stage_purity}.py`.
   - Done when: the standard checks pass.
+  - Handover: `ast` closure, `stage_code`/`install_fields`/`refresh_fingerprint`, `fingerprint [--check] [--dry-run] [--yes]`, `fingerprint_result` v1;
+    owner accepted `E_SUBPROCESS` for failing editable git, `--dry-run`/`--yes`, extra files. Watch: dev-venv extras in `packages` (D1 unchanged).
 - ⬜ **P1.3.3** `energatron stage`, `DvcRunner` and the DVC checks.
   - The `stage` command, with the repro-log records `main()` writes; `adapters/pipeline/dvc_runner.py`; the
     last placeholder leaves `build_context()`. If a D1 §11.5 or D3 §14 check fails, stop and ask the owner.
@@ -597,6 +604,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P1.3.2 · `ast` module closure, code fingerprint (`stage_code`, `install_fields`, `refresh_fingerprint`), `fingerprint [--check] [--dry-run] [--yes]`, `fingerprint_result` v1, stage closure/purity architecture tests (1270 tests); review finding 1 fixed; owner accepted the recorded decisions, D1 unchanged on dev-venv extras · energatron-5000 `P1.3.2: add stage closure, code fingerprint and energatron fingerprint`
 - 2026-10-30 · P1.3.1 · Stage runner (`run_stage`/`prepare_stage`, provenance, atomic promote), registry, `catalog_index` stage (`datasets.parquet`, six checks), `dvc.yaml` emitter + golden, `write_parquet`/`parquet_rows`, lazy core `catalog_lines` (1154 tests); review finding 1 and nits 2–3 fixed; owner accepted the recorded deviations · energatron-5000 `P1.3.1: add stage runner, registry, catalog_index and dvc.yaml emitter`
 - 2026-10-30 · P1.2.2 · `FsBlobStore` and `JsonlCatalog` raw-zone adapters wired into `build_context()`, port methods `keys`/`missing_sources`/`initialise`, core `parse_catalog`, `make_dirs` (1088 tests); review findings 1-5 and the nit fixed; owner accepted the deviations incl. the extra core/services files · energatron-5000 `P1.2.2: add FsBlobStore and JsonlCatalog raw-zone adapters`
 - 2026-10-30 · P1.2.1 · P1 core models (catalog record, raw-zone keys, provenance, params, region, repro log), P1 codes, `check_premises`/`mask_filename`, synthetic fixtures, 5 golden schemas (1006 tests); owner accepted deviations 1–3 and `<redacted>` (D3 unchanged); nits 2–3 fixed by the owner · energatron-5000 `P1.2.1: add P1 core models, codes and privacy helpers`

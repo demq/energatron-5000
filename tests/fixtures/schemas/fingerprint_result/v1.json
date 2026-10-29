@@ -1,0 +1,19 @@
+{
+  "changed_fields": [
+    "tool_commit"
+  ],
+  "changed_stages": [
+    "catalog_index"
+  ],
+  "check": false,
+  "dry_run": false,
+  "install": "editable",
+  "kind": "fingerprint_result",
+  "schema_version": 1,
+  "stages": {
+    "catalog_index": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  },
+  "tool_commit": "0123456789abcdef0123456789abcdef01234567",
+  "tool_dirty": false,
+  "written": true
+}
