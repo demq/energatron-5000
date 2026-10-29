@@ -97,12 +97,14 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.5.1
-- Last commit: energatron-5000 `P1.5.1: add the other five source parsers and their fixture generators`
+- Last done: P1.5.2
+- Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files`; energatron-5000
+  `P1.5.2: record landing the legacy files and P1's acceptance`
 - Checks: `ruff check` passed, `ruff format --check` 167 files, `pyright` 0 errors, `lint-imports` 5 kept,
-  `pytest -q` 1690 passed, `pre-commit run --files <changed>` passed; privacy scan 0 violations
+  `pytest -q` 1690 passed, `pre-commit run --files <changed>` passed in both repos; privacy scans 0 violations;
+  re-land a no-op (exit 8, HEAD unchanged), `catalog_index` 7 rows, 6 of 6 checks pass, `dvc status` clean
 - Review: none
-- Next: P1.5.2
+- Next: P2.1.1
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,20 +112,19 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
   list below.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
-- P1.1–P1.4 ✅. P1.5.1 ✅ (2026-10-30): all seven parsers in `PARSERS`, `regions/sa.yaml` complete (D3 §10.3),
-  `make_sources.py` generators; the reviewer's `land --dry-run` on the real legacy files matched D3 §15 steps 3–4.
-- Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3.
+- P1 agent work is all ✅ (2026-10-30): seven parsers, `land`, the pipeline machinery; the workspace holds 7
+  datasets (2/2/2/1) and `catalog_index` passes. Only the owner's P1.5.3 (backup after P1) keeps P1 open.
+- Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
+  P1.5.3.
 
-**Read first** (for P1.5.2, a workspace sub-task)
-- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §1 (the facts), §15 steps 3–8.
-- The workspace `CLAUDE.md` (Commands: `land`, `pipeline sync`).
+**Read first** (for P2.1.1, a spec sub-task)
+- The plan: §9, §10.1–10.2, §13, §15. D1 §4.3, §9–§11, §14. D3 §3.3, §5.2, §16.
+- How D3 described the workspace files by structure only; P2's spec does the same.
 
 **Facts**
-- The dry run (P1.5.1 review): 7 items, exit 8 `E_PARTIAL`; 2 `sapn_summary` + 3 usage/txn would land, the SAPN
-  DETAILED copy `already_landed`, the hourly JSON rejected `E_UNKNOWN_SOURCE`; warnings `W_PREMISES_UNCHECKED`
-  (txn) and `W_UNKNOWN_IDENTIFIER` account (usage, expected until P0.3.2). Expected total: 7 datasets 2/2/2/1.
-- The tool commit of P1.5.1 moves `tool_commit`: run `fingerprint` before `dvc repro`, and list
-  `.energatron/code_fingerprint.json` among the commit's files.
+- The workspace's acceptance note is `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`;
+  it may mention data, so nothing from it is copied here.
+- The hourly JSON in the legacy folder stays unlanded (`E_UNKNOWN_SOURCE`); `sapn_interval` has 2 datasets.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing, GitHub repo, git
   remote or global installs.
@@ -132,12 +133,11 @@ Then clear the context and type `/next`.
 - none
 
 **Watch out**
-- `land` exit codes: several items with any rejected → `E_PARTIAL` (exit 8) with `data`; that is the expected
-  result here. A run whose only item is rejected can still make a healing commit.
+- Re-run `fingerprint` after each tool commit before any workspace `dvc repro`; commit the fingerprint with
+  `dvc.lock`.
 - `offer_cdr` records `extra.source_ts_from: "content"` (D3 §3.3; §5.7's list omits it).
 - D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone.
-- `TASKS.md` gets counts and pass/fail only; never print an identifier or a kWh or $ figure. Anything that
-  mentions data goes in a dated note in `demq-elektric/agent_docs/`.
+- `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
 - pytest takes ~3 minutes. A safety hook holds any command containing `rm`. Agents never read
   `demq-elektric/private/`. In zsh pass file lists as an array.
 
@@ -535,7 +535,7 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Done when: the standard checks pass.
   - Handover: `make_sources.py`, `pdf_meta`, five parsers (bills one class), `PARSERS`/`sa.yaml` complete; owner accepted `test_wiring.py` edit,
     `_common.py`, extra reasons, quote-aware CSV, extra generator kwargs, `offer_cdr` `source_ts_from`. Watch: dry run on legacy files matched D3 §15.
-- ⬜ **P1.5.2** Land the legacy files and finish P1's acceptance.
+- ✅ **P1.5.2** Land the legacy files and finish P1's acceptance.
   - D3 §15 steps 3–7, then step 8's agent part: `backup --status` shows a backup pending, and the report asks
     the owner for P1.5.3.
   - The usage exports' meter serial matches the SAPN one (a counts-only check, 2026-10-24), so the premises
@@ -545,6 +545,8 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Done when: D3 §15 steps 3–7 pass (the hourly JSON rejected, exit 8; 7 datasets: 2/2/2/1; re-landing a
     no-op; `catalog_index` 7 rows; a clean state). `TASKS.md` gets counts and pass/fail only.
   - On /done: commit `dvc.lock` (D3 §15 step 6).
+  - Handover: `land: 5 datasets` (7 total, 2/2/2/1, hourly JSON rejected, exit 8), re-land a no-op, `catalog_index` 7 rows, 6 checks pass; owner
+    checked; `/done` also committed the fingerprint (`tool_commit` only) and the acceptance note. Watch: backup pending until P1.5.3.
 - ⛔ **P1.5.3** Owner: back up after P1.
   - Why: owner step (iCloud).
   - Refs: D3 §15 step 8; the runbook.
@@ -607,6 +609,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P1.5.2 · `land` on the legacy folders (its own commit `land: 5 datasets`; 7 datasets 2/2/2/1, hourly JSON rejected, exit 8; owner checked, inputs intact); re-land a no-op; `fingerprint` (`tool_commit` only) + `dvc repro` → `catalog_index` 7 rows, 6 checks pass; `dvc status` clean; acceptance note in the workspace · demq-elektric `P1.5.2: record the pipeline run on the landed legacy files`; energatron-5000 `P1.5.2: record landing the legacy files and P1's acceptance`
 - 2026-10-30 · P1.5.1 · `make_sources.py` generators, `pdf_meta.creation_date`, parsers `bill_pdf` (elec + gas), `sapn_summary` (CSV + PDF), `retailer_usage`, `retailer_txn`, `cdr_plan`; `PARSERS` and `regions/sa.yaml` complete, `resolve_parser` on the real registry (1690 tests); review nits 1–3 fixed; owner accepted deviations (`test_wiring.py` edit, `_common.py`, extra reasons, quote-aware CSV, extra generator kwargs, `offer_cdr` `extra.source_ts_from`); reviewer's dry run on the legacy files matched D3 §15 · energatron-5000 `P1.5.1: add the other five source parsers and their fixture generators`
 - 2026-10-30 · P1.4.4 · `land` landed the two current SAPN files (its own commit, 2 datasets, inputs untouched; owner checked); `fingerprint` + `dvc repro` → `catalog_index` 2 rows, 6 checks pass; `dvc status` clean; fingerprint file committed too (`tool_commit` only) · demq-elektric `P1.4.4: record the pipeline run on the landed SAPN files`; energatron-5000 `P1.4.4: record landing the SAPN files and the pipeline run`
 - 2026-10-30 · P1.4.3 · Workspace P1 set-up (D3 §15 step 1): `pipeline sync` (`dvc.yaml`, `params.yaml`, 10 empty catalogs + pointers), `fingerprint` (`tool_dirty: false`), `dvc repro` (`catalog_index` 0 rows, all checks pass), `pipeline-sync` hook before `agent-links`, `land`/`pipeline sync` in workspace Commands; owner checked the workspace diff · demq-elektric `P1.4.3: set up the P1 pipeline in the workspace`; energatron-5000 `P1.4.3: record the workspace P1 pipeline set-up`
