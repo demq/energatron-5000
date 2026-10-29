@@ -65,6 +65,8 @@ def held_by_another_process(paths: WorkspacePaths) -> Iterator[None]:
         ("pipeline", "sync"),
         ("pipeline", "sync", "--dry-run"),
         ("verify",),
+        ("land", "synthetic.csv"),
+        ("land", "synthetic.csv", "--dry-run"),
     ],
 )
 def test_a_locking_command_fails_while_another_process_holds_the_lock(

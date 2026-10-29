@@ -97,13 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.4.1
-- Last commit: energatron-5000 `P1.4.1: add the NEM12 fixture generator and the sapn_interval parser`; demq-elektric no
-  change
-- Checks: `ruff check` passed; `ruff format --check` 147 files formatted; `pyright` 0 errors; `lint-imports` 5
-  kept; `pytest -q` 1460 passed; `pre-commit run --files` passed; privacy scan 0 violations
+- Last done: P1.4.2
+- Last commit: energatron-5000 `P1.4.2: add the land service and energatron land`; demq-elektric no change
+- Checks: `ruff check` passed; `ruff format --check` 153 files formatted; `pyright` 0 errors; `lint-imports` 5
+  kept; `pytest -q` 1540 passed; `pre-commit run --files` passed; privacy scan 0 violations
 - Review: none
-- Next: P1.4.2
+- Next: P1.4.3
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -111,31 +110,25 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
   list below.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
-- P1.1–P1.3 ✅; P1.4.1 ✅ (2026-10-30): `make_nem12.py`, `SapnIntervalParser` (`SAPN_INTERVAL`), parser registry,
-  `regions/sa.yaml` loaded in `build_context()`.
+- P1.1–P1.3 ✅; P1.4.1 ✅ (parser, registry, `regions/sa.yaml`); P1.4.2 ✅ (2026-10-30): `services/land.py`,
+  `energatron land`, `land_result`/`land_pending` v1, `CommandOutput.error`.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3.
 
-**Read first** (for P1.4.2)
-- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §5.1, §7, §8, §11, §13; D1 (rev 2) §4.8, §7, §8.
-- `src/energatron/adapters/sources/{sapn_nem12,registry}.py`, `src/energatron/adapters/wiring.py`,
-  `services/pipeline_sync.py` (a recent service + CLI pattern), `tests/fixtures/make_nem12.py`.
+**Read first** (for P1.4.3, a workspace sub-task in `demq-elektric/`)
+- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §10.1 (incl. the `pipeline-sync` hook YAML),
+  §15 step 1, §17; D2 §11.3 (workspace `.pre-commit-config.yaml`); D2 §10.1 (workspace `CLAUDE.md` Commands).
+- `demq-elektric/CLAUDE.md` and its `.pre-commit-config.yaml`.
 
 **Facts**
-- Parsers: `ctx.parsers` = `parsers_for(load_region_profile(config.region))`, in `PARSERS` order; today only
-  `(SAPN_INTERVAL,)`. A listed source without a parser → `E_INTERNAL`; unknown region → `E_INVALID_INPUT`
-  `field: "region"`; a broken shipped profile → `E_INTERNAL`.
-- `SAPN_INTERVAL.inspect` check order: record types / `100` first / last `900`; then `200`/`300`/`400`s and duplicate
-  days; then the `100` DateTime (`bad_header`), the filename (`bad_filename`), then `no_data` (no `300`).
-  Owner-accepted extra `details.reason` words: `not_utf8`, `unknown_record`, `misplaced_900`, `bad_200`,
-  `bad_interval`, `mixed_interval`, `bad_unit`, `orphan_300`, `bad_field_count`, `bad_date`, `bad_update_time`,
-  `unexpected_400`, `bad_quality_range`, plus `no_data`.
-- `SourceInfo.identifiers`: NMIs from the `200`s plus the filename's 11-char NMI, serials from non-empty `200`
-  field 7, deduped in file order. `source_ts`: filename → `100` → latest `UpdateDateTime`.
-- Fixtures: `make_nem12(spec)`, `sapn_filename`, `dst_spec`, `nem12_header_dt(spec)` (expected `100` DateTime);
-  synthetic IDs only.
-- Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
-  Standard checks: D2 §5.4, as the Rules list them. Every model change bumps `schema_version` and adds a
-  migration; golden schemas in `tests/fixtures/schemas/`.
+- Steps: `uv run energatron pipeline sync`, then `uv run energatron fingerprint`, then `dvc repro`
+  (`catalog_index`: 0 rows, every check passes). Add the `pipeline-sync` hook before `agent-links`; add
+  `land` and `pipeline sync` to the workspace `CLAUDE.md`'s Commands.
+- The tool's `src/energatron/` is committed (P1.4.2), so `fingerprint` should record `tool_dirty: false`.
+- `land` (P1.4.4) needs these files committed (D3 §7.1 step 4): P1.4.3's `/done` commits them as one workspace
+  commit; then `backup --status --json` for the pending-backup line.
+- Workspace HEAD: `P0: bootstrap demq-elektric workspace`, tree clean before P1.4.3.
+- Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md` for the
+  tool repo; the workspace's own hooks run `--mode workspace`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing, GitHub repo, git
   remote or global installs.
 
@@ -143,10 +136,10 @@ Then clear the context and type `/next`.
 - none
 
 **Watch out**
-- P1.4.2 tests the three-way PDF tie with stand-in parsers (pass them via `parsers=`); the real ones come in P1.5.1.
+- `land` exit codes: a single item's error → that error, `data` null; several items with any rejected →
+  `E_PARTIAL` (exit 8) with `data`. A run whose only item is rejected can still make a healing commit.
 - D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone, and empty
   `<YYYY>/` dirs don't come back in a clone. Per D3 no code change.
-- Tests first; layers point down; core does no I/O. Record any file edited outside the Files list as a deviation.
 - `pre-commit run --files` skips ruff/import hooks for untracked files; run ruff and lint-imports directly too.
   In zsh pass file lists as an array, not an unquoted string.
 - pytest takes ~3 minutes. A safety hook holds any command containing `rm`. Never print an identifier or a kWh
@@ -502,7 +495,7 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Done when: the standard checks pass.
   - Handover: `make_nem12.py`, `SapnIntervalParser`, `parsers_for`, `regions/sa.yaml` in `build_context()`; owner accepted extra reason
     words, `no_data`, `nem12_header_dt`, package marker. Watch: `inspect` check order (structure, header, filename, `no_data`).
-- ⬜ **P1.4.2** The `land` service and `energatron land`.
+- ✅ **P1.4.2** The `land` service and `energatron land`.
   - `services/land.py`: `resolve_parser`, preconditions, plan, write, commit message, recovery, `land_result`,
     `land_pending`; the `land` command. The three-way PDF tie is tested with stand-in parsers here and with the
     real ones in P1.5.1.
@@ -511,6 +504,8 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
     `tests/unit/services/test_{resolve_parser,land}.py`, `tests/integration/test_land_{cli,recovery}.py`,
     `tests/unit/adapters/test_locking.py`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass.
+  - Handover: `services/land.py` + `energatron land`, `land_result`/`land_pending` v1, `CommandOutput.error` (exit 8 with data); owner accepted
+    extra reasons, `--source` precheck, `E_PARTIAL` details, whole-second times, extra helpers. Watch: a rejected-only run can still commit.
 - ⬜ **P1.4.3** Set up the P1 pipeline in the workspace.
   - D3 §15 step 1: `pipeline sync`, `fingerprint`, `dvc repro` (`catalog_index`: 0 rows, every check passes);
     the `pipeline-sync` hook in the workspace's `.pre-commit-config.yaml`, before `agent-links`; `land` and
@@ -610,6 +605,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P1.4.2 · `services/land.py` (`resolve_parser`, §7.1 preconditions, plan, write, recovery via `land_pending`), `energatron land`, `land_result`/`land_pending` v1, `CommandOutput.error` (1540 tests); review nits 1–2 fixed; owner accepted deviations (extra rejection reasons, `--source` precheck → `E_USAGE`, `E_PARTIAL` details, whole-second timestamps, extra helpers, `CommandOutput.error`) · energatron-5000 `P1.4.2: add the land service and energatron land`
 - 2026-10-30 · P1.4.1 · `make_nem12.py` NEM12 generator (+ `nem12_header_dt`), `SapnIntervalParser` (`detect`, `inspect` in §5.2's order, `SourceInfo`), `PARSERS`/`parsers_for`, `regions/sa.yaml` loaded in `build_context()` (1460 tests); review finding 1 and nits 2–4 fixed; owner accepted deviations (extra reason words, `no_data`, `nem12_header_dt`, package marker) · energatron-5000 `P1.4.1: add the NEM12 fixture generator and the sapn_interval parser`
 - 2026-10-30 · P1.3.4 · `pipeline sync [--check] [--dry-run]` (`services/pipeline_sync.py`), `verify` (fingerprint, DVC status, blob re-hash, stage reruns), `pipeline_sync_result`/`verify_result` v1, restore drill step 9 runs `verify` on P1 clones (1364 tests); review nits 1–3 fixed; owner accepted deviations 1–3 · energatron-5000 `P1.3.4: add energatron pipeline sync and energatron verify`
 - 2026-10-30 · P1.3.3 · `energatron stage` (repro-log records in `main()`, `--emit-dvc-yaml`), `DvcRunner` wired into `build_context()`, `stage_result`/`dvc_yaml_result` v1, D1 §11.5 checks pass, D3 §14 checks 1, 2, 4 pass and 3 recorded (1325 tests); review finding 1 and nits 2–3 fixed; owner accepted the new kind, extra files and fake stages · energatron-5000 `P1.3.3: add energatron stage, DvcRunner and the DVC checks`

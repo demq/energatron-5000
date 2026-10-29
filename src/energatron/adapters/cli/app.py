@@ -15,7 +15,7 @@ from pathlib import Path
 import typer
 
 from energatron.adapters import wiring
-from energatron.adapters.cli.commands import backup, denylist, fingerprint, pipeline, stage, verify, version
+from energatron.adapters.cli.commands import backup, denylist, fingerprint, land, pipeline, stage, verify, version
 from energatron.adapters.cli.output import (
     CommandOutput,
     Invocation,
@@ -46,6 +46,7 @@ app.command("fingerprint")(fingerprint.fingerprint)
 app.command("stage")(stage.stage)
 app.add_typer(pipeline.app, name="pipeline")
 app.command("verify")(verify.verify)
+app.command("land")(land.land)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

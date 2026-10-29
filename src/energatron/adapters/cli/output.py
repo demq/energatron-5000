@@ -49,6 +49,7 @@ class CommandOutput:
     command: str
     result: ServiceResult | StageResult
     text: str
+    error: EnergatronError | None = None  # a failure that still has a result: `E_PARTIAL` (exit 8, D1 §8.5)
 
 
 class CliError(BaseModel):
@@ -130,26 +131,33 @@ def stage_name(args: Sequence[str]) -> str | None:
 
 
 def write_success(invocation: Invocation, output: CommandOutput) -> int:
-    """Print a command's result: the envelope, or its text on stdout and its warnings on stderr. Returns 0."""
-    result, warnings = output.result, output.result.warnings
+    """Print a command's result: the envelope, or its text on stdout and its warnings on stderr. Returns 0.
+
+    A result that comes with an error (`E_PARTIAL`) is printed the same way, with the error added: in the envelope
+    `ok` is false and `data` still holds the result; in human mode the error follows the warnings on stderr. Returns
+    the error's exit code then.
+    """
+    result, warnings, error = output.result, output.result.warnings, output.error
     if invocation.json_mode:
         _write_envelope(
             invocation,
             CliResult(
                 command=output.command,
-                ok=True,
-                exit_code=0,
+                ok=error is None,
+                exit_code=0 if error is None else error.exit_code,
                 energatron_version=energatron.__version__,
                 data=result.model_dump(mode="json"),
                 warnings=tuple(warnings),
-                error=None,
+                error=None if error is None else _cli_error(error),
             ),
         )
     else:
         _write(invocation, sys.stdout, output.text)
         for warning in warnings:
             _write(invocation, sys.stderr, f"{_PREFIX}warning {warning.code}: {warning.message}\n")
-    return 0
+        if error is not None:
+            _write_error_text(invocation, error)
+    return 0 if error is None else error.exit_code
 
 
 def write_failure(invocation: Invocation, command: str | None, error: EnergatronError) -> int:
@@ -163,15 +171,23 @@ def write_failure(invocation: Invocation, command: str | None, error: Energatron
                 exit_code=error.exit_code,
                 energatron_version=energatron.__version__,
                 data=None,
-                error=CliError(code=error.code, category=error.category, message=error.message, details=error.details),
+                error=_cli_error(error),
             ),
         )
     else:
-        _write(invocation, sys.stderr, f"{_PREFIX}error {error.code}: {error.message}\n")
-        hint = error.details.get("hint")
-        if isinstance(hint, str):
-            _write(invocation, sys.stderr, f"{_PREFIX}hint: {hint}\n")
+        _write_error_text(invocation, error)
     return error.exit_code
+
+
+def _cli_error(error: EnergatronError) -> CliError:
+    return CliError(code=error.code, category=error.category, message=error.message, details=error.details)
+
+
+def _write_error_text(invocation: Invocation, error: EnergatronError) -> None:
+    _write(invocation, sys.stderr, f"{_PREFIX}error {error.code}: {error.message}\n")
+    hint = error.details.get("hint")
+    if isinstance(hint, str):
+        _write(invocation, sys.stderr, f"{_PREFIX}hint: {hint}\n")
 
 
 def _write_envelope(invocation: Invocation, envelope: CliResult) -> None:

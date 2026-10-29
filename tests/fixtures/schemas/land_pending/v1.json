@@ -1,0 +1,5 @@
+{
+  "kind": "land_pending",
+  "schema_version": 1,
+  "dataset_ids": ["retailer_usage-20251001T000000-0a1b2c3d", "sapn_interval-20261023T100345-3fa9c2e1"]
+}

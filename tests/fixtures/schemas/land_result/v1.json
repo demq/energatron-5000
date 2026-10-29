@@ -1,0 +1,57 @@
+{
+  "kind": "land_result",
+  "schema_version": 1,
+  "dry_run": false,
+  "items": [
+    {
+      "position": 1,
+      "input": "data/landing/<redacted>_<n>_<n>_<n>_SAPN_DETAILED.csv",
+      "bytes": 65536,
+      "sha256": "3fa9c2e1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "status": "landed",
+      "source": "sapn_interval",
+      "dataset_id": "sapn_interval-20261023T100345-3fa9c2e1",
+      "stored_path": "data/raw/sapn_interval/2026/sapn_interval-20261023T100345-3fa9c2e1.csv",
+      "coverage": {"start": "2024-10-23", "end": "2026-10-22"},
+      "error": null
+    },
+    {
+      "position": 2,
+      "input": "data/landing/notes.txt",
+      "bytes": 120,
+      "sha256": "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+      "status": "rejected",
+      "source": null,
+      "dataset_id": null,
+      "stored_path": null,
+      "coverage": null,
+      "error": {
+        "code": "E_UNKNOWN_SOURCE",
+        "category": "input",
+        "message": "No parser recognises this file.",
+        "details": {"position": 2}
+      }
+    },
+    {
+      "position": 3,
+      "input": "<outside>/link.csv",
+      "bytes": null,
+      "sha256": null,
+      "status": "rejected",
+      "source": null,
+      "dataset_id": null,
+      "stored_path": null,
+      "coverage": null,
+      "error": {
+        "code": "E_INVALID_INPUT",
+        "category": "input",
+        "message": "Symbolic links aren't landed.",
+        "details": {"reason": "symlink", "position": 3}
+      }
+    }
+  ],
+  "landed": ["sapn_interval-20261023T100345-3fa9c2e1"],
+  "commit": "1a2b3c4ddddddddddddddddddddddddddddddddd",
+  "pointer_files": ["data/raw/sapn_interval.dvc"],
+  "skipped_hidden": 1
+}
