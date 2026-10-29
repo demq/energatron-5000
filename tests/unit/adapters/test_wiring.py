@@ -9,7 +9,7 @@ import pytest
 
 from energatron.adapters import wiring
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
-from energatron.adapters.sources.sapn_nem12 import SAPN_INTERVAL
+from energatron.adapters.sources.registry import PARSERS
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
@@ -33,7 +33,7 @@ def test_the_context_holds_the_workspace_and_its_configs(tmp_path: Path) -> None
     assert ctx.paths == paths
     assert ctx.config.region == "sa"
     assert ctx.private is not None
-    assert tuple(ctx.parsers) == (SAPN_INTERVAL,)  # the parsers `regions/sa.yaml` lists
+    assert tuple(ctx.parsers) == PARSERS  # `regions/sa.yaml` lists all seven P1 parsers
     assert dict(ctx.offers) == {}
     assert isinstance(ctx.vcs, GitDvcVersionControl)
     assert isinstance(ctx.clock, wiring.SystemClock)

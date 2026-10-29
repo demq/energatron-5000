@@ -5,8 +5,13 @@ from pathlib import Path
 import pytest
 
 from energatron.adapters import wiring
+from energatron.adapters.sources.bill_pdf import ELEC_BILL, GAS_BILL
+from energatron.adapters.sources.cdr_plan import OFFER_CDR
 from energatron.adapters.sources.registry import PARSERS, parsers_for
+from energatron.adapters.sources.retailer_txn import RETAILER_TXN
+from energatron.adapters.sources.retailer_usage import RETAILER_USAGE
 from energatron.adapters.sources.sapn_nem12 import SAPN_INTERVAL
+from energatron.adapters.sources.sapn_summary import SAPN_SUMMARY
 from energatron.core.errors import InternalError
 from energatron.core.models.catalog import SourceInfo, SourceType
 from energatron.core.models.region import RegionProfile
@@ -24,8 +29,27 @@ def test_one_parser_per_source_and_each_source_is_a_source_type() -> None:
     assert all(isinstance(parser.version, int) and parser.version >= 1 for parser in PARSERS)
 
 
-def test_sapn_interval_is_registered() -> None:
-    assert SAPN_INTERVAL in PARSERS
+ALL = (SAPN_INTERVAL, SAPN_SUMMARY, RETAILER_USAGE, RETAILER_TXN, ELEC_BILL, GAS_BILL, OFFER_CDR)
+P1_SOURCES = {
+    SourceType.ELEC_BILL,
+    SourceType.GAS_BILL,
+    SourceType.OFFER_CDR,
+    SourceType.RETAILER_TXN,
+    SourceType.RETAILER_USAGE,
+    SourceType.SAPN_INTERVAL,
+    SourceType.SAPN_SUMMARY,
+}
+
+
+def test_the_seven_p1_parsers_are_registered() -> None:
+    assert PARSERS == ALL
+    assert {parser.source for parser in PARSERS} == P1_SOURCES
+
+
+def test_sources_without_a_p1_parser_have_none() -> None:
+    sources = {parser.source for parser in PARSERS}
+    for source in (SourceType.GAS_BILL_RECORD, SourceType.OFFER_MANUAL, SourceType.OFFER_CDR_INDEX):
+        assert source not in sources
 
 
 def test_the_profile_keeps_the_listed_parsers_in_registry_order() -> None:
@@ -63,8 +87,9 @@ def test_a_listed_source_without_a_parser_is_internal() -> None:
 def test_the_sa_profile_is_valid_and_lists_only_parsers_that_exist() -> None:
     sa = wiring.load_region_profile("sa")
     assert sa.name == "sa"
-    assert sa.parsers == (SourceType.SAPN_INTERVAL,)
+    assert set(sa.parsers) == P1_SOURCES
+    assert [source.value for source in sa.parsers] == sorted(source.value for source in sa.parsers)
 
 
 def test_build_context_filters_parsers_by_the_region_profile(tmp_path: Path) -> None:
-    assert tuple(wiring.build_context(make_workspace(tmp_path)).parsers) == (SAPN_INTERVAL,)
+    assert tuple(wiring.build_context(make_workspace(tmp_path)).parsers) == ALL

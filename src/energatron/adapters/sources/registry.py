@@ -2,13 +2,26 @@
 
 from typing import Final
 
+from energatron.adapters.sources.bill_pdf import ELEC_BILL, GAS_BILL
+from energatron.adapters.sources.cdr_plan import OFFER_CDR
+from energatron.adapters.sources.retailer_txn import RETAILER_TXN
+from energatron.adapters.sources.retailer_usage import RETAILER_USAGE
 from energatron.adapters.sources.sapn_nem12 import SAPN_INTERVAL
+from energatron.adapters.sources.sapn_summary import SAPN_SUMMARY
 from energatron.core.errors import InternalError
 from energatron.core.models.region import RegionProfile
 from energatron.ports.sources import SourceParser
 
-PARSERS: Final[tuple[SourceParser, ...]] = (SAPN_INTERVAL,)
-"""The registered parsers. P1.5.1 adds the other five."""
+PARSERS: Final[tuple[SourceParser, ...]] = (
+    SAPN_INTERVAL,
+    SAPN_SUMMARY,
+    RETAILER_USAGE,
+    RETAILER_TXN,
+    ELEC_BILL,
+    GAS_BILL,
+    OFFER_CDR,
+)
+"""The registered parsers: P1's seven (D3 §5). `gas_bill_record`, `offer_manual` and `offer_cdr_index` have none yet."""
 
 
 def parsers_for(profile: RegionProfile, parsers: tuple[SourceParser, ...] = PARSERS) -> tuple[SourceParser, ...]:

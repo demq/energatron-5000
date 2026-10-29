@@ -1,17 +1,29 @@
-"""`services.land.resolve_parser`: each D3 §5.1 rule, with stand-in parsers (the real PDF parsers come in P1.5.1).
+"""`services.land.resolve_parser`: each D3 §5.1 rule, with stand-in parsers, then with the real registry.
 
-The three-way PDF tie is three stand-ins that all accept any content, as the two bill parsers and the SAPN summary
-parser will all accept a bare PDF.
+The three-way PDF tie is tested twice: with three stand-ins that all accept any content, and with the real bill and
+SAPN summary parsers, which all accept a bare PDF.
 """
 
 from dataclasses import dataclass
+from datetime import date, datetime
 
 import pytest
 
+from energatron.adapters.sources.registry import PARSERS
 from energatron.core.errors import AmbiguousSourceError, InvalidInputError, UnknownSourceError, UsageError
 from energatron.core.models.catalog import Detection, Evidence, SourceInfo, SourceType
 from energatron.ports.sources import SourceParser
 from energatron.services.land import resolve_parser
+from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
+from tests.fixtures.make_sources import (
+    SummaryRow,
+    make_cdr_plan_detail,
+    make_pdf,
+    make_retailer_txn_csv,
+    make_retailer_usage_csv,
+    make_sapn_summary_csv,
+)
+from tests.fixtures.synthetic import SYNTHETIC_NMI
 
 
 @dataclass
@@ -104,3 +116,65 @@ def test_source_option_for_a_type_with_no_parser_is_a_usage_error() -> None:
         with pytest.raises(UsageError) as caught:
             resolve_parser(parsers(StandIn(INTERVAL, ("content",))), "x.csv", b"", source=source)
         assert source.value in caught.value.message
+
+
+# --- with the real parsers (P1.5.1) ---------------------------------------------------------------------------------
+
+WINDOW = (date(2025, 1, 1), date(2025, 2, 1))
+GENERATED = datetime(2025, 2, 1, 9, 0, 0)
+
+
+def test_the_real_three_way_pdf_tie_is_ambiguous() -> None:
+    with pytest.raises(AmbiguousSourceError) as caught:
+        resolve_parser(PARSERS, "scan.pdf", make_pdf(creation_date="D:2025"))
+    assert caught.value.details["candidates"] == ["elec_bill", "gas_bill", "sapn_summary"]
+
+
+def test_a_sapn_named_pdf_resolves_to_the_summary() -> None:
+    name = sapn_filename("SUMMARY", SYNTHETIC_NMI, WINDOW, GENERATED, ext="pdf")
+    chosen, evidence = resolve_parser(PARSERS, name, make_pdf(creation_date="D:2025"))
+    assert chosen.source == SUMMARY and evidence == ("filename", "content")
+
+
+def test_a_bill_needs_source_and_then_resolves() -> None:
+    for source in (ELEC, GAS):
+        chosen, evidence = resolve_parser(PARSERS, "scan.pdf", make_pdf(creation_date="D:2025"), source=source)
+        assert chosen.source == source and evidence == ("option",)
+
+
+def test_each_generated_source_resolves_to_its_own_parser() -> None:
+    cases: tuple[tuple[str, bytes, SourceType], ...] = (
+        (
+            sapn_filename("DETAILED", SYNTHETIC_NMI, WINDOW, GENERATED),
+            make_nem12(Nem12Spec(start=date(2025, 1, 1), days=2)),
+            INTERVAL,
+        ),
+        (
+            sapn_filename("SUMMARY", SYNTHETIC_NMI, WINDOW, GENERATED),
+            make_sapn_summary_csv((SummaryRow(date(2025, 1, 1), date(2025, 1, 31)),)),
+            SUMMARY,
+        ),
+        ("usage_all.csv", make_retailer_usage_csv(2), SourceType.RETAILER_USAGE),
+        (
+            "transactions_all.csv",
+            make_retailer_txn_csv((("Payment - x", datetime(2025, 1, 1), "1"),)),
+            SourceType.RETAILER_TXN,
+        ),
+        ("plan.json", make_cdr_plan_detail(), SourceType.OFFER_CDR),
+    )
+    for name, data, source in cases:
+        for filename in (name, "renamed.dat"):
+            chosen, _ = resolve_parser(PARSERS, filename, data[: 64 * 1024])
+            assert chosen.source == source
+
+
+def test_a_real_parser_given_by_source_with_the_wrong_content_is_a_mismatch() -> None:
+    with pytest.raises(InvalidInputError) as caught:
+        resolve_parser(PARSERS, "plan.json", make_cdr_plan_detail(), source=ELEC)
+    assert caught.value.details["reason"] == "content_mismatch"
+
+
+def test_source_option_for_a_type_without_a_p1_parser_is_a_usage_error_with_the_real_registry() -> None:
+    for source in (SourceType.GAS_BILL_RECORD, SourceType.OFFER_MANUAL, SourceType.OFFER_CDR_INDEX):
+        with pytest.raises(UsageError):
+            resolve_parser(PARSERS, "x.csv", b"", source=source)
