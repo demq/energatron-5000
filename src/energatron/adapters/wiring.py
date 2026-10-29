@@ -1,17 +1,19 @@
 """The composition root: `build_context()` builds the `ServiceContext` from the workspace's files (D1 §3, §4.8).
 
 Driving adapters (the CLI now) reach the driven adapters only through here. The raw zone is `JsonlCatalog` and
-`FsBlobStore` (P1.2.2). `code_fingerprint()` computes the live code fingerprint of every registered stage (D1 §11,
-P1.3.2). `PipelineRunner` is still a `_NotYetPipelineRunner` placeholder whose every method raises
-`E_INTERNAL("PipelineRunner arrives in P1")` until P1.3.3, and `parsers` is empty until P1.4.1 (D2 §5.9).
+`FsBlobStore` (P1.2.2); the `PipelineRunner` is `DvcRunner` (P1.3.3). `code_fingerprint()` computes the live code
+fingerprint of every registered stage, and `stage_code()` one stage's live entry (D1 §11). `parsers` is empty until
+P1.4.1.
 """
 
-from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import NoReturn
 
-from energatron.adapters.pipeline.fingerprint import compute_fingerprint
+from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
+from energatron.adapters.pipeline.dvc_runner import DvcRunner
+from energatron.adapters.pipeline.fingerprint import InstalledDistributions, compute_fingerprint, package_dir
+from energatron.adapters.pipeline.fingerprint import read_fingerprint as read_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refresh_fingerprint  # for the CLI
+from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
@@ -21,13 +23,11 @@ from energatron.adapters.workspace import (
     read_private_config,
     read_workspace_config,
 )
-from energatron.core.errors import InternalError
-from energatron.core.models.pipeline import ReproReport, StageStatus
-from energatron.core.models.provenance import CodeFingerprint
+from energatron.core.models.provenance import CodeFingerprint, StageCode
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.ports.clock import Clock
 from energatron.services.context import ServiceContext
-from energatron.services.stages.registry import STAGES
+from energatron.services.stages.registry import STAGES, get_stage
 
 
 class SystemClock:
@@ -57,7 +57,7 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
         blobs=FsBlobStore(paths),
         parsers=(),
         vcs=vcs,
-        runner=_NotYetPipelineRunner(),
+        runner=DvcRunner(paths, fingerprint=lambda: code_fingerprint()),
         clock=clock,
     )
 
@@ -67,16 +67,9 @@ def code_fingerprint() -> CodeFingerprint:
     return compute_fingerprint(STAGES)
 
 
-# The P0 placeholder left until P1.3.3 (D2 §5.9)
-
-
-def _not_yet(port: str) -> NoReturn:
-    raise InternalError(f"{port} arrives in P1")
-
-
-class _NotYetPipelineRunner:
-    def status(self) -> list[StageStatus]:
-        _not_yet("PipelineRunner")
-
-    def repro(self, targets: Sequence[str] = ()) -> ReproReport:
-        _not_yet("PipelineRunner")
+def stage_code(name: str) -> StageCode:
+    """The live code entry of the registered stage `name` (D1 §11.1); an unknown name → `E_USAGE`."""
+    spec = get_stage(name)
+    return _stage_code(
+        spec.impl.__module__, spec.package_data, package_dir=package_dir(), distributions=InstalledDistributions()
+    )

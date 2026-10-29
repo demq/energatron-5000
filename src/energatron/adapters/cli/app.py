@@ -10,22 +10,28 @@ import logging
 import os
 import sys
 from collections.abc import Sequence
+from pathlib import Path
 
 import typer
 
-from energatron.adapters.cli.commands import backup, denylist, fingerprint, version
+from energatron.adapters import wiring
+from energatron.adapters.cli.commands import backup, denylist, fingerprint, stage, version
 from energatron.adapters.cli.output import (
     CommandOutput,
     Invocation,
     command_name,
     logging_to_stderr,
     prescan,
+    stage_name,
     write_failure,
     write_success,
 )
+from energatron.core.canonical import canonical_json
 from energatron.core.errors import EnergatronError, InternalError, UsageError
+from energatron.core.models.pipeline import ReproLogEntry
 
 _log = logging.getLogger(__name__)
+_INTERRUPTED = 130  # typer's exit code for Ctrl-C (128 + SIGINT)
 
 app = typer.Typer(
     name="energatron",
@@ -37,33 +43,73 @@ app.command("version")(version.version)
 app.command("denylist")(denylist.denylist)
 app.command("backup")(backup.backup)
 app.command("fingerprint")(fingerprint.fingerprint)
+app.command("stage")(stage.stage)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Run one command and return its exit code (D1 §7). `argv` defaults to `sys.argv[1:]`."""
+    """Run one command and return its exit code (D1 §7). `argv` defaults to `sys.argv[1:]`.
+
+    For `stage <name>` with `ENERGATRON_REPRO_LOG` set, a `start` record goes to that file before anything is parsed,
+    and an `end` record with the exit code in the outermost `finally`, so `DvcRunner` sees a stage that failed
+    early too (D1 §4.5). A stage stopped by Ctrl-C (or by an exception escaping) gets no `end` record, so it reads as
+    stopped, not failed.
+    """
     args = list(sys.argv[1:] if argv is None else argv)
     json_mode, debug = prescan(args, os.environ)
     invocation = Invocation(json_mode=json_mode, debug=debug)
     with logging_to_stderr(invocation):
+        log = os.environ.get(wiring.REPRO_LOG_ENV)
+        name = stage_name(args) if log else None
+        exit_code: int | None = None  # stays None when the command is interrupted: no `end` record
+        if log and name:
+            _record(Path(log), ReproLogEntry(stage=name, event="start", exit_code=None))
         try:
-            returned = app(args=args, prog_name="energatron", standalone_mode=False, obj=invocation)
-        except typer.Abort:
-            error: EnergatronError = UsageError("Aborted.")
-        except typer.TyperException as exc:  # click's argument errors, raised because standalone_mode is off
-            error = usage_error(exc)
-        except EnergatronError as exc:
-            error = exc
-        except Exception as exc:
-            if invocation.debug:
-                _log.error("internal error", exc_info=True)
-            error = InternalError(
-                "An internal error occurred; rerun with --debug for the traceback.", exception=type(exc).__name__
-            )
-        else:
-            if isinstance(returned, CommandOutput):
-                return write_success(invocation, returned)
-            return returned if isinstance(returned, int) else 0  # `--help` returns 0
-        return write_failure(invocation, command_name(args, _command_names()), error)
+            returned, interrupted = _run(args, invocation)
+            if not interrupted:
+                exit_code = returned
+            return returned
+        finally:
+            if log and name and exit_code is not None:
+                _record(Path(log), ReproLogEntry(stage=name, event="end", exit_code=exit_code))
+
+
+def _run(args: list[str], invocation: Invocation) -> tuple[int, bool]:
+    """Run the app: `(exit code, interrupted)`.
+
+    typer turns Ctrl-C into `Exit(130)`, which click returns as 130 with `standalone_mode` off (no command returns an
+    int but `--help`'s 0); an `Abort` raised from a `KeyboardInterrupt` counts too.
+    """
+    interrupted = False
+    try:
+        returned = app(args=args, prog_name="energatron", standalone_mode=False, obj=invocation)
+    except typer.Abort as exc:
+        interrupted = isinstance(exc.__cause__, KeyboardInterrupt)
+        error: EnergatronError = UsageError("Aborted.")
+    except typer.TyperException as exc:  # click's argument errors, raised because standalone_mode is off
+        error = usage_error(exc)
+    except EnergatronError as exc:
+        error = exc
+    except Exception as exc:
+        if invocation.debug:
+            _log.error("internal error", exc_info=True)
+        error = InternalError(
+            "An internal error occurred; rerun with --debug for the traceback.", exception=type(exc).__name__
+        )
+    else:
+        if isinstance(returned, CommandOutput):
+            return write_success(invocation, returned), False
+        code = returned if isinstance(returned, int) else 0  # `--help` returns 0
+        return code, code == _INTERRUPTED
+    return write_failure(invocation, command_name(args, _command_names()), error), interrupted
+
+
+def _record(path: Path, entry: ReproLogEntry) -> None:
+    """Append one repro-log line: compact canonical JSON and a newline. A failed write is logged, not raised."""
+    try:
+        with path.open("ab") as handle:
+            handle.write(canonical_json(entry.model_dump(mode="json")) + b"\n")
+    except OSError:
+        _log.warning("The repro log couldn't be written.")
 
 
 def usage_error(exc: typer.TyperException) -> UsageError:

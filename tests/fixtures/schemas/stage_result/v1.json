@@ -1,0 +1,29 @@
+{
+  "checks": [
+    {
+      "details": {},
+      "name": "records_valid",
+      "status": "pass"
+    },
+    {
+      "details": {
+        "duplicates": 1
+      },
+      "name": "sha256_unique",
+      "status": "fail"
+    }
+  ],
+  "kind": "stage_result",
+  "outputs": {
+    "catalog": [
+      {
+        "bytes": 1024,
+        "path": "datasets.parquet",
+        "rows": 2,
+        "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      }
+    ]
+  },
+  "schema_version": 1,
+  "stage": "catalog_index"
+}

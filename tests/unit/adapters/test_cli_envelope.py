@@ -15,8 +15,11 @@ from typing import Any
 import pytest
 
 import energatron
+from energatron.adapters import wiring
 from energatron.adapters.cli import output
+from energatron.adapters.cli.commands import stage as stage_command
 from energatron.adapters.cli.output import Invocation, confirm
+from energatron.core.canonical import canonical_json
 from energatron.core.errors import (
     Category,
     CheckFailedError,
@@ -31,9 +34,13 @@ from energatron.core.errors import (
     UsageError,
     WarningCode,
 )
+from energatron.core.models.catalog import SourceType
+from energatron.core.models.provenance import CodeFingerprint
 from energatron.core.models.vcs import BackupStatus
 from energatron.services import backup as backup_service
 from energatron.services.backup import BackupStatusResult
+from energatron.services.files import dump_json
+from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 from tests.unit.adapters._cli import BUNDLE, FakeVcs, FakeVcsState, data_of, run_cli
 from tests.unit.adapters._workspace import MINIMAL_PRIVATE_TOML, make_workspace, write
 from tests.unit.core._private import NMI, NMI_WITH_CHECKSUM
@@ -599,3 +606,250 @@ def test_confirmation_on_a_tty_prompts(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(output, "ask", lambda question: False)
     with pytest.raises(ConfirmationRequiredError):
         confirm(Invocation(json_mode=False, debug=False), "Go ahead?", yes=False)
+
+
+# stage (D1 §9.5, §4.5): runs one stage; never locks; writes its repro-log records from main()
+
+
+@pytest.fixture(scope="module")
+def live_fingerprint() -> CodeFingerprint:
+    return wiring.code_fingerprint()
+
+
+def stage_workspace(tmp_path: Path, live: CodeFingerprint, *, record: bool = True) -> Path:
+    """A workspace ready for `catalog_index`: `params.yaml`, empty catalogs and, unless `record` is off, the live
+    code fingerprint recorded."""
+    root = make_workspace(tmp_path).root
+    write(root, "params.yaml", "kind: params\nschema_version: 1\n")
+    for source in SourceType:
+        write(root, f"data/raw/{source.value}/_catalog.jsonl", "")
+    if record:
+        write(root, CODE_FINGERPRINT_PATH, dump_json(live.model_dump(mode="json")))
+    return root
+
+
+def repro_log(path: Path) -> list[dict[str, Any]]:
+    """The records in a repro log; each line compact canonical JSON of kind `repro_log_entry`."""
+    lines = path.read_bytes().splitlines(keepends=True)
+    for line in lines:
+        assert line.endswith(b"\n")
+        assert canonical_json(json.loads(line)) + b"\n" == line
+    return [json.loads(line) for line in lines]
+
+
+def start_end(stage: str, exit_code: int) -> list[dict[str, Any]]:
+    entry = {"kind": "repro_log_entry", "schema_version": 1, "stage": stage}
+    return [entry | {"event": "start", "exit_code": None}, entry | {"event": "end", "exit_code": exit_code}]
+
+
+def test_stage_runs_a_stage_and_returns_its_result(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState, live_fingerprint: CodeFingerprint
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    ran = run_cli(capsys, "stage", "catalog_index", "--json", "--workspace", str(root))
+    assert ran.code == 0, ran.out
+    data: dict[str, Any] = data_of(assert_success(ran.envelope(), "stage", "stage_result"))
+    assert list(data) == ["kind", "schema_version", "stage", "outputs", "checks"]
+    assert data["stage"] == "catalog_index"
+    outputs = data["outputs"]
+    assert isinstance(outputs, dict)
+    assert [file["path"] for file in outputs["catalog"]] == ["datasets.parquet"]
+    assert outputs["catalog"][0]["rows"] == 0
+    assert {check["status"] for check in data["checks"]} == {"pass"}
+    provenance = json.loads((root / "data/marts/catalog/_provenance.json").read_text(encoding="utf-8"))
+    assert provenance["code"] == live_fingerprint.stages["catalog_index"].model_dump(mode="json")
+
+
+def test_stage_in_human_mode(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState, live_fingerprint: CodeFingerprint
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    ran = run_cli(capsys, "stage", "catalog_index", "--workspace", str(root))
+    assert ran.code == 0
+    assert ran.out == "Stage catalog_index done: 1 output, 1 file, 6 checks passed.\n"
+
+
+def test_stage_refuses_a_stale_or_missing_code_entry(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState, live_fingerprint: CodeFingerprint
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint, record=False)
+    ran = run_cli(capsys, "stage", "catalog_index", "--json", "--workspace", str(root))
+    assert assert_failure(ran.envelope(), "E_FINGERPRINT_STALE", 4)["details"] == {"stage": "catalog_index"}
+    assert not (root / "data/marts/catalog").exists()
+
+
+def test_a_failed_check_is_exit_7_after_the_outputs_are_written(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState, live_fingerprint: CodeFingerprint
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    write(root, "data/raw/sapn_interval/_catalog.jsonl", "not json\n")
+    ran = run_cli(capsys, "stage", "catalog_index", "--json", "--workspace", str(root))
+    assert assert_failure(ran.envelope(), "E_CHECK_FAILED", 7)["details"]["stage"] == "catalog_index"
+    assert (root / "data/marts/catalog/_provenance.json").is_file()
+
+
+@pytest.mark.parametrize(
+    "argv",
+    [
+        ["stage"],
+        ["stage", "nope"],
+        ["stage", "catalog_index", "--input", "no-equals-sign"],
+        ["stage", "catalog_index", "--input", "nope=x"],
+        ["stage", "catalog_index", "--output", "=x"],
+        ["stage", "catalog_index", "--emit-dvc-yaml"],
+        ["stage", "--emit-dvc-yaml", "--output", "catalog=x"],
+    ],
+)
+def test_stage_argument_errors_are_usage(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    live_fingerprint: CodeFingerprint,
+    argv: list[str],
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    ran = run_cli(capsys, *argv, "--json", "--workspace", str(root))
+    envelope = ran.envelope()
+    assert envelope["command"] == "stage"
+    assert_failure(envelope, "E_USAGE", 2)
+
+
+def test_stage_overrides_resolve_from_the_current_directory_and_provenance_keeps_the_default(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    live_fingerprint: CodeFingerprint,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    elsewhere = tmp_path / "elsewhere"
+    write(elsewhere, "catalog.jsonl", "")
+    monkeypatch.chdir(elsewhere)
+    ran = run_cli(
+        capsys,
+        "stage",
+        "catalog_index",
+        "--input",
+        "catalog.sapn_interval=catalog.jsonl",
+        "--output",
+        "catalog=out",
+        "--json",
+        "--workspace",
+        str(root),
+    )
+    assert ran.code == 0, ran.out
+    provenance = json.loads((elsewhere / "out" / "_provenance.json").read_text(encoding="utf-8"))
+    paths = [item["path"] for item in provenance["inputs"]]
+    assert "data/raw/sapn_interval/_catalog.jsonl" in paths
+    assert str(tmp_path) not in json.dumps(provenance)
+    assert not (root / "data/marts/catalog").exists()
+
+
+def test_emit_dvc_yaml_prints_the_generated_file(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState, live_fingerprint: CodeFingerprint
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    golden = (Path(__file__).resolve().parents[2] / "fixtures" / "golden" / "dvc.yaml").read_text(encoding="utf-8")
+    human = run_cli(capsys, "stage", "--emit-dvc-yaml", "--workspace", str(root))
+    assert human.code == 0
+    assert human.out == golden
+    data = data_of(
+        assert_success(
+            run_cli(capsys, "stage", "--emit-dvc-yaml", "--json", "--workspace", str(root)).envelope(),
+            "stage",
+            "dvc_yaml_result",
+        )
+    )
+    assert data == {"kind": "dvc_yaml_result", "schema_version": 1, "text": golden}
+
+
+def test_stage_writes_start_and_end_records_to_the_repro_log(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    live_fingerprint: CodeFingerprint,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    log = tmp_path / "repro.jsonl"
+    monkeypatch.setenv("ENERGATRON_REPRO_LOG", str(log))
+    assert run_cli(capsys, "stage", "catalog_index", "--workspace", str(root)).code == 0
+    assert repro_log(log) == start_end("catalog_index", 0)
+
+
+@pytest.mark.parametrize(
+    ("argv", "stage", "exit_code"),
+    [
+        (["stage", "catalog_index"], "catalog_index", 2),  # no workspace: fails before run_stage
+        (["stage", "nope", "--json"], "nope", 2),  # unknown stage
+        (["stage", "--workspace", "{root}", "catalog_index", "--bogus"], "catalog_index", 2),  # a parse error
+        (["stage", "--input", "x=y", "catalog_index", "--workspace", "{root}"], "catalog_index", 2),
+        (["stage", "catalog_index", "--workspace", "{bare}"], "catalog_index", 4),  # no params.yaml
+    ],
+)
+def test_a_stage_failing_before_run_stage_still_writes_both_records(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    live_fingerprint: CodeFingerprint,
+    monkeypatch: pytest.MonkeyPatch,
+    argv: list[str],
+    stage: str,
+    exit_code: int,
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    bare = make_workspace(tmp_path, name="bare").root
+    log = tmp_path / "repro.jsonl"
+    monkeypatch.setenv("ENERGATRON_REPRO_LOG", str(log))
+    ran = run_cli(capsys, *(arg.format(root=root, bare=bare) for arg in argv))
+    assert ran.code == exit_code
+    assert repro_log(log) == start_end(stage, exit_code)
+
+
+@pytest.mark.parametrize("argv", [["stage", "--emit-dvc-yaml"], ["version"], ["fingerprint", "--check"], ["stage"]])
+def test_only_a_named_stage_writes_records(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    live_fingerprint: CodeFingerprint,
+    monkeypatch: pytest.MonkeyPatch,
+    argv: list[str],
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    log = tmp_path / "repro.jsonl"
+    monkeypatch.setenv("ENERGATRON_REPRO_LOG", str(log))
+    run_cli(capsys, *argv, "--workspace", str(root))
+    assert not log.exists()
+
+
+def test_no_repro_log_without_the_variable(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState, live_fingerprint: CodeFingerprint
+) -> None:
+    root = stage_workspace(tmp_path, live_fingerprint)
+    before = sorted(path.relative_to(tmp_path) for path in tmp_path.rglob("*"))
+    assert run_cli(capsys, "stage", "catalog_index", "--workspace", str(root)).code == 0
+    after = sorted(path.relative_to(tmp_path) for path in tmp_path.rglob("*"))
+    assert [path for path in after if path not in before and "data/marts" not in path.as_posix()] == []
+
+
+def test_an_interrupted_stage_writes_only_its_start_record(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    live_fingerprint: CodeFingerprint,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A stage stopped by Ctrl-C has no `end` record, so `DvcRunner` reports it as stopped, `exit_code: null`
+    (D1 §4.5). typer turns the `KeyboardInterrupt` into exit code 130, which `main()` still returns."""
+    root = stage_workspace(tmp_path, live_fingerprint)
+    log = tmp_path / "repro.jsonl"
+    monkeypatch.setenv("ENERGATRON_REPRO_LOG", str(log))
+
+    def interrupt(*args: object, **kwargs: object) -> object:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(stage_command, "run_stage", interrupt)
+    ran = run_cli(capsys, "stage", "catalog_index", "--workspace", str(root))
+    assert ran.code == 130
+    assert ran.out == ""
+    assert repro_log(log) == start_end("catalog_index", 0)[:1]

@@ -12,9 +12,10 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
-from typing import Final
+from typing import ClassVar, Final, Literal
 
 import yaml
+from pydantic import Field
 
 from energatron.core.canonical import JSONValue, content_hash, sha256_hex, tree_hash
 from energatron.core.errors import (
@@ -28,7 +29,7 @@ from energatron.core.errors import (
     UsageError,
     WarningCode,
 )
-from energatron.core.models._common import FrozenModel, StageName
+from energatron.core.models._common import StageName
 from energatron.core.models.catalog import CATALOG_FILENAME, SourceType, catalog_lines
 from energatron.core.models.params import Params
 from energatron.core.models.provenance import (
@@ -41,6 +42,7 @@ from energatron.core.models.provenance import (
     StageProvenance,
 )
 from energatron.core.models.storage import RAW_PREFIX
+from energatron.core.persisted import Persisted
 from energatron.services.files import fsync_directory, make_dirs, parquet_rows, read_json, write_json
 
 _IGNORED: Final = frozenset({".DS_Store"})
@@ -77,17 +79,23 @@ class PreparedStage:
     outputs: Mapping[str, Path]
 
 
-class StageResult(FrozenModel):
-    """What a stage run produced (D1 §9.3 step 8): per output, its files; the checks; the warnings.
+class StageResult(Persisted):
+    """`stage_result` v1: what a stage run produced (D1 §5, §9.3 step 8; fields set in P1.3.3).
 
-    No paths beyond output-relative ones: an override may sit outside the workspace. P1.3.3 wraps this in the
-    `stage_result` kind that `energatron stage` returns.
+    Per output, its files with their `sha256`, byte counts and row counts; the checks. No paths beyond output-relative
+    ones: an override may sit outside the workspace. The warnings are returned, but, as in every service result, left
+    out of the dump: the CLI moves them to the envelope's own `warnings` (D1 §8.5).
     """
+
+    KIND: ClassVar[str] = "stage_result"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["stage_result"] = "stage_result"
+    schema_version: Literal[1] = 1
 
     stage: StageName
     outputs: dict[str, list[ProvenanceFile]]
     checks: list[CheckResult]
-    warnings: list[ResultWarning]
+    warnings: list[ResultWarning] = Field(default_factory=list, exclude=True)
 
 
 # prepare_stage (D1 §9.1)

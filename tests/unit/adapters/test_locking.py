@@ -1,8 +1,8 @@
 """The workspace lock across processes (D1 §8.8; D2 §5.9, §14).
 
 Another process holds `.energatron/lock` through `workspace_lock()`. `denylist`, `backup` and `fingerprint` (their dry
-runs and `denylist --check` included) fail with `E_LOCKED` and change nothing; `backup --status`, `fingerprint --check`
-and `version` still run.
+runs and `denylist --check` included) fail with `E_LOCKED` and change nothing; `backup --status`, `fingerprint --check`,
+`stage` and `version` still run.
 """
 
 import subprocess
@@ -13,10 +13,13 @@ from pathlib import Path
 
 import pytest
 
+from energatron.adapters import wiring
+from energatron.core.models.catalog import SourceType
 from energatron.core.models.workspace import WorkspacePaths
+from energatron.services.files import dump_json
 from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 from tests.unit.adapters._cli import FakeVcsState, run_cli
-from tests.unit.adapters._workspace import make_workspace
+from tests.unit.adapters._workspace import make_workspace, write
 
 HOLDER = """
 import sys
@@ -101,3 +104,20 @@ def test_the_lock_is_free_again_after_a_command(
     assert run_cli(capsys, "backup", "--json", *workspace).code == 0
     with held_by_another_process(paths):
         pass  # the child could take it: nothing was left holding it
+
+
+def test_stage_runs_while_another_process_holds_the_lock(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState
+) -> None:
+    """`energatron stage` never locks: `dvc repro` runs it under a parent that holds the lock (D1 §8.8)."""
+    paths = make_workspace(tmp_path)
+    write(paths.root, "params.yaml", "kind: params\nschema_version: 1\n")
+    for source in SourceType:
+        write(paths.root, f"data/raw/{source.value}/_catalog.jsonl", "")
+    write(paths.root, CODE_FINGERPRINT_PATH, dump_json(wiring.code_fingerprint().model_dump(mode="json")))
+    with held_by_another_process(paths):
+        ran = run_cli(capsys, "stage", "catalog_index", "--json", "--workspace", str(paths.root))
+        emitted = run_cli(capsys, "stage", "--emit-dvc-yaml", "--json", "--workspace", str(paths.root))
+    assert ran.code == 0, ran.out
+    assert ran.envelope()["data"]["kind"] == "stage_result"
+    assert emitted.code == 0

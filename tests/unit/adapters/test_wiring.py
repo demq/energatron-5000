@@ -1,4 +1,5 @@
-"""`adapters/wiring.py`: `build_context()`, `SystemClock` and the P1 placeholders (D2 §5.9; D1 §4.7, §4.8)."""
+"""`adapters/wiring.py`: `build_context()`, `SystemClock`, the live code entries and no placeholder left (D2 §5.9;
+D1 §4.7, §4.8)."""
 
 from datetime import UTC, timedelta
 from pathlib import Path
@@ -7,10 +8,11 @@ from typing import Any
 import pytest
 
 from energatron.adapters import wiring
+from energatron.adapters.pipeline.dvc_runner import DvcRunner
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
-from energatron.core.errors import BackupNotConfiguredError, InternalError
+from energatron.core.errors import BackupNotConfiguredError
 from energatron.core.models.catalog import SourceType
 from energatron.core.models.workspace import BackupPolicy
 from tests.unit.adapters._workspace import local_toml, make_workspace, write
@@ -87,16 +89,25 @@ def test_the_raw_zone_ports_are_the_file_adapters_on_the_workspace(tmp_path: Pat
     assert paths.catalog_path(SourceType.SAPN_INTERVAL).is_file()
 
 
-def test_only_the_runner_is_still_a_placeholder_that_raises_internal(tmp_path: Path) -> None:
-    """The `runner` placeholder stays until P1.3.3, which asserts that none is left (D2 §5.9)."""
-    ctx = wiring.build_context(make_workspace(tmp_path))
-    for call in (lambda: ctx.runner.status(), lambda: ctx.runner.repro()):
-        with pytest.raises(InternalError) as caught:
-            call()
-        assert caught.value.message == "PipelineRunner arrives in P1"
-    assert type(ctx.runner).__name__ == "_NotYetPipelineRunner"
-    assert not hasattr(wiring, "_NotYetCatalog")
-    assert not hasattr(wiring, "_NotYetBlobStore")
+def test_the_runner_is_dvc_on_the_workspace_and_no_placeholder_is_left(tmp_path: Path) -> None:
+    """No `_NotYet` placeholder is left in `build_context()` (D2 §5.9; D3 §13)."""
+    paths = make_workspace(tmp_path)
+    runner = wiring.build_context(paths).runner
+    assert isinstance(runner, DvcRunner)
+    assert runner.paths == paths
+    assert not [name for name in vars(wiring) if name.startswith("_NotYet") or name == "_not_yet"]
+
+
+def test_the_runner_refreshes_with_the_live_fingerprint(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    sentinel = object()
+    monkeypatch.setattr(wiring, "code_fingerprint", lambda: sentinel)
+    runner = wiring.build_context(make_workspace(tmp_path)).runner
+    assert isinstance(runner, DvcRunner)
+    assert runner.fingerprint() is sentinel
+
+
+def test_stage_code_is_the_live_entry_of_one_stage() -> None:
+    assert wiring.stage_code("catalog_index") == wiring.code_fingerprint().stages["catalog_index"]
 
 
 def test_the_system_clock_is_aware_utc() -> None:

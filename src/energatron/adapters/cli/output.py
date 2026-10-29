@@ -24,6 +24,7 @@ from energatron.core.errors import Category, ConfirmationRequiredError, Energatr
 from energatron.core.persisted import Persisted
 from energatron.core.privacy import DenyEntry, redact, redact_json
 from energatron.services.context import ServiceResult
+from energatron.services.stages.runner import StageResult
 
 JSON_ENV = "ENERGATRON_JSON"
 """`ENERGATRON_JSON=1` does what `--json` does (D1 §8.2)."""
@@ -46,7 +47,7 @@ class CommandOutput:
     """What a command returns to `main()`: its name, its result, and the result as human text."""
 
     command: str
-    result: ServiceResult
+    result: ServiceResult | StageResult
     text: str
 
 
@@ -98,6 +99,33 @@ def command_name(args: Sequence[str], commands: Collection[str]) -> str | None:
     return first if first in commands else None
 
 
+_VALUE_OPTIONS = frozenset({"--input", "--output", "--workspace"})
+"""The options that take a value as the next argument; the stage pre-scan skips that value."""
+
+
+def stage_name(args: Sequence[str]) -> str | None:
+    """The stage named in `energatron stage <name> …`, from the raw arguments, before typer parses them (D1 §4.5).
+
+    The first two arguments that are neither options nor an option's value must be `stage` and the name. Anything
+    after a `--` separator doesn't count. Returns None for any other command, or for `stage` with no name.
+    """
+    before = list(args[: list(args).index("--")]) if "--" in args else list(args)
+    positional: list[str] = []
+    skip = False
+    for arg in before:
+        if skip:
+            skip = False
+        elif arg in _VALUE_OPTIONS:
+            skip = True
+        elif not arg.startswith("-"):
+            positional.append(arg)
+            if len(positional) == 2:
+                break
+    if len(positional) == 2 and positional[0] == "stage" and positional[1]:
+        return positional[1]
+    return None
+
+
 # Writing results
 
 
@@ -113,7 +141,7 @@ def write_success(invocation: Invocation, output: CommandOutput) -> int:
                 exit_code=0,
                 energatron_version=energatron.__version__,
                 data=result.model_dump(mode="json"),
-                warnings=warnings,
+                warnings=tuple(warnings),
                 error=None,
             ),
         )
