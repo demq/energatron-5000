@@ -1,0 +1,7 @@
+{
+  "backup": {
+    "bundle_dir": "~/Library/Mobile Documents/com~apple~CloudDocs/Backups/demq-elektric-git"
+  },
+  "kind": "local_config",
+  "schema_version": 1
+}

@@ -1,0 +1,9 @@
+{
+  "backup": {
+    "keep_latest": 10,
+    "keep_monthly": true
+  },
+  "kind": "workspace_config",
+  "region": "sa",
+  "schema_version": 1
+}

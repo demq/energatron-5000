@@ -1,0 +1,42 @@
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: local
+    hooks:
+      - id: privacy-guard
+        name: privacy guard
+        entry: uv run --frozen python scripts/privacy_guard.py --mode tool --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: privacy-guard-msg
+        name: privacy guard (commit message)
+        entry: uv run --frozen python scripts/privacy_guard.py --mode tool --commit-msg
+        language: system
+        stages: [commit-msg]
+      - id: agent-links
+        name: agent links
+        entry: uv run --frozen python scripts/check_agent_links.py --parent
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: ruff
+        name: ruff
+        entry: uv run --frozen ruff check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        stages: [pre-commit]
+      - id: ruff-format
+        name: ruff format
+        entry: uv run --frozen ruff format --check --force-exclude
+        language: system
+        types_or: [python, pyi]
+        stages: [pre-commit]
+      - id: lint-imports
+        name: import contracts
+        entry: uv run --frozen lint-imports
+        language: system
+        pass_filenames: false
+        files: ^(src/|\.importlinter$)
+        stages: [pre-commit]

@@ -1,0 +1,11 @@
+{
+  "dry_run": false,
+  "entries": 11,
+  "kind": "denylist_result",
+  "manual_entries": 2,
+  "pointer_files": [
+    "private.dvc"
+  ],
+  "schema_version": 1,
+  "written": true
+}

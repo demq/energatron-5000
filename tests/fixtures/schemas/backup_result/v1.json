@@ -1,0 +1,13 @@
+{
+  "dry_run": false,
+  "kind": "backup_result",
+  "report": {
+    "bundle_created": true,
+    "bundle_name": "20261023T093000Z-1a2b3c4.bundle",
+    "bundles_kept": 10,
+    "bundles_removed": 1,
+    "dataless_files": 0,
+    "dvc_files_pushed": 3
+  },
+  "schema_version": 1
+}

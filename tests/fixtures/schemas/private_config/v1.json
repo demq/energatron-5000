@@ -1,0 +1,25 @@
+{
+  "accounts": {
+    "electricity": [
+      "SYNTHACCOUNT"
+    ],
+    "gas": []
+  },
+  "current_plans": {
+    "electricity": "SYN-PLAN-A~20260101T000000Z~0123abcd",
+    "gas": null
+  },
+  "kind": "private_config",
+  "premises": {
+    "gas_mirn": "5550000000",
+    "meter_serials": [
+      "SYNTHMETER"
+    ],
+    "network_tariff": "SYNTARIFF",
+    "nmi": "QAAAVZZZZZ3",
+    "postcode": "0000",
+    "street": "1 Example Street"
+  },
+  "salt": "0123456789abcdef0123456789abcdef",
+  "schema_version": 1
+}

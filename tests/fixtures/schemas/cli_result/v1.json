@@ -1,0 +1,34 @@
+{
+  "command": "denylist",
+  "data": {
+    "dry_run": false,
+    "entries": 2,
+    "kind": "denylist_result",
+    "manual_entries": 0,
+    "pointer_files": [
+      "private.dvc"
+    ],
+    "schema_version": 1,
+    "written": true
+  },
+  "energatron_version": "0.1.0.dev0",
+  "error": null,
+  "exit_code": 0,
+  "kind": "cli_result",
+  "ok": true,
+  "schema_version": 1,
+  "warnings": [
+    {
+      "code": "W_PRIVATE_FIELDS_MISSING",
+      "details": {
+        "fields": [
+          "premises.street",
+          "premises.postcode",
+          "premises.meter_serials",
+          "accounts"
+        ]
+      },
+      "message": "Optional private fields are missing, so the denylist is weaker: add them to private/config.toml."
+    }
+  ]
+}

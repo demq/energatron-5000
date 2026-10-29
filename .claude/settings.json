@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(~/WorkSpace/Electricity/demq-elektric/private/**)",
+      "Edit(~/WorkSpace/Electricity/demq-elektric/private/**)",
+      "Edit(~/WorkSpace/Electricity/demq-elektric/data/raw/**)",
+      "Edit(~/WorkSpace/Electricity/demq-elektric/legacy/**)",
+      "Bash(git push --force:*)",
+      "Bash(git commit --no-verify:*)",
+      "Bash(dvc gc:*)",
+      "Bash(uv run dvc gc:*)"
+    ]
+  }
+}

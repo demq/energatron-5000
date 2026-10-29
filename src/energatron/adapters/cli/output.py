@@ -1,0 +1,229 @@
+"""What the CLI writes, and how (D1 §8.4-§8.7, §8.9): the `cli_result` envelope, human text, redaction, logs, prompts.
+
+- stdout carries the result only: human text, or exactly one JSON document and a newline.
+- stderr carries logs, human-mode warnings and errors, and tracebacks (`--debug`).
+- Everything written passes through `core.privacy` first: the envelope is redacted as data (`redact_json`), text
+  with `redact()`, and log records by the handler's formatter. The denylist is the invocation's: derived from the
+  private config plus `private/denylist.txt`, once the workspace is open.
+"""
+
+import json
+import logging
+import sys
+from collections.abc import Collection, Iterator, Mapping, Sequence
+from contextlib import contextmanager
+from dataclasses import dataclass
+from typing import ClassVar, Literal, TextIO
+
+import typer
+from pydantic import BaseModel, ConfigDict, Field
+
+import energatron
+from energatron.core.canonical import JSONValue
+from energatron.core.errors import Category, ConfirmationRequiredError, EnergatronError, ResultWarning
+from energatron.core.persisted import Persisted
+from energatron.core.privacy import DenyEntry, redact, redact_json
+from energatron.services.context import ServiceResult
+
+JSON_ENV = "ENERGATRON_JSON"
+"""`ENERGATRON_JSON=1` does what `--json` does (D1 §8.2)."""
+
+_PREFIX = "energatron: "
+_LOGGER = "energatron"
+
+
+@dataclass
+class Invocation:
+    """One run of the CLI: its output mode, decided before parsing (D1 §8.5), and the denylist used to redact."""
+
+    json_mode: bool
+    debug: bool
+    denylist: tuple[DenyEntry, ...] = ()
+
+
+@dataclass(frozen=True)
+class CommandOutput:
+    """What a command returns to `main()`: its name, its result, and the result as human text."""
+
+    command: str
+    result: ServiceResult
+    text: str
+
+
+class CliError(BaseModel):
+    """`error` in the envelope: `{"code", "category", "message", "details"}` (D1 §8.5)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True, allow_inf_nan=False)
+
+    code: str
+    category: Category
+    message: str
+    details: dict[str, JSONValue] = Field(default_factory=dict)
+
+
+class CliResult(Persisted):
+    """`cli_result` v1, the JSON envelope (D1 §8.5). `data` is the service's result model, dumped; null on failure
+    except for exit code 8, where it holds the per-item results. `warnings` are the result's (D1 §7)."""
+
+    KIND: ClassVar[str] = "cli_result"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["cli_result"] = "cli_result"
+    schema_version: Literal[1] = 1
+
+    command: str | None
+    ok: bool
+    exit_code: int = Field(ge=0)
+    energatron_version: str
+    data: dict[str, JSONValue] | None
+    warnings: tuple[ResultWarning, ...] = ()
+    error: CliError | None
+
+
+def prescan(args: Sequence[str], env: Mapping[str, str]) -> tuple[bool, bool]:
+    """`(json_mode, debug)` from the raw arguments, before typer parses them (D1 §8.5).
+
+    JSON mode is on when `--json` appears before any `--` separator, or `ENERGATRON_JSON=1`; debug likewise.
+    """
+    before = list(args[: list(args).index("--")]) if "--" in args else list(args)
+    return "--json" in before or env.get(JSON_ENV) == "1", "--debug" in before
+
+
+def command_name(args: Sequence[str], commands: Collection[str]) -> str | None:
+    """The command named in the raw arguments, for an envelope written before parsing succeeds (D1 §8.5).
+
+    The first argument that doesn't start with `-`, but only when it is one of `commands`; otherwise None, so a
+    mistyped filename or value never reaches the envelope (owner decision 2026-10-29, for P1.1.1's D1 revision).
+    """
+    first = next((arg for arg in args if not arg.startswith("-")), None)
+    return first if first in commands else None
+
+
+# Writing results
+
+
+def write_success(invocation: Invocation, output: CommandOutput) -> int:
+    """Print a command's result: the envelope, or its text on stdout and its warnings on stderr. Returns 0."""
+    result, warnings = output.result, output.result.warnings
+    if invocation.json_mode:
+        _write_envelope(
+            invocation,
+            CliResult(
+                command=output.command,
+                ok=True,
+                exit_code=0,
+                energatron_version=energatron.__version__,
+                data=result.model_dump(mode="json"),
+                warnings=warnings,
+                error=None,
+            ),
+        )
+    else:
+        _write(invocation, sys.stdout, output.text)
+        for warning in warnings:
+            _write(invocation, sys.stderr, f"{_PREFIX}warning {warning.code}: {warning.message}\n")
+    return 0
+
+
+def write_failure(invocation: Invocation, command: str | None, error: EnergatronError) -> int:
+    """Print an error: the envelope, or `energatron: error <code>: <message>` (and its hint) on stderr."""
+    if invocation.json_mode:
+        _write_envelope(
+            invocation,
+            CliResult(
+                command=command,
+                ok=False,
+                exit_code=error.exit_code,
+                energatron_version=energatron.__version__,
+                data=None,
+                error=CliError(code=error.code, category=error.category, message=error.message, details=error.details),
+            ),
+        )
+    else:
+        _write(invocation, sys.stderr, f"{_PREFIX}error {error.code}: {error.message}\n")
+        hint = error.details.get("hint")
+        if isinstance(hint, str):
+            _write(invocation, sys.stderr, f"{_PREFIX}hint: {hint}\n")
+    return error.exit_code
+
+
+def _write_envelope(invocation: Invocation, envelope: CliResult) -> None:
+    """Redact the dumped envelope as data, then serialise it: one line (D1 §8.7)."""
+    document = redact_json(envelope.model_dump(mode="json"), invocation.denylist)
+    sys.stdout.write(json.dumps(document, ensure_ascii=False, allow_nan=False) + "\n")
+    sys.stdout.flush()
+
+
+def _write(invocation: Invocation, stream: TextIO, text: str) -> None:
+    stream.write(redact(text, invocation.denylist))
+    stream.flush()
+
+
+# Logging (D1 §8.9)
+
+
+class RedactingFormatter(logging.Formatter):
+    """Formats a record, traceback included, then redacts it with the invocation's current denylist (D1 §8.7)."""
+
+    def __init__(self, invocation: Invocation) -> None:
+        super().__init__(f"{_PREFIX}%(levelname)s %(name)s: %(message)s")
+        self._invocation = invocation
+
+    def format(self, record: logging.LogRecord) -> str:
+        return redact(super().format(record), self._invocation.denylist)
+
+
+class _StderrHandler(logging.Handler):
+    """Writes to whatever `sys.stderr` is when the record is emitted."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            sys.stderr.write(self.format(record) + "\n")
+            sys.stderr.flush()
+        except Exception:
+            self.handleError(record)
+
+
+@contextmanager
+def logging_to_stderr(invocation: Invocation) -> Iterator[None]:
+    """Send the `energatron` loggers to stderr through the redacting formatter, for one invocation."""
+    logger = logging.getLogger(_LOGGER)
+    handler = _StderrHandler()
+    handler.setFormatter(RedactingFormatter(invocation))
+    saved = logger.level, logger.propagate
+    logger.addHandler(handler)
+    logger.propagate = False
+    set_verbosity(invocation, verbose=False)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
+        logger.setLevel(saved[0])
+        logger.propagate = saved[1]
+
+
+def set_verbosity(invocation: Invocation, *, verbose: bool, debug: bool = False) -> None:
+    """WARNING by default, INFO with `-v`, DEBUG with `--debug` (D1 §8.9)."""
+    level = logging.DEBUG if debug or invocation.debug else logging.INFO if verbose else logging.WARNING
+    logging.getLogger(_LOGGER).setLevel(level)
+
+
+# Confirmation (D1 §8.6)
+
+
+def ask(question: str) -> bool:
+    """Prompt on stderr; the answer is read from the terminal."""
+    return typer.confirm(question, default=False, err=True)
+
+
+def confirm(invocation: Invocation, question: str, *, yes: bool) -> None:
+    """Go on only with `--yes`, or a "yes" typed at a prompt.
+
+    A prompt happens only when stdin and stderr are both terminals and JSON mode is off; otherwise →
+    `E_CONFIRMATION_REQUIRED`. A "no" → `E_CONFIRMATION_REQUIRED` too, and nothing is done.
+    """
+    if yes:
+        return
+    if invocation.json_mode or not (sys.stdin.isatty() and sys.stderr.isatty()):
+        raise ConfirmationRequiredError("This needs confirmation and can't prompt here: rerun with --yes.")
+    if not ask(question):
+        raise ConfirmationRequiredError("Not confirmed; nothing was done.")

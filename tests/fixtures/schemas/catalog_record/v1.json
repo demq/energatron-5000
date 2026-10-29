@@ -1,0 +1,31 @@
+{
+  "bytes": 1234,
+  "coverage": {
+    "end": "2026-10-22",
+    "start": "2024-10-23"
+  },
+  "dataset_id": "sapn_interval-20261023T100345-aaaaaaaa",
+  "detector": {
+    "evidence": [
+      "filename",
+      "content"
+    ],
+    "name": "sapn_interval",
+    "version": 1
+  },
+  "extra": {
+    "days": 731,
+    "interval_minutes": 5
+  },
+  "file_mtime": "2026-10-23T00:05:41Z",
+  "kind": "catalog_record",
+  "landed_at": "2026-10-23T00:32:10Z",
+  "notes": "",
+  "original_filename": "synthetic_interval.csv",
+  "schema_version": 1,
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source": "sapn_interval",
+  "source_ts": "2026-10-23T10:03:45",
+  "stored_path": "data/raw/sapn_interval/2026/sapn_interval-20261023T100345-aaaaaaaa.csv",
+  "supersedes": null
+}

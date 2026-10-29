@@ -1,0 +1,9 @@
+{
+  "commits_not_backed_up": 1,
+  "head": "9f8e7d6000000000000000000000000000000000",
+  "kind": "backup_status_result",
+  "last_backup_at": "2026-10-23T09:30:00Z",
+  "last_backup_head": "1a2b3c4000000000000000000000000000000000",
+  "refs_backed_up": false,
+  "schema_version": 1
+}

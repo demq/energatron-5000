@@ -1,0 +1,66 @@
+[importlinter]
+root_package = energatron
+include_external_packages = True
+
+[importlinter:contract:layers]
+name = Layers point down
+type = layers
+layers =
+    energatron.adapters
+    energatron.services
+    energatron.ports
+    energatron.core
+
+[importlinter:contract:core-pure]
+name = Core does no I/O
+type = forbidden
+source_modules = energatron.core
+forbidden_modules =
+    os
+    subprocess
+    shutil
+    tempfile
+    socket
+    urllib
+    http
+    pyarrow
+    httpx
+    typer
+    yaml
+    duckdb
+    dvc
+
+[importlinter:contract:services-no-net]
+name = Services do no network or subprocess I/O
+type = forbidden
+source_modules = energatron.services
+forbidden_modules =
+    subprocess
+    socket
+    urllib
+    http
+    httpx
+    typer
+    dvc
+
+[importlinter:contract:driven-independent]
+name = Driven adapters are independent
+type = independence
+modules =
+    energatron.adapters.storage
+    energatron.adapters.sources
+    energatron.adapters.vcs
+    energatron.adapters.pipeline
+    energatron.adapters.offers
+
+[importlinter:contract:cli-via-wiring]
+name = CLI reaches driven adapters only through wiring
+type = forbidden
+source_modules = energatron.adapters.cli
+forbidden_modules =
+    energatron.adapters.storage
+    energatron.adapters.sources
+    energatron.adapters.vcs
+    energatron.adapters.pipeline
+    energatron.adapters.offers
+allow_indirect_imports = True
