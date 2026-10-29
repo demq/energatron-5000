@@ -1,7 +1,7 @@
 """The error model (D1 §7, §13): every code is defined once in `core/errors.py`, in exactly one category.
 
-The expected table is D1 §7's, plus the codes and warnings D2 adds (D2 §1 change 7). A phase that adds codes adds
-them here too.
+The expected table is D1 §7's, plus the codes and warnings D2 adds (D2 §1 change 7) and P1's (D1 §7, D3 §11).
+A phase that adds codes adds them here too.
 """
 
 import builtins
@@ -41,6 +41,7 @@ EXPECTED_TABLE: dict[Category, tuple[int, frozenset[str]]] = {
                 "E_COMMIT_REJECTED",
                 "E_BACKUP_NOT_CONFIGURED",  # D2
                 "E_DENYLIST_STALE",  # D2
+                "E_PIPELINE_NOT_SYNCED",  # D3
             }
         ),
     ),
@@ -49,7 +50,16 @@ EXPECTED_TABLE: dict[Category, tuple[int, frozenset[str]]] = {
     Category.CHECK: (7, frozenset({"E_CHECK_FAILED"})),
     Category.PARTIAL: (8, frozenset({"E_PARTIAL"})),
 }
-EXPECTED_WARNINGS = frozenset({"W_PRIVATE_FIELDS_MISSING", "W_BACKUP_DATALESS"})  # D2
+EXPECTED_WARNINGS = frozenset(
+    {
+        "W_PRIVATE_FIELDS_MISSING",  # D2
+        "W_BACKUP_DATALESS",  # D2
+        "W_FINGERPRINT_METADATA",  # D1 §11.3
+        "W_BACKUP_PENDING",  # D1 §4.4, D3 §11
+        "W_PREMISES_UNCHECKED",  # D3 §6
+        "W_UNKNOWN_IDENTIFIER",  # D3 §6
+    }
+)
 
 
 def error_classes() -> list[type[EnergatronError]]:

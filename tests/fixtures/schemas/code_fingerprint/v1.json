@@ -1,0 +1,26 @@
+{
+  "energatron_version": "0.1.0",
+  "install": "editable",
+  "kind": "code_fingerprint",
+  "schema_version": 1,
+  "stages": {
+    "catalog_index": {
+      "files": [
+        "__init__.py",
+        "core/__init__.py",
+        "services/__init__.py",
+        "services/stages/__init__.py",
+        "services/stages/catalog_index.py"
+      ],
+      "packages": {
+        "pydantic": "2.12.0",
+        "pyyaml": "6.0.3"
+      },
+      "python": "3.14.0",
+      "source_sha256": "75b3cdd7c8a9e3d56c6517e176ae41d4e271ac2638cbae5e63d3c53badb9ea77",
+      "stage_sha256": "5da91aedd788dfea7dde96f89fe18494529526ad4acbcd82499a3347a8c9aebf"
+    }
+  },
+  "tool_commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "tool_dirty": false
+}

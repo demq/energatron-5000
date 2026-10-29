@@ -1,0 +1,52 @@
+{
+  "checks": [
+    {
+      "details": {},
+      "name": "dataset_id_unique",
+      "status": "pass"
+    }
+  ],
+  "code": {
+    "files": [
+      "__init__.py",
+      "core/__init__.py",
+      "services/__init__.py",
+      "services/stages/__init__.py",
+      "services/stages/catalog_index.py"
+    ],
+    "packages": {
+      "pydantic": "2.12.0",
+      "pyyaml": "6.0.3"
+    },
+    "python": "3.14.0",
+    "source_sha256": "75b3cdd7c8a9e3d56c6517e176ae41d4e271ac2638cbae5e63d3c53badb9ea77",
+    "stage_sha256": "5da91aedd788dfea7dde96f89fe18494529526ad4acbcd82499a3347a8c9aebf"
+  },
+  "files": [
+    {
+      "bytes": 2048,
+      "path": "datasets.parquet",
+      "rows": 1,
+      "sha256": "dfdb6f7a987f1772944b3b1244e76e04e736567a59f2d4fae4853a593e42db97"
+    }
+  ],
+  "inputs": [
+    {
+      "dataset_ids": [
+        "sapn_interval-20261023T100345-aaaaaaaa"
+      ],
+      "name": "catalog.sapn_interval",
+      "path": "data/raw/sapn_interval/_catalog.jsonl",
+      "sha256": "840bebb975367d841fd2b87a614277cafe9fa10cc5fc1504f94de072182910dd",
+      "type": "file"
+    }
+  ],
+  "kind": "stage_provenance",
+  "output": "catalog",
+  "params": {
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "values": {}
+  },
+  "schema_version": 1,
+  "stage": "catalog_index"
+}

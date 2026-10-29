@@ -1,4 +1,4 @@
-"""The denylist and redaction (D1 §8.7; D2 §7.3, §7.4).
+"""The denylist, redaction, the premises check and filename masking (D1 §8.7; D2 §7.3, §7.4; D3 §6, §8.2).
 
 `derive_denylist()` turns the private config into `DenyEntry` values. `redact()` and `redact_json()` replace every
 entry with `<redacted>`: the CLI passes everything it writes to stdout and stderr through them, as the last line of
@@ -9,7 +9,10 @@ entry matches only where no letter, digit, `_` or `-` touches it. Whitespace in 
 run of it matches any run of whitespace, and whitespace at either end is ignored (`value.split()`; P0.2.5's guard
 uses the same rule).
 
-Nothing here ever shows an entry's value: not in a repr, not in an error.
+`check_premises()` compares a file's identifiers with the private config before landing (D3 §6); `mask_filename()`
+hides what a file name could give away in output (D3 §8.2).
+
+Nothing here ever shows an entry's or an identifier's value: not in a repr, not in an error, not in a warning.
 """
 
 import json
@@ -20,6 +23,14 @@ from functools import lru_cache
 from typing import TYPE_CHECKING, Literal
 
 from energatron.core.canonical import JSONValue
+from energatron.core.errors import (
+    ForeignPremisesError,
+    InternalError,
+    InvalidInputError,
+    ResultWarning,
+    WarningCode,
+)
+from energatron.core.models.catalog import PUBLIC_SOURCES, SourceType
 
 if TYPE_CHECKING:  # the model imports nmi_checksum from here
     from energatron.core.models.private import PrivateConfig
@@ -36,6 +47,10 @@ _NMI = re.compile(r"[A-Z0-9]{10}")
 _WHITESPACE = re.compile(r"\s+")
 _WORD_EDGE_BEFORE = r"(?<![0-9A-Za-z_-])"
 _WORD_EDGE_AFTER = r"(?![0-9A-Za-z_-])"
+_DIGIT_RUN = re.compile(r"[A-Za-z0-9]+")
+_DIGITS_TO_MASK = 4
+_IDENTIFIER_KINDS = ("nmi", "meter_serial", "account")
+_KIND_LABELS = {"meter_serial": "meter serial", "account": "account"}
 _MAX_PASSES = 8  # a bound, in case a hand-written entry matches inside `<redacted>` itself
 
 
@@ -130,7 +145,95 @@ def redact_json(value: JSONValue, denylist: Iterable[DenyEntry]) -> JSONValue:
     return _redact_value(value, patterns)
 
 
+def mask_filename(name: str, denylist: Iterable[DenyEntry]) -> str:
+    """One path component as output may show it (D3 §8.2).
+
+    First `redact()` with the denylist, then every maximal run of `[A-Za-z0-9]` that holds four or more digits
+    becomes `<n>`. SAPN names keep their shape but lose the NMI and dates; a retailer name loses its numbers.
+    """
+    redacted = redact(name, denylist)
+    return _DIGIT_RUN.sub(_mask_run, redacted)
+
+
+def check_premises(
+    source: SourceType, identifiers: Mapping[str, Sequence[str]], private: PrivateConfig
+) -> list[ResultWarning]:
+    """Check that a file belongs to the workspace's premises (D3 §6). Returns warnings or raises.
+
+    Values are compared stripped and case-insensitively; an NMI on its first 10 characters. Blank values count as
+    absent. Public sources aren't checked. An 11-character NMI with a wrong checksum digit raises `E_INVALID_INPUT`
+    (`reason: "nmi_checksum"`); an NMI other than the premises' raises `E_FOREIGN_PREMISES`. Meter serials and
+    accounts the private config doesn't hold give `W_UNKNOWN_IDENTIFIER`, once per kind. Without an NMI, a known
+    serial or account confirms the premises; values of a kind whose private list isn't empty, with nothing known in
+    any kind, are foreign; otherwise the result carries `W_PREMISES_UNCHECKED`.
+
+    Errors and warnings name the kind in `details.identifier`, never a value. The caller adds the input's
+    `position`. An identifier kind other than `nmi`, `meter_serial` and `account` is a bug (`E_INTERNAL`).
+    """
+    if SourceType(source) in PUBLIC_SOURCES:
+        return []
+    unknown_kinds = sorted(set(identifiers) - set(_IDENTIFIER_KINDS))
+    if unknown_kinds:
+        raise InternalError(
+            "A parser returned an identifier kind the premises check doesn't know.", kinds=unknown_kinds
+        )
+    found = {kind: [_fold(value) for value in identifiers.get(kind, ()) if value.strip()] for kind in _IDENTIFIER_KINDS}
+    known = {
+        "meter_serial": {_fold(value) for value in private.premises.meter_serials},
+        "account": {_fold(value) for value in (*private.accounts.electricity, *private.accounts.gas)},
+    }
+
+    nmis = found["nmi"]
+    for nmi in nmis:
+        if len(nmi) == 11 and _NMI.fullmatch(nmi[:10]) and nmi[10] != str(nmi_checksum(nmi[:10])):
+            raise InvalidInputError(
+                "The file's NMI has a wrong checksum digit.", reason="nmi_checksum", identifier="nmi"
+            )
+    premises_nmi = private.premises.nmi[:10].upper()
+    if any(nmi[:10] != premises_nmi for nmi in nmis):
+        raise ForeignPremisesError("The file belongs to another NMI than the workspace's.", identifier="nmi")
+
+    warnings = [
+        ResultWarning(
+            code=WarningCode.W_UNKNOWN_IDENTIFIER,
+            message=(
+                f"The file holds a {_KIND_LABELS[kind]} that private/config.toml doesn't list, so the denylist "
+                "doesn't cover it yet: add it to private/config.toml and run `energatron denylist`."
+            ),
+            details={"identifier": kind},
+        )
+        for kind in ("meter_serial", "account")
+        if any(value not in known[kind] for value in found[kind])
+    ]
+    if nmis:
+        return warnings
+    if any(value in known[kind] for kind in ("meter_serial", "account") for value in found[kind]):
+        return warnings
+    checkable = [kind for kind in ("meter_serial", "account") if found[kind] and known[kind]]
+    if checkable:
+        raise ForeignPremisesError(
+            f"The file's {_KIND_LABELS[checkable[0]]} doesn't belong to the workspace's premises.",
+            identifier=checkable[0],
+        )
+    warnings.append(
+        ResultWarning(
+            code=WarningCode.W_PREMISES_UNCHECKED,
+            message="Nothing in the file could confirm that it belongs to the workspace's premises.",
+        )
+    )
+    return warnings
+
+
 # Helpers
+
+
+def _mask_run(match: re.Match[str]) -> str:
+    run = match.group()
+    return "<n>" if sum(character.isdigit() for character in run) >= _DIGITS_TO_MASK else run
+
+
+def _fold(value: str) -> str:
+    return value.strip().upper()
 
 
 def _by_length(value: str) -> Match:

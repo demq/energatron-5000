@@ -1,0 +1,14 @@
+{
+  "kind": "region_profile",
+  "name": "sa",
+  "parsers": [
+    "elec_bill",
+    "gas_bill",
+    "offer_cdr",
+    "retailer_txn",
+    "retailer_usage",
+    "sapn_interval",
+    "sapn_summary"
+  ],
+  "schema_version": 1
+}

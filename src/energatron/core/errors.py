@@ -212,6 +212,13 @@ class DenylistStaleError(EnergatronError):
     category = Category.STATE
 
 
+class PipelineNotSyncedError(EnergatronError):
+    """`dvc.yaml`, `params.yaml` or the catalogs don't match the tool; run `energatron pipeline sync` (D3 §10.1)."""
+
+    code = "E_PIPELINE_NOT_SYNCED"
+    category = Category.STATE
+
+
 # privacy (exit 5)
 
 
@@ -289,6 +296,10 @@ class WarningCode(StrEnum):
 
     W_PRIVATE_FIELDS_MISSING = "W_PRIVATE_FIELDS_MISSING"  # optional private fields are absent (D2 §7.2)
     W_BACKUP_DATALESS = "W_BACKUP_DATALESS"  # backed-up files are iCloud placeholders (D2 §8.1)
+    W_FINGERPRINT_METADATA = "W_FINGERPRINT_METADATA"  # only the fingerprint's recording fields differ (D1 §11.3)
+    W_BACKUP_PENDING = "W_BACKUP_PENDING"  # a commit was made that no backup holds yet (D1 §4.4, D3 §11)
+    W_PREMISES_UNCHECKED = "W_PREMISES_UNCHECKED"  # nothing in the file could confirm the premises (D3 §6)
+    W_UNKNOWN_IDENTIFIER = "W_UNKNOWN_IDENTIFIER"  # a meter serial or account not in the private config (D3 §6)
 
 
 class ResultWarning(BaseModel):

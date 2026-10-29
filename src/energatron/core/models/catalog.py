@@ -1,9 +1,10 @@
 """Source types and the raw-zone catalog (D1 §4.1, §4.3; D3 §3.1, §4).
 
 Created in P0 because the `Catalog` and `SourceParser` ports name these models. P1.2.1 completes them:
-`CatalogRecord.from_json_line`, and the rule that `stored_path` equals `WorkspacePaths.blob_key(...)`.
+`CatalogRecord.from_json_line`, `blob_key()` and the rule that `stored_path` equals it.
 """
 
+import json
 from datetime import date, datetime
 from enum import StrEnum, unique
 from typing import Annotated, ClassVar, Final, Literal, Self
@@ -11,8 +12,11 @@ from typing import Annotated, ClassVar, Final, Literal, Self
 from pydantic import AfterValidator, Field, model_validator
 
 from energatron.core.canonical import JSONValue
+from energatron.core.errors import CatalogCorruptError, InvalidInputError
 from energatron.core.ids import dataset_id as make_dataset_id
+from energatron.core.ids import parse_dataset_id
 from energatron.core.models._common import DatasetId, FrozenModel, Sha256Hex, UtcDatetime
+from energatron.core.models.storage import RAW_PREFIX
 from energatron.core.persisted import Persisted
 
 
@@ -41,6 +45,28 @@ type IdentifierKind = Literal["nmi", "meter_serial", "account"]
 
 _EVIDENCE_ORDER: Final[tuple[Evidence, ...]] = ("filename", "content")
 _EXTENSIONS: Final = frozenset({".csv", ".pdf", ".json", ".yaml"})
+
+CATALOG_FILENAME: Final = "_catalog.jsonl"
+"""Each source's catalog file, in its raw directory (D3 §3.2)."""
+
+
+def raw_key(source: SourceType) -> str:
+    """The key prefix of a source's raw directory, `data/raw/<source>/` (D3 §3.2)."""
+    return f"{RAW_PREFIX}{SourceType(source).value}/"
+
+
+def blob_key(source: SourceType, dataset_id: str, ext: str) -> str:
+    """Where a dataset's file is stored: `data/raw/<source>/<YYYY>/<dataset_id><ext>` (D3 §3.2).
+
+    `<YYYY>` is the first four characters of the ID's timestamp, so an aware `source_ts` files under its UTC year.
+    Raises `ValueError` for an extension other than `.csv .pdf .json .yaml`, an invalid ID, or an ID of another
+    source.
+    """
+    _extension(ext)
+    parts = parse_dataset_id(dataset_id)
+    if parts.source != SourceType(source).value:
+        raise ValueError("the dataset ID belongs to another source")
+    return f"{raw_key(source)}{parts.source_ts.year:04d}/{dataset_id}{ext}"
 
 
 def _detection_evidence(evidence: tuple[str, ...]) -> tuple[str, ...]:
@@ -130,7 +156,7 @@ class CatalogRecord(Persisted):
     source: SourceType
     sha256: Sha256Hex
     bytes: int = Field(gt=0)
-    stored_path: str = Field(min_length=1)  # P1.2.1: equals blob_key(source, dataset_id, ext)
+    stored_path: str = Field(min_length=1)  # equals blob_key(source, dataset_id, ext)
     original_filename: Annotated[str, AfterValidator(_base_name)] = Field(min_length=1, max_length=255, repr=False)
     landed_at: UtcDatetime
     file_mtime: UtcDatetime | None
@@ -147,4 +173,46 @@ class CatalogRecord(Persisted):
             raise ValueError("dataset_id doesn't match source, source_ts and sha256")
         if self.detector.name != self.source:
             raise ValueError("detector.name doesn't match source")
+        if self.stored_path not in {blob_key(self.source, self.dataset_id, ext) for ext in _EXTENSIONS}:
+            raise ValueError("stored_path isn't the blob key for source, dataset_id and a known extension")
         return self
+
+    @classmethod
+    def from_json_line(cls, line: str | bytes, *, number: int | None = None) -> Self:
+        """Parse, upgrade and validate one catalog line (D3 §4.1). Surrounding whitespace, such as the trailing
+        newline, is allowed.
+
+        Invalid JSON, anything but one JSON object, NaN, a repeated key or a failed validation raises
+        `E_CATALOG_CORRUPT` with `details.line` (`number`, the 1-based line number, when the caller knows it) and,
+        for a failed validation, the fields and rules; never the line's text. A line from a newer energatron
+        raises `E_SCHEMA_TOO_NEW`.
+        """
+        try:
+            text = line.decode("utf-8") if isinstance(line, bytes) else line
+            doc = json.loads(text, object_pairs_hook=_unique_keys, parse_constant=_no_constant)
+        except ValueError:  # UnicodeDecodeError and JSONDecodeError are ValueErrors
+            raise CatalogCorruptError(
+                "A catalog line isn't one valid JSON object.", line=number, reason="invalid_json"
+            ) from None
+        if not isinstance(doc, dict):
+            raise CatalogCorruptError("A catalog line isn't a JSON object.", line=number, reason="not_an_object")
+        try:
+            return cls.from_document(doc)
+        except InvalidInputError as error:
+            raise CatalogCorruptError(
+                f"A catalog line is invalid: {error.message}",
+                line=number,
+                reason="invalid_record",
+                errors=error.details.get("errors"),
+            ) from None
+
+
+def _unique_keys(pairs: list[tuple[str, JSONValue]]) -> dict[str, JSONValue]:
+    doc = dict(pairs)
+    if len(doc) != len(pairs):
+        raise ValueError("repeated key")
+    return doc
+
+
+def _no_constant(_name: str) -> JSONValue:
+    raise ValueError("NaN and infinities aren't JSON")

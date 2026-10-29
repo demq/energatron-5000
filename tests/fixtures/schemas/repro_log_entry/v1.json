@@ -1,0 +1,7 @@
+{
+  "event": "end",
+  "exit_code": 0,
+  "kind": "repro_log_entry",
+  "schema_version": 1,
+  "stage": "catalog_index"
+}

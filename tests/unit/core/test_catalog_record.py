@@ -1,0 +1,243 @@
+"""Catalog lines and the raw-zone layout (D1 §4.1, §4.2; D3 §3.2, §4.1). Synthetic values only."""
+
+import json
+from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
+
+import pytest
+
+from energatron.core.canonical import JSONValue, canonical_json, sha256_hex
+from energatron.core.errors import CatalogCorruptError, Category, InternalError, InvalidInputError, SchemaTooNewError
+from energatron.core.ids import dataset_id
+from energatron.core.models.catalog import CatalogRecord, SourceType, blob_key
+from energatron.core.models.storage import StoredBlob, check_blob_key
+from energatron.core.models.workspace import WorkspacePaths
+
+DIGEST = sha256_hex(b"synthetic")
+SOURCE_TS = datetime(2026, 10, 23, 10, 3, 45)
+DATASET = dataset_id("sapn_interval", SOURCE_TS, DIGEST)
+FILENAME = "synthetic_interval_file.csv"
+ROOT = Path("/scratch/workspace")
+
+
+def record_doc(**changes: JSONValue) -> dict[str, JSONValue]:
+    doc: dict[str, JSONValue] = {
+        "kind": "catalog_record",
+        "schema_version": 1,
+        "dataset_id": DATASET,
+        "source": "sapn_interval",
+        "sha256": DIGEST,
+        "bytes": 1234,
+        "stored_path": f"data/raw/sapn_interval/2026/{DATASET}.csv",
+        "original_filename": FILENAME,
+        "landed_at": "2026-10-23T00:32:10Z",
+        "file_mtime": None,
+        "source_ts": "2026-10-23T10:03:45",
+        "coverage": None,
+        "detector": {"name": "sapn_interval", "version": 1, "evidence": ["filename", "content"]},
+        "extra": {"interval_minutes": 5},
+        "supersedes": None,
+        "notes": "",
+    }
+    return doc | changes
+
+
+def line_of(doc: dict[str, JSONValue]) -> bytes:
+    return canonical_json(doc) + b"\n"
+
+
+# The raw-zone layout
+
+
+def test_blob_key_files_a_dataset_under_its_source_and_year() -> None:
+    assert blob_key(SourceType.SAPN_INTERVAL, DATASET, ".csv") == f"data/raw/sapn_interval/2026/{DATASET}.csv"
+
+
+def test_blob_key_takes_the_year_from_the_id_so_an_aware_source_ts_is_in_utc() -> None:
+    # 00:30 on 1 January at +10:30 is still the previous year in UTC, which is what the ID holds.
+    aware = datetime(2027, 1, 1, 0, 30, tzinfo=timezone(timedelta(hours=10, minutes=30)))
+    offer = dataset_id("offer_cdr", aware, DIGEST)
+    assert blob_key(SourceType.OFFER_CDR, offer, ".json") == f"data/raw/offer_cdr/2026/{offer}.json"
+
+
+@pytest.mark.parametrize("ext", [".CSV", "csv", ".txt", ""])
+def test_blob_key_refuses_other_extensions(ext: str) -> None:
+    with pytest.raises(ValueError, match="extension"):
+        blob_key(SourceType.SAPN_INTERVAL, DATASET, ext)
+
+
+def test_blob_key_refuses_an_id_of_another_source_or_no_id() -> None:
+    with pytest.raises(ValueError, match="source"):
+        blob_key(SourceType.SAPN_SUMMARY, DATASET, ".csv")
+    with pytest.raises(ValueError):
+        blob_key(SourceType.SAPN_INTERVAL, "not-an-id", ".csv")
+
+
+def test_workspace_paths_lay_out_the_raw_zone() -> None:
+    paths = WorkspacePaths(root=ROOT)
+    assert paths.raw_dir(SourceType.RETAILER_TXN) == ROOT / "data" / "raw" / "retailer_txn"
+    assert paths.catalog_path(SourceType.RETAILER_TXN) == ROOT / "data" / "raw" / "retailer_txn" / "_catalog.jsonl"
+    assert paths.blob_key(SourceType.SAPN_INTERVAL, DATASET, ".csv") == blob_key(
+        SourceType.SAPN_INTERVAL, DATASET, ".csv"
+    )
+    assert paths.relative(paths.raw_dir(SourceType.SAPN_INTERVAL) / "2026" / f"{DATASET}.csv") == blob_key(
+        SourceType.SAPN_INTERVAL, DATASET, ".csv"
+    )
+
+
+# Blob keys (D1 §4.2)
+
+
+@pytest.mark.parametrize("key", ["data/raw/x/2026/y.csv", "data/raw/sapn_interval/_catalog.jsonl"])
+def test_valid_blob_keys(key: str) -> None:
+    assert check_blob_key(key) == key
+    assert StoredBlob(key=key, sha256=DIGEST, bytes=1).key == key
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "/data/raw/x/y.csv",
+        "data/raw/../x/y.csv",
+        "data/raw/x\\y.csv",
+        "data/staged/x/y.csv",
+        "data/raw/",
+        "data/raw/x/",
+        "data/raw//y.csv",
+        "data/raw/./y.csv",
+        "",
+    ],
+)
+def test_invalid_blob_keys_are_programming_errors(key: str) -> None:
+    with pytest.raises(InternalError):
+        check_blob_key(key)
+    with pytest.raises(ValueError):
+        StoredBlob(key=key, sha256=DIGEST, bytes=1)
+
+
+def test_a_key_prefix_ends_with_a_slash() -> None:
+    assert check_blob_key("data/raw/sapn_interval/", prefix=True) == "data/raw/sapn_interval/"
+    assert check_blob_key("data/raw/", prefix=True) == "data/raw/"
+    for bad in ("data/raw/sapn_interval", "data/raw/../", "/data/raw/x/", "data/raw//"):
+        with pytest.raises(InternalError):
+            check_blob_key(bad, prefix=True)
+
+
+# stored_path
+
+
+@pytest.mark.parametrize(
+    "stored_path",
+    [
+        f"data/raw/sapn_interval/2025/{DATASET}.csv",
+        f"data/raw/sapn_summary/2026/{DATASET}.csv",
+        f"data/raw/sapn_interval/2026/{DATASET}.txt",
+        f"data/raw/sapn_interval/2026/{DATASET}.CSV",
+        f"data/raw/sapn_interval/{DATASET}.csv",
+        "data/raw/sapn_interval/2026/other.csv",
+    ],
+    ids=["wrong-year", "wrong-source-dir", "other-extension", "upper-case-extension", "no-year", "other-name"],
+)
+def test_stored_path_must_be_the_blob_key(stored_path: str) -> None:
+    with pytest.raises(InvalidInputError):
+        CatalogRecord.from_document(record_doc(stored_path=stored_path))
+
+
+@pytest.mark.parametrize("ext", [".csv", ".pdf", ".json", ".yaml"])
+def test_stored_path_takes_any_of_the_four_extensions(ext: str) -> None:
+    record = CatalogRecord.from_document(record_doc(stored_path=f"data/raw/sapn_interval/2026/{DATASET}{ext}"))
+    assert record.stored_path.endswith(ext)
+
+
+# from_json_line
+
+
+def test_a_written_line_reads_back_as_the_same_record() -> None:
+    record = CatalogRecord.from_document(record_doc())
+    line = canonical_json(record.model_dump(mode="json")) + b"\n"
+    assert CatalogRecord.from_json_line(line) == record
+    assert CatalogRecord.from_json_line(line.decode()) == record
+    assert CatalogRecord.from_json_line(line.rstrip(b"\n")) == record
+
+
+def test_an_aware_source_ts_keeps_its_offset() -> None:
+    aware = datetime(2026, 10, 23, 10, 3, 45, tzinfo=UTC)
+    offer = dataset_id("offer_cdr", aware, DIGEST)
+    doc = record_doc(
+        dataset_id=offer,
+        source="offer_cdr",
+        stored_path=f"data/raw/offer_cdr/2026/{offer}.json",
+        source_ts="2026-10-23T10:03:45Z",
+        detector={"name": "offer_cdr", "version": 1, "evidence": ["content"]},
+    )
+    record = CatalogRecord.from_json_line(line_of(doc))
+    assert record.source_ts == aware
+    assert record.source_ts.tzinfo is not None
+
+
+def corrupt(line: bytes | str, number: int | None = 7) -> CatalogCorruptError:
+    with pytest.raises(CatalogCorruptError) as caught:
+        CatalogRecord.from_json_line(line, number=number)
+    return caught.value
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        b"{not json",
+        b"",
+        b"\n",
+        b"[]",
+        b'"text"',
+        b"\xff\xfe",
+        b'{"a": 1}\n{"b": 2}\n',
+        line_of(record_doc(kind="workspace_config")),
+        line_of(record_doc(bytes=0)),
+        line_of(record_doc(schema_version=0)),
+        line_of(record_doc(unknown_field=1)),
+    ],
+    ids=[
+        "not-json",
+        "empty",
+        "blank",
+        "array",
+        "string",
+        "not-utf8",
+        "two-lines",
+        "other-kind",
+        "invalid-field",
+        "bad-version",
+        "unknown-field",
+    ],
+)
+def test_a_bad_line_is_a_corrupt_catalog_with_its_number(line: bytes) -> None:
+    error = corrupt(line)
+    assert error.category is Category.STATE
+    assert error.details["line"] == 7
+
+
+def test_nan_and_duplicate_keys_are_refused() -> None:
+    nan_line = line_of(record_doc()).replace(b'"bytes":1234', b'"bytes":NaN')
+    assert corrupt(nan_line).details["line"] == 7
+    duplicate = line_of(record_doc()).replace(b'"bytes":1234', b'"bytes":1234,"bytes":99')
+    assert corrupt(duplicate).details["line"] == 7
+
+
+def test_a_corrupt_line_never_repeats_its_text() -> None:
+    doc = record_doc(bytes=0, notes="synthetic private note")
+    error = corrupt(line_of(doc))
+    shown = f"{error.message} {json.dumps(error.details)} {error!r}"
+    assert FILENAME not in shown
+    assert "synthetic private note" not in shown
+    assert "bytes" in shown  # the field and the rule are named
+    bad_json = corrupt(f'{{"original_filename": "{FILENAME}"'.encode())
+    assert FILENAME not in f"{bad_json.message} {json.dumps(bad_json.details)}"
+
+
+def test_the_line_number_is_null_when_unknown() -> None:
+    assert corrupt(b"{", number=None).details["line"] is None
+
+
+def test_a_line_from_a_newer_energatron_says_so() -> None:
+    with pytest.raises(SchemaTooNewError):
+        CatalogRecord.from_json_line(line_of(record_doc(schema_version=2)))

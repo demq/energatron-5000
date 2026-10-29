@@ -1,22 +1,21 @@
 """Where a workspace keeps its files (`WorkspacePaths`) and its two config kinds (D1 §4.8; D2 §6.1, §6.2)."""
 
-import re
 from pathlib import Path
-from typing import Annotated, ClassVar, Literal
+from typing import ClassVar, Literal
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from energatron.core.models._common import FrozenModel
+from energatron.core.models._common import FrozenModel, RegionName
+from energatron.core.models.catalog import CATALOG_FILENAME, SourceType
+from energatron.core.models.catalog import blob_key as _blob_key
+from energatron.core.models.storage import RAW_PREFIX
 from energatron.core.persisted import Persisted
-
-_REGION = re.compile(r"[a-z][a-z0-9_]*")
 
 
 class WorkspacePaths(BaseModel):
     """The absolute workspace root for this run, and the paths under it. Never persisted (D1 §4.8).
 
-    Building a path reads nothing: whether a file exists is the caller's question. P1 adds the raw-zone layout
-    (D3 §3.2).
+    Building a path reads nothing: whether a file exists is the caller's question. The raw-zone layout is D3 §3.2's.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True)
@@ -78,6 +77,24 @@ class WorkspacePaths(BaseModel):
         """`private/denylist.txt`: optional and hand-written (D2 §7.2)."""
         return self.private_dir / "denylist.txt"
 
+    @property
+    def raw_root(self) -> Path:
+        """`data/raw/`: the raw zone, one directory per source (D3 §3.2)."""
+        return self.root / RAW_PREFIX.rstrip("/")
+
+    def raw_dir(self, source: SourceType) -> Path:
+        """`data/raw/<source>/`: the source's catalog and its stored files."""
+        return self.raw_root / SourceType(source).value
+
+    def catalog_path(self, source: SourceType) -> Path:
+        """`data/raw/<source>/_catalog.jsonl` (D1 §4.1)."""
+        return self.raw_dir(source) / CATALOG_FILENAME
+
+    @staticmethod
+    def blob_key(source: SourceType, dataset_id: str, ext: str) -> str:
+        """The key a dataset is stored under, `data/raw/<source>/<YYYY>/<dataset_id><ext>` (D3 §3.2)."""
+        return _blob_key(source, dataset_id, ext)
+
     def relative(self, path: Path) -> str:
         """`path` as a workspace-relative POSIX path, the only form output and persisted files use (D1 §12).
 
@@ -86,12 +103,6 @@ class WorkspacePaths(BaseModel):
         if not path.is_absolute() or ".." in path.parts or not path.is_relative_to(self.root):
             raise ValueError("expected an absolute path inside the workspace")
         return path.relative_to(self.root).as_posix()
-
-
-def _region(value: str) -> str:
-    if _REGION.fullmatch(value) is None:
-        raise ValueError("a region is a profile name in snake_case, such as sa")
-    return value
 
 
 class BackupPolicy(FrozenModel):
@@ -109,7 +120,7 @@ class WorkspaceConfig(Persisted):
     kind: Literal["workspace_config"] = "workspace_config"
     schema_version: Literal[1] = 1
 
-    region: Annotated[str, AfterValidator(_region)]  # a region profile name; P1 checks that the profile exists
+    region: RegionName  # a region profile name; P1 checks that the profile exists
     backup: BackupPolicy = Field(default_factory=BackupPolicy)
 
 

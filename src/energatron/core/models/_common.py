@@ -24,6 +24,8 @@ class FrozenModel(BaseModel):
 
 _SHA256 = re.compile(r"[0-9a-f]{64}")
 _COMMIT_SHA = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")  # SHA-1 or SHA-256 object names (D1 §4.4)
+_STAGE_NAME = re.compile(r"[a-z][a-z0-9_]*")
+_REGION = re.compile(r"[a-z][a-z0-9_]*")
 _BUNDLE_NAME = re.compile(r"[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7}\.bundle")  # D2 §8.2
 
 
@@ -42,6 +44,24 @@ def _commit_sha(value: str) -> str:
 def _bundle_name(value: str) -> str:
     if _BUNDLE_NAME.fullmatch(value) is None:
         raise ValueError("expected a bundle file name such as 20261023T093000Z-1a2b3c4.bundle")
+    return value
+
+
+def _stage_name(value: str) -> str:
+    if _STAGE_NAME.fullmatch(value) is None:
+        raise ValueError("a stage name is snake_case, such as catalog_index")
+    return value
+
+
+def _region(value: str) -> str:
+    if _REGION.fullmatch(value) is None:
+        raise ValueError("a region is a profile name in snake_case, such as sa")
+    return value
+
+
+def _relative_posix(value: str) -> str:
+    if not value or value.startswith("/") or "\\" in value or any(part in ("", ".", "..") for part in value.split("/")):
+        raise ValueError("expected a relative POSIX path with no empty, . or .. component")
     return value
 
 
@@ -70,3 +90,12 @@ UtcDatetime = Annotated[AwareDatetime, AfterValidator(_utc)]
 
 DatasetId = Annotated[str, AfterValidator(_dataset_id)]
 """A dataset ID (D1 §6.3)."""
+
+StageName = Annotated[str, AfterValidator(_stage_name)]
+"""A pipeline stage's name, snake_case (D1 §9.2)."""
+
+RegionName = Annotated[str, AfterValidator(_region)]
+"""A region profile's name, snake_case, such as `sa` (D2 §6.1, D3 §10.3)."""
+
+RelativePosixPath = Annotated[str, AfterValidator(_relative_posix)]
+"""A relative POSIX path: no leading `/`, no backslash, no empty, `.` or `..` component (D1 §12)."""
