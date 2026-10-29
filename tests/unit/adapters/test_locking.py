@@ -1,8 +1,8 @@
 """The workspace lock across processes (D1 §8.8; D2 §5.9, §14).
 
-Another process holds `.energatron/lock` through `workspace_lock()`. `denylist`, `backup` and `fingerprint` (their dry
-runs and `denylist --check` included) fail with `E_LOCKED` and change nothing; `backup --status`, `fingerprint --check`,
-`stage` and `version` still run.
+Another process holds `.energatron/lock` through `workspace_lock()`. `denylist`, `backup`, `fingerprint`,
+`pipeline sync` and `verify` (their dry runs and `denylist --check` included) fail with `E_LOCKED` and change nothing;
+`backup --status`, `fingerprint --check`, `pipeline sync --check`, `stage` and `version` still run.
 """
 
 import subprocess
@@ -62,6 +62,9 @@ def held_by_another_process(paths: WorkspacePaths) -> Iterator[None]:
         ("backup", "--dry-run"),
         ("fingerprint",),
         ("fingerprint", "--dry-run"),
+        ("pipeline", "sync"),
+        ("pipeline", "sync", "--dry-run"),
+        ("verify",),
     ],
 )
 def test_a_locking_command_fails_while_another_process_holds_the_lock(
@@ -76,6 +79,8 @@ def test_a_locking_command_fails_while_another_process_holds_the_lock(
     assert envelope["error"]["category"] == "state"
     assert not paths.denylist_generated.exists()
     assert not (paths.root / CODE_FINGERPRINT_PATH).exists()
+    assert not (paths.root / "dvc.yaml").exists()
+    assert not (paths.root / "data").exists()
     assert fake_vcs.tracked == []
     assert fake_vcs.backups == 0
 
@@ -121,3 +126,16 @@ def test_stage_runs_while_another_process_holds_the_lock(
     assert ran.code == 0, ran.out
     assert ran.envelope()["data"]["kind"] == "stage_result"
     assert emitted.code == 0
+
+
+def test_pipeline_sync_check_runs_while_another_process_holds_the_lock(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState
+) -> None:
+    """As it does inside `land`'s commit hook, while `land` holds the lock (D3 §10.1, §13)."""
+    paths = make_workspace(tmp_path)
+    workspace = ("--workspace", str(paths.root))
+    assert run_cli(capsys, "pipeline", "sync", "--json", *workspace).code == 0
+    with held_by_another_process(paths):
+        ran = run_cli(capsys, "pipeline", "sync", "--check", "--json", *workspace)
+    assert ran.code == 0, ran.out
+    assert ran.envelope()["data"]["kind"] == "pipeline_sync_result"

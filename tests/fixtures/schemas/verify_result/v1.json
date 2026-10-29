@@ -1,0 +1,8 @@
+{
+  "datasets": 2,
+  "kind": "verify_result",
+  "schema_version": 1,
+  "stages": [
+    "catalog_index"
+  ]
+}

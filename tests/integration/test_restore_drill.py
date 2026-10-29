@@ -172,7 +172,7 @@ def test_passes_on_a_fresh_backup(drill: Drill, tmp_path: Path) -> None:
     assert sorted(steps) == list(range(1, 13))
     assert steps[4] == "SKIP"  # no code_fingerprint.json before P1
     assert steps[7] == "SKIP"  # no dvc.yaml before P1
-    assert steps[9] == "SKIP"  # `energatron verify` doesn't exist yet (P1.3.4)
+    assert steps[9] == "SKIP"  # no pipeline files before P1: nothing to verify
     assert {steps[n] for n in (1, 2, 3, 5, 6, 8, 10, 11, 12)} == {"PASS"}
     assert summary["counts"]["bundles"] == 1
     assert summary["counts"]["dataless_files"] == 0
@@ -226,6 +226,23 @@ def test_fails_at_step_8_after_a_commit_that_was_not_backed_up(drill: Drill) -> 
     assert steps[8] == "FAIL"
     assert [n for n, status in steps.items() if status == "FAIL"] == [8]
     assert summary["ok"] is False
+
+
+def test_step_9_runs_verify_when_a_p1_clone_has_lost_its_dvc_yaml(drill: Drill) -> None:
+    """A clone with a raw zone but no `dvc.yaml` isn't a pre-P1 workspace: step 9 runs `verify`, which fails."""
+    drill.scratch.write("data/raw/sapn_interval/_catalog.jsonl", "")
+    drill.scratch.vcs().track(["data/raw/sapn_interval"])
+    drill.scratch.commit_all("a raw zone without dvc.yaml")
+    drill.scratch.clock.advance(minutes=1)  # so this bundle is the newest by name
+    drill.scratch.vcs().backup()
+    code, out = drill.run("--json")
+    assert code == 1, out
+    steps = {step["step"]: step for step in json.loads(out)["steps"]}
+    assert steps[7]["status"] == "SKIP"  # `dvc repro` needs a dvc.yaml
+    assert steps[9]["status"] == "FAIL"
+    assert steps[9]["detail"].startswith("`energatron verify` failed (E_")  # it ran, and found nothing to verify
+    assert [n for n, step in steps.items() if step["status"] == "FAIL"] == [9]
+    assert any(args[-2:] == ["verify", "--json"] for _cwd, args in drill.uv_calls())
 
 
 def test_setup_error_without_local_config_exits_2(drill: Drill) -> None:

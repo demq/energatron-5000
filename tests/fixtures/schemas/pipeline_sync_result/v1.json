@@ -1,0 +1,17 @@
+{
+  "catalogs_created": [
+    "gas_bill_record",
+    "offer_manual"
+  ],
+  "dry_run": false,
+  "dvc_yaml_written": true,
+  "kind": "pipeline_sync_result",
+  "params_rewritten": false,
+  "params_written": true,
+  "pointer_files": [
+    "data/raw/gas_bill_record.dvc",
+    "data/raw/offer_manual.dvc",
+    "data/raw/.gitignore"
+  ],
+  "schema_version": 1
+}

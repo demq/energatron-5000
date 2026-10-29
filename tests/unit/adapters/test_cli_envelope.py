@@ -335,6 +335,22 @@ def test_json_after_a_double_dash_does_not_count(capsys: pytest.CaptureFixture[s
     assert "E_USAGE" in ran.err
 
 
+def test_a_bare_command_group_is_only_a_usage_error(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`energatron pipeline` with no subcommand prints no help: an error only, as the top-level app does."""
+    ran = run_cli(capsys, "pipeline")
+    assert ran.code == 2
+    assert ran.out == ""
+    assert ran.err.startswith("energatron: error E_USAGE: ")
+    monkeypatch.setenv("ENERGATRON_JSON", "1")
+    ran = run_cli(capsys, "pipeline")
+    assert ran.code == 2
+    envelope = ran.envelope()
+    assert envelope["command"] == "pipeline"
+    assert_failure(envelope, "E_USAGE", 2)
+
+
 def test_argument_errors_in_human_mode_go_to_stderr(capsys: pytest.CaptureFixture[str]) -> None:
     ran = run_cli(capsys, "backup", "--nope")
     assert ran.code == 2

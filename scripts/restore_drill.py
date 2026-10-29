@@ -18,7 +18,7 @@ Steps:
    6 data          `dvc pull` (with the remote's `verify` on); `dvc status` and `dvc status --cloud` both `{}`
    7 pipeline      `dvc repro`, then a clean `git status` (only with a `dvc.yaml`, P1 on)
    8 bundle        the clone's HEAD is the live workspace's HEAD
-   9 verify        `energatron verify` (SKIP until the command exists, P1.3.4)
+   9 verify        `energatron verify` (P1 on: SKIP only with no `dvc.yaml`, fingerprint file or `data/raw/`)
   10 privacy       `privacy_guard.py --mode workspace --tracked` on the clone, with the clone's `private/`
   11 dataless      no file under the bundle folder or the remote is only in the cloud
   12 clean-up      delete the scratch folder, unless --keep
@@ -304,6 +304,10 @@ class Drill:
             self.record(8, "PASS", "the clone's HEAD is the live HEAD")
 
     def verify(self, clone: Path) -> None:
+        p1_files = ("dvc.yaml", ".energatron/code_fingerprint.json", "data/raw")
+        if not any(os.path.lexists(os.path.join(str(clone), name)) for name in p1_files):
+            self.record(9, "SKIP", "no pipeline files (before P1)")
+            return
         done = self.run(clone, "uv", "run", "--locked", "energatron", "verify", "--json")
         try:
             envelope = json.loads(done.stdout)
