@@ -97,12 +97,15 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.4.2
-- Last commit: energatron-5000 `P1.4.2: add the land service and energatron land`; demq-elektric no change
-- Checks: `ruff check` passed; `ruff format --check` 153 files formatted; `pyright` 0 errors; `lint-imports` 5
-  kept; `pytest -q` 1540 passed; `pre-commit run --files` passed; privacy scan 0 violations
+- Last done: P1.4.3
+- Last commit: demq-elektric `P1.4.3: set up the P1 pipeline in the workspace`; energatron-5000 `P1.4.3: record
+  the workspace P1 pipeline set-up`
+- Checks: `pipeline sync --check` and `fingerprint --check` exit 0; `dvc status` up to date; workspace
+  `pre-commit run --files` passed (privacy guard, pipeline-sync, agent links); tool repo `ruff check` passed,
+  `ruff format --check` 153 files, `pyright` 0 errors, `lint-imports` 5 kept, `pytest -q` 1540 passed,
+  `pre-commit run --files TASKS.md` passed; privacy scan 0 violations
 - Review: none
-- Next: P1.4.3
+- Next: P1.4.4
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,23 +113,22 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
   list below.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
-- P1.1–P1.3 ✅; P1.4.1 ✅ (parser, registry, `regions/sa.yaml`); P1.4.2 ✅ (2026-10-30): `services/land.py`,
-  `energatron land`, `land_result`/`land_pending` v1, `CommandOutput.error`.
+- P1.1–P1.3 ✅; P1.4.1–P1.4.3 ✅. P1.4.3 (2026-10-30) committed the workspace P1 set-up (D3 §15 step 1):
+  `dvc.yaml`, `params.yaml`, 10 empty catalogs and their `data/raw/*.dvc`, the fingerprint, `dvc.lock`
+  (`catalog_index` 0 rows), the `pipeline-sync` hook and the `CLAUDE.md` Commands.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3.
 
-**Read first** (for P1.4.3, a workspace sub-task in `demq-elektric/`)
-- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §10.1 (incl. the `pipeline-sync` hook YAML),
-  §15 step 1, §17; D2 §11.3 (workspace `.pre-commit-config.yaml`); D2 §10.1 (workspace `CLAUDE.md` Commands).
-- `demq-elektric/CLAUDE.md` and its `.pre-commit-config.yaml`.
+**Read first** (for P1.4.4, a workspace sub-task in `demq-elektric/`)
+- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §15 step 2 (and step 6 for the pipeline
+  run), §7 (`land` preconditions, plan, commit), §1 (the facts, by structure only).
+- `demq-elektric/CLAUDE.md` (Commands now list `land` and `pipeline sync`).
 
 **Facts**
-- Steps: `uv run energatron pipeline sync`, then `uv run energatron fingerprint`, then `dvc repro`
-  (`catalog_index`: 0 rows, every check passes). Add the `pipeline-sync` hook before `agent-links`; add
-  `land` and `pipeline sync` to the workspace `CLAUDE.md`'s Commands.
-- The tool's `src/energatron/` is committed (P1.4.2), so `fingerprint` should record `tool_dirty: false`.
-- `land` (P1.4.4) needs these files committed (D3 §7.1 step 4): P1.4.3's `/done` commits them as one workspace
-  commit; then `backup --status --json` for the pending-backup line.
-- Workspace HEAD: `P0: bootstrap demq-elektric workspace`, tree clean before P1.4.3.
+- Steps: `uv run energatron land data/landing/ --json` → 2 `landed`, exit 0, one commit (`land`'s own, not
+  an agent commit); then `uv run energatron fingerprint` and `uv run dvc repro` → `catalog_index` 2 rows,
+  every check passes; `dvc status` clean. `/done` commits `dvc.lock`.
+- `land`'s precondition (D3 §7.1 step 4) needs the pipeline files and hook committed: done in P1.4.3.
+- Workspace HEAD: `P1.4.3: set up the P1 pipeline in the workspace`; tree clean.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md` for the
   tool repo; the workspace's own hooks run `--mode workspace`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing, GitHub repo, git
@@ -138,12 +140,11 @@ Then clear the context and type `/next`.
 **Watch out**
 - `land` exit codes: a single item's error → that error, `data` null; several items with any rejected →
   `E_PARTIAL` (exit 8) with `data`. A run whose only item is rejected can still make a healing commit.
-- D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone, and empty
-  `<YYYY>/` dirs don't come back in a clone. Per D3 no code change.
-- `pre-commit run --files` skips ruff/import hooks for untracked files; run ruff and lint-imports directly too.
-  In zsh pass file lists as an array, not an unquoted string.
-- pytest takes ~3 minutes. A safety hook holds any command containing `rm`. Never print an identifier or a kWh
-  or $ figure from the owner's files; scans print counts only. Agents never read `demq-elektric/private/`.
+- D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone.
+- `TASKS.md` and workspace notes get counts and pass/fail only; anything mentioning data goes in the
+  workspace's `agent_docs/`. Never print an identifier or a kWh or $ figure; scans print counts only.
+- pytest takes ~3 minutes. A safety hook holds any command containing `rm`. Agents never read
+  `demq-elektric/private/`. In zsh pass file lists as an array.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -506,7 +507,7 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Done when: the standard checks pass.
   - Handover: `services/land.py` + `energatron land`, `land_result`/`land_pending` v1, `CommandOutput.error` (exit 8 with data); owner accepted
     extra reasons, `--source` precheck, `E_PARTIAL` details, whole-second times, extra helpers. Watch: a rejected-only run can still commit.
-- ⬜ **P1.4.3** Set up the P1 pipeline in the workspace.
+- ✅ **P1.4.3** Set up the P1 pipeline in the workspace.
   - D3 §15 step 1: `pipeline sync`, `fingerprint`, `dvc repro` (`catalog_index`: 0 rows, every check passes);
     the `pipeline-sync` hook in the workspace's `.pre-commit-config.yaml`, before `agent-links`; `land` and
     `pipeline sync` in the workspace `CLAUDE.md`'s Commands.
@@ -515,6 +516,8 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
     `data/raw/*.dvc`, `data/raw/.gitignore`, `data/marts/.gitignore`, `.pre-commit-config.yaml`, `CLAUDE.md`.
   - Done when: `pipeline sync --check` and `fingerprint --check` pass; `git status` lists exactly those files.
   - On /done: commit them as one workspace commit; `land` needs them committed (D3 §7.1 step 4).
+  - Handover: workspace `dvc.yaml`/`params.yaml`/10 empty catalogs + pointers, fingerprint, `catalog_index` 0 rows; `pipeline-sync` hook before
+    `agent-links`, `land`/`pipeline sync` in workspace Commands; owner checked the workspace diff. Watch: `land` now relies on this commit.
 - ⬜ **P1.4.4** Land the two current SAPN files and run the pipeline on them.
   - D3 §15 step 2, then `fingerprint` and `dvc repro`: an extra run, not in D3 §15, to see real data through
     `catalog_index` before building wide.
@@ -605,6 +608,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P1.4.3 · Workspace P1 set-up (D3 §15 step 1): `pipeline sync` (`dvc.yaml`, `params.yaml`, 10 empty catalogs + pointers), `fingerprint` (`tool_dirty: false`), `dvc repro` (`catalog_index` 0 rows, all checks pass), `pipeline-sync` hook before `agent-links`, `land`/`pipeline sync` in workspace Commands; owner checked the workspace diff · demq-elektric `P1.4.3: set up the P1 pipeline in the workspace`; energatron-5000 `P1.4.3: record the workspace P1 pipeline set-up`
 - 2026-10-30 · P1.4.2 · `services/land.py` (`resolve_parser`, §7.1 preconditions, plan, write, recovery via `land_pending`), `energatron land`, `land_result`/`land_pending` v1, `CommandOutput.error` (1540 tests); review nits 1–2 fixed; owner accepted deviations (extra rejection reasons, `--source` precheck → `E_USAGE`, `E_PARTIAL` details, whole-second timestamps, extra helpers, `CommandOutput.error`) · energatron-5000 `P1.4.2: add the land service and energatron land`
 - 2026-10-30 · P1.4.1 · `make_nem12.py` NEM12 generator (+ `nem12_header_dt`), `SapnIntervalParser` (`detect`, `inspect` in §5.2's order, `SourceInfo`), `PARSERS`/`parsers_for`, `regions/sa.yaml` loaded in `build_context()` (1460 tests); review finding 1 and nits 2–4 fixed; owner accepted deviations (extra reason words, `no_data`, `nem12_header_dt`, package marker) · energatron-5000 `P1.4.1: add the NEM12 fixture generator and the sapn_interval parser`
 - 2026-10-30 · P1.3.4 · `pipeline sync [--check] [--dry-run]` (`services/pipeline_sync.py`), `verify` (fingerprint, DVC status, blob re-hash, stage reruns), `pipeline_sync_result`/`verify_result` v1, restore drill step 9 runs `verify` on P1 clones (1364 tests); review nits 1–3 fixed; owner accepted deviations 1–3 · energatron-5000 `P1.3.4: add energatron pipeline sync and energatron verify`
