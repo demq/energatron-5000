@@ -9,7 +9,7 @@ import pytest
 from energatron.core.canonical import JSONValue, canonical_json, sha256_hex
 from energatron.core.errors import CatalogCorruptError, Category, InternalError, InvalidInputError, SchemaTooNewError
 from energatron.core.ids import dataset_id
-from energatron.core.models.catalog import CatalogRecord, SourceType, blob_key
+from energatron.core.models.catalog import CatalogRecord, SourceType, blob_key, parse_catalog
 from energatron.core.models.storage import StoredBlob, check_blob_key
 from energatron.core.models.workspace import WorkspacePaths
 
@@ -241,3 +241,52 @@ def test_the_line_number_is_null_when_unknown() -> None:
 def test_a_line_from_a_newer_energatron_says_so() -> None:
     with pytest.raises(SchemaTooNewError):
         CatalogRecord.from_json_line(line_of(record_doc(schema_version=2)))
+
+
+# Whole catalog files (`parse_catalog`): the rules every reader shares, the adapter and stage code alike
+
+
+def other_doc(payload: bytes) -> dict[str, JSONValue]:
+    digest = sha256_hex(payload)
+    ident = dataset_id("sapn_interval", SOURCE_TS, digest)
+    return record_doc(dataset_id=ident, sha256=digest, stored_path=f"data/raw/sapn_interval/2026/{ident}.csv")
+
+
+def test_parse_catalog_reads_every_line_in_order() -> None:
+    first, second = record_doc(), other_doc(b"second")
+    records = parse_catalog(line_of(first) + line_of(second), SourceType.SAPN_INTERVAL)
+    assert [record.dataset_id for record in records] == [first["dataset_id"], second["dataset_id"]]
+
+
+def test_parse_catalog_of_an_empty_file_is_empty() -> None:
+    assert parse_catalog(b"", SourceType.SAPN_INTERVAL) == []
+
+
+@pytest.mark.parametrize(
+    ("content", "line", "reason"),
+    [
+        (line_of(record_doc()).rstrip(b"\n"), 1, "unterminated"),
+        (line_of(record_doc()) + line_of(other_doc(b"x")).rstrip(b"\n"), 2, "unterminated"),
+        (line_of(record_doc()).replace(b"\n", b"\r\n"), 1, "crlf"),
+        (line_of(record_doc()) + b"\n", 2, "invalid_json"),
+        (line_of(record_doc()) + b"not json\n", 2, "invalid_json"),
+    ],
+    ids=["one-unterminated", "last-unterminated", "crlf", "blank-line", "bad-line"],
+)
+def test_parse_catalog_refuses_a_malformed_file_naming_source_and_line(content: bytes, line: int, reason: str) -> None:
+    with pytest.raises(CatalogCorruptError) as caught:
+        parse_catalog(content, SourceType.SAPN_INTERVAL)
+    assert caught.value.details["source"] == "sapn_interval"
+    assert caught.value.details["line"] == line
+    assert caught.value.details["reason"] == reason
+
+
+def test_parse_catalog_refuses_a_record_of_another_source() -> None:
+    with pytest.raises(CatalogCorruptError) as caught:
+        parse_catalog(line_of(record_doc()), SourceType.SAPN_SUMMARY)
+    assert caught.value.details == {"source": "sapn_summary", "line": 1, "reason": "wrong_source"}
+
+
+def test_parse_catalog_passes_a_newer_version_on_as_schema_too_new() -> None:
+    with pytest.raises(SchemaTooNewError):
+        parse_catalog(line_of(record_doc(schema_version=2)), SourceType.SAPN_INTERVAL)

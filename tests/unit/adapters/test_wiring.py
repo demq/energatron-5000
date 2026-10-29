@@ -7,8 +7,11 @@ from typing import Any
 import pytest
 
 from energatron.adapters import wiring
+from energatron.adapters.storage.fs_blobs import FsBlobStore
+from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
 from energatron.core.errors import BackupNotConfiguredError, InternalError
+from energatron.core.models.catalog import SourceType
 from energatron.core.models.workspace import BackupPolicy
 from tests.unit.adapters._workspace import local_toml, make_workspace, write
 
@@ -73,33 +76,27 @@ def test_a_bad_bundle_folder_still_builds_the_context(tmp_path: Path, value: str
         ctx.vcs.backup()
 
 
-def test_the_p1_ports_are_placeholders_that_raise_internal(tmp_path: Path) -> None:
+def test_the_raw_zone_ports_are_the_file_adapters_on_the_workspace(tmp_path: Path) -> None:
+    paths = make_workspace(tmp_path)
+    ctx = wiring.build_context(paths)
+    assert isinstance(ctx.catalog, JsonlCatalog)
+    assert isinstance(ctx.blobs, FsBlobStore)
+    assert list(ctx.catalog.records()) == []
+    assert ctx.blobs.keys("data/raw/") == []
+    assert ctx.catalog.initialise(SourceType.SAPN_INTERVAL) is True
+    assert paths.catalog_path(SourceType.SAPN_INTERVAL).is_file()
+
+
+def test_only_the_runner_is_still_a_placeholder_that_raises_internal(tmp_path: Path) -> None:
+    """The `runner` placeholder stays until P1.3.3, which asserts that none is left (D2 §5.9)."""
     ctx = wiring.build_context(make_workspace(tmp_path))
-    calls = {
-        "Catalog": [
-            lambda: ctx.catalog.get("x"),
-            lambda: ctx.catalog.find_sha256("0" * 64),
-            lambda: ctx.catalog.records(),
-            lambda: ctx.catalog.append(None),  # pyright: ignore[reportArgumentType]
-        ],
-        "BlobStore": [
-            lambda: ctx.blobs.put("data/raw/x", b""),
-            lambda: ctx.blobs.get("data/raw/x"),
-            lambda: ctx.blobs.exists("data/raw/x"),
-            lambda: ctx.blobs.stat("data/raw/x"),
-        ],
-        "PipelineRunner": [lambda: ctx.runner.status(), lambda: ctx.runner.repro()],
-    }
-    for port, port_calls in calls.items():
-        for call in port_calls:
-            with pytest.raises(InternalError) as caught:
-                call()
-            assert caught.value.message == f"{port} arrives in P1"
-    assert {type(ctx.catalog).__name__, type(ctx.blobs).__name__, type(ctx.runner).__name__} == {
-        "_NotYetCatalog",
-        "_NotYetBlobStore",
-        "_NotYetPipelineRunner",
-    }
+    for call in (lambda: ctx.runner.status(), lambda: ctx.runner.repro()):
+        with pytest.raises(InternalError) as caught:
+            call()
+        assert caught.value.message == "PipelineRunner arrives in P1"
+    assert type(ctx.runner).__name__ == "_NotYetPipelineRunner"
+    assert not hasattr(wiring, "_NotYetCatalog")
+    assert not hasattr(wiring, "_NotYetBlobStore")
 
 
 def test_the_system_clock_is_aware_utc() -> None:

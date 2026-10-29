@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.2.1
-- Last commit: energatron-5000 `P1.2.1: add P1 core models, codes and privacy helpers`; demq-elektric no change
-- Checks: `ruff check` passed; `ruff format --check` 108 files formatted; `pyright` 0 errors; `lint-imports` 5
-  kept; `pytest -q` 1006 passed; `pre-commit run --files` passed; privacy scan 0 violations
+- Last done: P1.2.2
+- Last commit: energatron-5000 `P1.2.2: add FsBlobStore and JsonlCatalog raw-zone adapters`; demq-elektric no change
+- Checks: `ruff check` passed; `ruff format --check` 112 files formatted; `pyright` 0 errors; `lint-imports` 5
+  kept; `pytest -q` 1088 passed; `pre-commit run --files` passed; privacy scan 0 violations
 - Review: none
-- Next: P1.2.2
+- Next: P1.3.1
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,24 +110,25 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
   list below.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
-- P1.1.1 ✅ (D1 rev 2). P1.2.1 ✅ (2026-10-30): P1 core models, raw-zone keys, P1 codes and warnings,
-  `check_premises`, `mask_filename`, `tests/fixtures/synthetic.py`, golden v1 schemas for five new kinds.
+- P1.1 and P1.2 ✅. P1.2.2 (2026-10-30): `adapters/storage/{fs_blobs,jsonl_catalog}.py`, wired into
+  `build_context()`; ports `BlobStore.keys`, `Catalog.missing_sources`, `Catalog.initialise`; core
+  `parse_catalog`; `services.files.make_dirs`.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3.
 
-**Read first** (for P1.2.2)
-- D1 = `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (rev 2): §4.1, §4.2, §13.
-- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §3.2, §3.4, §13. D2 §5.9.
-- `src/energatron/core/models/{storage,catalog,workspace}.py` and `src/energatron/ports/` (the `BlobStore` and
-  `Catalog` ports), `src/energatron/adapters/wiring.py`.
+**Read first** (for P1.3.1)
+- D1 = `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (rev 2): §9, §10, §13.
+- D3 = `agent_docs/2026-10/2026-10-23_p1-landing-catalog-spec.md`: §9, §10.1, §13.
+- `src/energatron/core/models/{catalog,pipeline,storage,workspace}.py`, `src/energatron/services/files.py`,
+  `src/energatron/adapters/storage/jsonl_catalog.py` (how it calls `parse_catalog`).
 
 **Facts**
-- Raw-zone helpers already exist: `storage.RAW_PREFIX`, `is_blob_key()`, `check_blob_key(key, *, prefix=False)`
-  (→ `E_INTERNAL`), the `BlobKey` type on `StoredBlob.key`; `catalog.blob_key()`, `raw_key()`,
-  `CATALOG_FILENAME`; `WorkspacePaths.raw_root` (built from `RAW_PREFIX`), `raw_dir(source)`,
-  `catalog_path(source)`, `blob_key(...)`. `<YYYY>` comes from the dataset ID's UTC timestamp.
-- `CatalogRecord.from_json_line(line, *, number=None)` raises `E_CATALOG_CORRUPT` with `details.line`,
-  `reason` and no text; a newer version → `E_SCHEMA_TOO_NEW`. `JsonlCatalog` should pass the line number.
-  Surrounding whitespace on a line is accepted (docstring says so).
+- `core.models.catalog.parse_catalog(data, source)` is pure and holds every per-file catalog rule
+  (`E_CATALOG_CORRUPT` with `reason` `unterminated`/`crlf`/`wrong_source`, `details.source`/`line`; versions
+  upgraded in memory). `catalog_index` should call it rather than re-parse.
+- `services.files.make_dirs()` creates missing dirs and `fsync`s each parent; existing atomic-write helpers are
+  in the same module.
+- `FsBlobStore.keys(prefix)` lists the catalog file too and keeps hidden files (except `.DS_Store`), so stray
+  `.tmp` files show up. A symlink at or above a key → `E_CATALOG_CORRUPT` `reason: "symlink"`.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
   Standard checks: D2 §5.4, as the Rules list them. Every model change bumps `schema_version` and adds a
   migration; golden schemas in `tests/fixtures/schemas/`; fixtures come from `tests/fixtures/synthetic.py`.
@@ -139,11 +140,11 @@ Then clear the context and type `/next`.
 
 **Watch out**
 - Tests first: write them, see them fail, implement, see them pass. Layers point down; core does no I/O.
-- `build_context()` keeps the `runner` placeholder until P1.3.3.
-- `check_premises` returns `details.identifier` only; `land` (P1.4.2) adds `position`.
+- `build_context()` keeps the `_NotYetPipelineRunner` placeholder until P1.3.3.
+- Record any file edited outside the sub-task's Files list as a deviation (P1.2.2's review nit).
 - `pre-commit run --files` skips ruff/import hooks for untracked files; run ruff and lint-imports directly too.
-- A safety hook holds any command containing `rm`. Never print an identifier or a kWh or $ figure from the
-  owner's files; scans print counts only. Agents never read `demq-elektric/private/`.
+- pytest takes ~2 minutes. A safety hook holds any command containing `rm`. Never print an identifier or a kWh
+  or $ figure from the owner's files; scans print counts only. Agents never read `demq-elektric/private/`.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -415,7 +416,7 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Handover: D1 rev 2 approved 2026-10-30 (all listed items + review fixes); decision: `verify` in
     `services/verify.py`, `verify_result` v1, missing blob → `E_CATALOG_CORRUPT`. Watch: P1.2.2/P1.3.x build to it.
 
-#### P1.2 Core and raw-zone storage ⬜
+#### P1.2 Core and raw-zone storage ✅
 - ✅ **P1.2.1** P1 core models, codes and privacy helpers.
   - `core/models/catalog.py` (`SourceType`, `PUBLIC_SOURCES`, `CatalogRecord` with `from_json_line`,
     `Coverage`, `Detection`, `SourceInfo`), `storage.py`, `pipeline.py`, `provenance.py`, `Params` v1,
@@ -430,13 +431,15 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
   - Done when: the standard checks pass.
   - Handover: P1 core models (catalog/storage/pipeline/provenance/params/region), raw-zone keys, P1 codes, `check_premises`,
     `mask_filename`, synthetic fixtures. Decision: denylisted NMI masks to `<redacted>` (owner, D3 unchanged). Watch: `land` adds `position`.
-- ⬜ **P1.2.2** Raw-zone storage: `FsBlobStore` and `JsonlCatalog`.
+- ✅ **P1.2.2** Raw-zone storage: `FsBlobStore` and `JsonlCatalog`.
   - Both adapters, with D3 §3.4's methods; `build_context()` uses them (the `runner` placeholder stays until
     P1.3.3).
   - Refs: D1 §4.1, §4.2, §13; D3 §3.2, §3.4, §13; D2 §5.9.
   - Files: `src/energatron/adapters/storage/`, `src/energatron/adapters/wiring.py`,
     `tests/unit/adapters/test_{fs_blobs,jsonl_catalog}.py`.
   - Done when: the standard checks pass.
+  - Handover: `FsBlobStore`/`JsonlCatalog` wired into `build_context()`, ports gain `keys`/`missing_sources`/`initialise`.
+    Decision: per-file catalog rules in pure core `parse_catalog` (owner accepted extra files). Watch: `catalog_index` must reuse it.
 
 #### P1.3 Pipeline machinery ⬜
 - ⬜ **P1.3.1** Stage runner, registry, `catalog_index` and the generated `dvc.yaml`.
@@ -591,6 +594,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P1.2.2 · `FsBlobStore` and `JsonlCatalog` raw-zone adapters wired into `build_context()`, port methods `keys`/`missing_sources`/`initialise`, core `parse_catalog`, `make_dirs` (1088 tests); review findings 1-5 and the nit fixed; owner accepted the deviations incl. the extra core/services files · energatron-5000 `P1.2.2: add FsBlobStore and JsonlCatalog raw-zone adapters`
 - 2026-10-30 · P1.2.1 · P1 core models (catalog record, raw-zone keys, provenance, params, region, repro log), P1 codes, `check_premises`/`mask_filename`, synthetic fixtures, 5 golden schemas (1006 tests); owner accepted deviations 1–3 and `<redacted>` (D3 unchanged); nits 2–3 fixed by the owner · energatron-5000 `P1.2.1: add P1 core models, codes and privacy helpers`
 - 2026-10-30 · P0.5.1 · P0 acceptance: D2 §13 check 2 passed in both repos (4/4 test commits rejected by the expected hook, labels only), `--history` 0 violations, link checks exit 0; owner verified one commit per repo and no scratch file · energatron-5000 `P0.5.1: record P0 acceptance of guard, links and history`
 - 2026-10-30 · P0.4.1 · Tool repo prepared per D2 §5.8 (local identity, `energatron.denylist`, `pre-commit`/`commit-msg` hooks, `link_parent.py --check`), audit of 138 paths 0 violations (owner read the figure counts); Rules now name D2 §5.4's checks · energatron-5000 `P0: bootstrap energatron-5000`

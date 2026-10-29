@@ -24,3 +24,11 @@ class Catalog(Protocol):
     def append(self, record: CatalogRecord) -> None:
         """Raises `E_ID_COLLISION` if the record's `dataset_id` or `sha256` already exists."""
         ...
+
+    def missing_sources(self) -> list[SourceType]:
+        """The sources with no catalog yet, sorted (D3 §3.4)."""
+        ...
+
+    def initialise(self, source: SourceType) -> bool:
+        """Create the source's empty catalog atomically; False, changing nothing, if one exists (D3 §3.4)."""
+        ...

@@ -44,6 +44,12 @@ class FakeCatalog:
     def append(self, record: CatalogRecord) -> None:
         return None
 
+    def missing_sources(self) -> list[SourceType]:
+        return []
+
+    def initialise(self, source: SourceType) -> bool:
+        return False
+
 
 class FakeBlobs:
     def put(self, key: str, data: bytes) -> StoredBlob:
@@ -57,6 +63,9 @@ class FakeBlobs:
 
     def stat(self, key: str) -> StoredBlob:
         raise NotImplementedError
+
+    def keys(self, prefix: str) -> list[str]:
+        return []
 
 
 class FakeParser:

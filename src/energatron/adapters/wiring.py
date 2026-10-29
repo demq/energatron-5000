@@ -1,14 +1,16 @@
 """The composition root: `build_context()` builds the `ServiceContext` from the workspace's files (D1 §3, §4.8).
 
-Driving adapters (the CLI now) reach the driven adapters only through here. In P0 the ports that arrive in P1
-(`Catalog`, `BlobStore`, `PipelineRunner`) are `_NotYet<Port>` placeholders whose every method raises
-`E_INTERNAL("<Port> arrives in P1")`, and `parsers` is empty (D2 §5.9). P1 removes them.
+Driving adapters (the CLI now) reach the driven adapters only through here. The raw zone is `JsonlCatalog` and
+`FsBlobStore` (P1.2.2). `PipelineRunner` is still a `_NotYetPipelineRunner` placeholder whose every method raises
+`E_INTERNAL("PipelineRunner arrives in P1")` until P1.3.3, and `parsers` is empty until P1.4.1 (D2 §5.9).
 """
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import NoReturn
 
+from energatron.adapters.storage.fs_blobs import FsBlobStore
+from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
 from energatron.adapters.vcs.git_dvc import GitDvcVersionControl
 from energatron.adapters.workspace import (
     backup_bundle_dir,
@@ -17,9 +19,7 @@ from energatron.adapters.workspace import (
     read_workspace_config,
 )
 from energatron.core.errors import InternalError
-from energatron.core.models.catalog import CatalogRecord, SourceType
 from energatron.core.models.pipeline import ReproReport, StageStatus
-from energatron.core.models.storage import StoredBlob
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.ports.clock import Clock
 from energatron.services.context import ServiceContext
@@ -48,8 +48,8 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
         paths=paths,
         config=config,
         private=private,
-        catalog=_NotYetCatalog(),
-        blobs=_NotYetBlobStore(),
+        catalog=JsonlCatalog(paths),
+        blobs=FsBlobStore(paths),
         parsers=(),
         vcs=vcs,
         runner=_NotYetPipelineRunner(),
@@ -57,39 +57,11 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
     )
 
 
-# P0 placeholders for the ports that arrive in P1 (D2 §5.9)
+# The P0 placeholder left until P1.3.3 (D2 §5.9)
 
 
 def _not_yet(port: str) -> NoReturn:
     raise InternalError(f"{port} arrives in P1")
-
-
-class _NotYetCatalog:
-    def get(self, dataset_id: str) -> CatalogRecord | None:
-        _not_yet("Catalog")
-
-    def find_sha256(self, sha256: str) -> CatalogRecord | None:
-        _not_yet("Catalog")
-
-    def records(self, source: SourceType | None = None) -> Iterator[CatalogRecord]:
-        _not_yet("Catalog")
-
-    def append(self, record: CatalogRecord) -> None:
-        _not_yet("Catalog")
-
-
-class _NotYetBlobStore:
-    def put(self, key: str, data: bytes) -> StoredBlob:
-        _not_yet("BlobStore")
-
-    def get(self, key: str) -> bytes:
-        _not_yet("BlobStore")
-
-    def exists(self, key: str) -> bool:
-        _not_yet("BlobStore")
-
-    def stat(self, key: str) -> StoredBlob:
-        _not_yet("BlobStore")
 
 
 class _NotYetPipelineRunner:

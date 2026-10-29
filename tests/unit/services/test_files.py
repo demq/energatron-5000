@@ -11,6 +11,7 @@ from energatron.services.files import (
     atomic_write_bytes,
     atomic_write_text,
     dump_json,
+    make_dirs,
     read_json,
     read_jsonl,
     write_json,
@@ -93,3 +94,21 @@ def test_read_jsonl_rejects_a_bad_line(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
         read_jsonl(target)
     assert json.loads(target.read_text(encoding="utf-8").splitlines()[0]) == {"a": 1}
+
+
+def test_make_dirs_creates_missing_directories_and_fsyncs_each_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    synced: list[Path] = []
+    monkeypatch.setattr(files, "fsync_directory", synced.append)
+    (tmp_path / "a").mkdir()
+    files.make_dirs(tmp_path / "a" / "b" / "c")
+    assert (tmp_path / "a" / "b" / "c").is_dir()
+    assert synced == [tmp_path / "a", tmp_path / "a" / "b"]
+
+
+def test_make_dirs_of_an_existing_directory_does_nothing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    synced: list[Path] = []
+    monkeypatch.setattr(files, "fsync_directory", synced.append)
+    make_dirs(tmp_path)
+    assert synced == []

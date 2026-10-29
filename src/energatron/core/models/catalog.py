@@ -216,3 +216,39 @@ def _unique_keys(pairs: list[tuple[str, JSONValue]]) -> dict[str, JSONValue]:
 
 def _no_constant(_name: str) -> JSONValue:
     raise ValueError("NaN and infinities aren't JSON")
+
+
+def parse_catalog(data: bytes, source: SourceType) -> list[CatalogRecord]:
+    """Every record of one source's `_catalog.jsonl`, given its bytes, in file order (D1 §4.1; D3 §3.2).
+
+    The rules every reader shares, `JsonlCatalog` and stage code alike: each line is one record followed by `\\n`
+    (LF only, D1 §12), parsed and upgraded by `CatalogRecord.from_json_line`, and of this `source`. An empty file is
+    an empty catalog. A last line without its `\\n` (`unterminated`), a CRLF line (`crlf`), a record of another
+    source (`wrong_source`) or any `from_json_line` failure raises `E_CATALOG_CORRUPT` with `details.source` and
+    `details.line`, never the line's text. A line from a newer energatron raises `E_SCHEMA_TOO_NEW`.
+    """
+    source = SourceType(source)
+    if not data:
+        return []
+    lines = data.split(b"\n")
+    if lines[-1]:
+        raise CatalogCorruptError(
+            "The catalog's last line is unterminated.", source=source.value, line=len(lines), reason="unterminated"
+        )
+    records: list[CatalogRecord] = []
+    for number, line in enumerate(lines[:-1], start=1):
+        if line.endswith(b"\r"):
+            raise CatalogCorruptError("A catalog line ends in CRLF.", source=source.value, line=number, reason="crlf")
+        try:
+            record = CatalogRecord.from_json_line(line, number=number)
+        except CatalogCorruptError as error:
+            raise CatalogCorruptError(error.message, source=source.value, **error.details) from None
+        if record.source != source:
+            raise CatalogCorruptError(
+                "A catalog line holds a record of another source.",
+                source=source.value,
+                line=number,
+                reason="wrong_source",
+            )
+        records.append(record)
+    return records

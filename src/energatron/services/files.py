@@ -48,6 +48,24 @@ def fsync_directory(directory: Path) -> None:
         os.close(descriptor)
 
 
+def make_dirs(directory: Path) -> None:
+    """Create `directory` and any missing parents, `fsync`ing the parent of each one created, so the new entries
+    survive a crash. An existing directory is left alone; a file in the way raises `OSError`."""
+    missing: list[Path] = []
+    current = directory
+    while not current.is_dir():
+        missing.append(current)
+        current = current.parent
+    for path in reversed(missing):
+        try:
+            path.mkdir()
+        except FileExistsError:
+            if not path.is_dir():
+                raise
+            continue
+        fsync_directory(path.parent)
+
+
 def dump_json(value: JSONValue) -> str:
     """`value` as a JSON document: sorted keys, `indent=2`, non-ASCII kept, a trailing newline; NaN refused."""
     return json.dumps(value, sort_keys=True, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
