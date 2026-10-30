@@ -97,37 +97,42 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P1.5.2
-- Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files`; energatron-5000
-  `P1.5.2: record landing the legacy files and P1's acceptance`
-- Checks: `ruff check` passed, `ruff format --check` 167 files, `pyright` 0 errors, `lint-imports` 5 kept,
-  `pytest -q` 1690 passed, `pre-commit run --files <changed>` passed in both repos; privacy scans 0 violations;
-  re-land a no-op (exit 8, HEAD unchanged), `catalog_index` 7 rows, 6 of 6 checks pass, `dvc status` clean
+- Last done: P2.1.1
+- Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files` (unchanged);
+  energatron-5000 `P2.1.1: approve the P2 meter pipeline spec and apply plan rev 10 and D1 rev 3`
+- Checks: docs only, no code changed: privacy guard `--figures` on the changed docs and `TASKS.md` 0 violations;
+  `pre-commit run --files <changed>` passed
 - Review: none
-- Next: P2.1.1
+- Next: P2.2.1
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 2), plan rev 9, D4 = the P0–P2
-  list below.
+- Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 3), plan rev 10, D4 = the P0–P2
+  list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved; P2's
+  sub-tasks below were rewritten from its §2.
 - P0 agent work is all ✅; both repos on `main`, no remote, nothing pushed.
 - P1 agent work is all ✅ (2026-10-30): seven parsers, `land`, the pipeline machinery; the workspace holds 7
   datasets (2/2/2/1) and `catalog_index` passes. Only the owner's P1.5.3 (backup after P1) keeps P1 open.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
   P1.5.3.
 
-**Read first** (for P2.1.1, a spec sub-task)
-- The plan: §9, §10.1–10.2, §13, §15. D1 §4.3, §9–§11, §14. D3 §3.3, §5.2, §16.
-- How D3 described the workspace files by structure only; P2's spec does the same.
+**Read first** (for P2.2.1, foundations: `Params` v2, `RegionProfile` v2, `StageRun.zone()`)
+- The P2 spec: §2, §5, §6, §12, §13.1 (and §11 for the dict-valued param check).
+- D1 rev 3: §4.8, §5, §9.2, §9.4, §13. D3 §10.1–§10.3 (`pipeline sync`, `params`, `region_profile`).
 
 **Facts**
-- The workspace's acceptance note is `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`;
-  it may mention data, so nothing from it is copied here.
-- The hourly JSON in the legacy folder stays unlanded (`E_UNKNOWN_SOURCE`); `sapn_interval` has 2 datasets.
+- Owner decision on the P2 spec (2026-10-30): Q1–Q9 approved as written, except Q6: no waiver of hand-over
+  decision #11, so `localise` runs only on a `confirmed` verdict (spec §9.4, §10, §15).
+- P2.2.1 and P2.2.2 each change the code entry of every registered stage (`Params` and `precedence_order` sit
+  under `runner.py`), so `fingerprint --check` reports them stale until `energatron fingerprint` is re-run in a
+  workspace. That is expected (spec §2).
+- The workspace's acceptance note for P1 is `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`;
+  it may mention data, so nothing from it is copied here. The hourly JSON in the legacy folder stays unlanded
+  (`E_UNKNOWN_SOURCE`); `sapn_interval` has 2 datasets.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing, GitHub repo, git
-  remote or global installs.
+  remote or global installs. `tzdata` is added with `uv add tzdata` (project-local; P2.2.1).
 
 **Open questions for the owner**
 - none
@@ -137,6 +142,8 @@ Then clear the context and type `/next`.
   `dvc.lock`.
 - `offer_cdr` records `extra.source_ts_from: "content"` (D3 §3.3; §5.7's list omits it).
 - D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone.
+- The P1 parser tests (`test_sapn_nem12`, `test_sapn_summary`, `test_retailer_usage`) must pass unchanged after
+  the readers move into core (spec §4.4); if a behaviour has to change, stop and ask.
 - `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
 - pytest takes ~3 minutes. A safety hook holds any command containing `rm`. Agents never read
   `demq-elektric/private/`. In zsh pass file lists as an array.
@@ -557,10 +564,20 @@ comes with `DvcRunner`, after the fingerprint, because it computes the live code
 
 ### P2: Meter pipeline ⬜
 
-P2.1.1 writes the P2 spec. The sub-tasks after it are provisional: the spec's order of work may rewrite them.
+Built from the P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`, "the P2 spec") in its §2
+order; D1 rev 3 binds all code. The spec's decisions (owner-approved 2026-10-30): format readers live in core and
+there is no `SourceParser.parse`; no NMI in the interval tables; the time zone and TOU windows live in the region
+profile and `pipeline sync` copies them into `params.yaml`; `localise` is gated on a `confirmed` time-basis
+verdict, with no waiver of hand-over decision #11.
+- P2.2.1 and P2.2.2 make every stage's code entry stale (spec §2); re-run `fingerprint` in a workspace before
+  any `dvc repro`.
+- Each stage sub-task adds its stage to `STAGES`, the golden `tests/fixtures/golden/dvc.yaml` and the fixture
+  workspace (spec §13.2), so `test_determinism` and `test_stage_loads` cover it from the start.
+- Workspace sub-task P2.3.1 runs with the tool's `src/energatron/` committed; otherwise `fingerprint` records
+  `tool_dirty: true`.
 
-#### P2.1 P2 spec ⬜
-- ⬜ **P2.1.1** Draft the P2 meter pipeline spec, `agent_docs/<YYYY-MM>/<YYYY-MM-DD>_p2-meter-pipeline-spec.md`.
+#### P2.1 P2 spec ✅
+- ✅ **P2.1.1** Draft the P2 meter pipeline spec, `agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`.
   - Covers the stages `parse_nem12`, `merge_interval`, `validate_meter`, `validate_timebase` and `localise`;
     `SourceParser.parse` and how a stage reaches parser code inside its module set (D1 §14); staged and interim
     table schemas and keys; merge precedence (D3 §3.3); where `localise` gets its time-zone database (D1 §14);
@@ -571,33 +588,105 @@ P2.1.1 writes the P2 spec. The sub-tasks after it are provisional: the spec's or
   - Files: the new spec.
   - Done when: the owner approves it.
   - On /done: add the plan revision the spec lists, and rewrite P2's sub-tasks from its order of work.
+  - Handover: P2 spec approved with Q1-Q9 as written except Q6; `/done` applied plan rev 10 and D1 rev 3 (spec §16) and rewrote P2.2-P2.3 from
+    spec §2. Decision: no waiver of hand-over #11, so `localise` needs a `confirmed` verdict. Watch: this workspace's data must reach `confirmed` (§14 check 6).
 
-#### P2.2 Stages (provisional) ⬜
-- ⬜ **P2.2.1** (provisional) NEM12 parsing and the `parse_nem12` stage.
-  - Refs: the P2 spec; plan §9.2, §10.1, §13. Files: as the spec says. Done when: its tests and the standard
-    checks pass.
-- ⬜ **P2.2.2** (provisional) `merge_interval` and its conflicts report.
-  - Refs: the P2 spec; plan §9.2, §10.1. Files: as the spec says. Done when: its tests and the standard checks
-    pass.
-- ⬜ **P2.2.3** (provisional) `validate_meter`: monthly totals against SAPN SUMMARY, the gap list, quality shares.
-  - Refs: the P2 spec; plan §9.2, §10.1. Files: as the spec says. Done when: its tests and the standard checks
-    pass.
-- ⬜ **P2.2.4** (provisional) `validate_timebase`: hypotheses H1–H3 against the retailer's TOU export.
-  - Refs: the P2 spec; plan §9.2, §10.2. Files: as the spec says. Done when: its tests and the standard checks
-    pass.
-- ⬜ **P2.2.5** (provisional) `localise`: meter time to local time, with the DST days.
-  - Refs: the P2 spec; plan §9.2, §10.2, §13. Files: as the spec says. Done when: its tests and the standard
-    checks pass.
+#### P2.2 Stages ⬜
+- ⬜ **P2.2.1** Foundations: `Params` v2, `RegionProfile` v2, `StageRun.zone()`, `tzdata`, the P2 warnings.
+  - `core/models/params.py` v2 (`meter.*`, `validation.meter`, `validation.timebase`, window parsing and the
+    partition rule, `Params.defaults(profile)`, the v1 to v2 migration with `null` zone and windows);
+    `core/models/region.py` v2 and `regions/sa.yaml` v2 (`local_tz`, `tou_windows`), with `build_context()`
+    rejecting a `null` or unknown zone and non-partitioning windows (`E_INTERNAL`); `ServiceContext.region`;
+    `pipeline sync` fills `meter.local_tz` and the windows from the profile and `--check` reports a `null` value or
+    a differing zone as drift; `uv add tzdata`; `StageRun.zone()` in `runner.py`; the `test_stage_purity`
+    additions; the five P2 warnings in `core/errors.py`; golden schemas for `params` v2 and `region_profile` v2.
+  - Refs: the P2 spec §5, §6, §12, §13.1, §11 (dict-valued params); D1 rev 3 §4.8, §9.2, §9.4, §13; D3 §10.1–10.3.
+  - Files: `src/energatron/core/{errors.py,models/params.py,models/region.py}`, `src/energatron/regions/sa.yaml`,
+    `src/energatron/services/{context.py,pipeline_sync.py,stages/runner.py}`, `src/energatron/adapters/wiring.py`,
+    `pyproject.toml`, `uv.lock`, `tests/unit/core/test_{params,region}.py`,
+    `tests/architecture/test_{no_region_values,stage_purity}.py`, `tests/unit/services/test_{run_stage,pipeline_sync}.py`,
+    `tests/unit/adapters/test_wiring.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; the golden v1 `region_profile` and `params` documents upgrade and
+    validate (D1 §13); a dict-valued declared param reaches a stage whole; a stage reading a `null` zone or
+    windows fails with `E_INVALID_INPUT`.
+- ⬜ **P2.2.2** Format readers and dataset precedence.
+  - `core/text.py` (the pure helpers moved out of `adapters/sources/_common.py`), `core/nem12.py`,
+    `core/sapn_summary.py`, `core/retailer_usage.py` with their `scan_*` and `read_*` entry points; the three
+    parsers' `inspect` moved onto the `scan_*` functions with every P1 parser test unchanged and `version` still 1;
+    `precedence_order` in `core/models/catalog.py`; the fixture additions (`make_nem12` `day_values`, `day_quality`,
+    `negative_on`; `make_sources` `make_retailer_usage_from_nem12` and `make_summary_from_nem12`) and the
+    independent test oracle `tests/fixtures/oracle.py` (no `energatron` import).
+  - Refs: the P2 spec §3.3, §4, §13.1 (`test_text`, `test_nem12`, readers, `test_precedence`), §13.2; D3 §5.
+  - Files: `src/energatron/core/{text.py,nem12.py,sapn_summary.py,retailer_usage.py}`,
+    `src/energatron/core/models/catalog.py`, `src/energatron/adapters/sources/`, `tests/fixtures/{make_nem12,make_sources,oracle}.py`,
+    `tests/unit/core/test_{text,nem12,sapn_summary_reader,retailer_usage_reader,precedence}.py`,
+    `tests/unit/adapters/sources/`, `tests/unit/fixtures/test_generators.py`.
+  - Done when: the standard checks pass; the P1 parser tests pass unchanged (spec §4.4); `scan_nem12` and
+    `read_nem12` accept and reject exactly the same files; no `read_*` result type has an identifier field.
+- ⬜ **P2.2.3** `parse_nem12`.
+  - The stage and its `index.parquet`, the staged table, the kinds in `core/models/meter.py`, the registry entry,
+    the golden `dvc.yaml`, and `tests/fixtures/pipeline_workspace.py` (two overlapping SAPN datasets with one
+    conflict day, a SUMMARY CSV, two usage exports, spanning both DST changes of a year; it grows with each stage).
+    The integration test confirms DVC accepts a whole raw directory as a dep and marks the stage stale when a
+    dataset lands; if it doesn't, stop and ask (spec §11).
+  - Refs: the P2 spec §3.1, §7.1, §11, §12, §13.3 (`test_parse_nem12`); D1 §9, §13.
+  - Files: `src/energatron/services/stages/{parse_nem12,registry}.py`, `src/energatron/core/models/meter.py`,
+    `tests/unit/services/stages/test_parse_nem12.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
+    `tests/integration/` (the raw-directory dep test), `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; every `parse_nem12` check passes and fails in its test; no NMI or serial
+    in any output.
+- ⬜ **P2.2.4** `merge_interval` and its conflicts report.
+  - The stage, `intervals.parquet`, `conflicts.parquet`, `summary.json`, `W_MERGE_SAME_UPDATE`, the golden
+    `dvc.yaml` and the fixture workspace.
+  - Refs: the P2 spec §7.2, §12, §13.3 (`test_merge_interval`).
+  - Files: `src/energatron/services/stages/{merge_interval,registry}.py`, `src/energatron/core/models/meter.py`,
+    `tests/unit/services/stages/test_merge_interval.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
+    `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; merged rows = distinct days x `1440 / L` per suffix in the test.
+- ⬜ **P2.2.5** `validate_meter`: monthly totals against SAPN SUMMARY, the gap list, quality shares.
+  - The stage and its four reports, `W_METER_GAPS` and `W_METER_UNVALIDATED`, the golden `dvc.yaml` and the
+    fixture workspace.
+  - Refs: the P2 spec §8, §12, §13.3 (`test_validate_meter`).
+  - Files: `src/energatron/services/stages/{validate_meter,registry}.py`, `src/energatron/core/models/meter.py`,
+    `tests/unit/services/stages/test_validate_meter.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
+    `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; `match` within the tolerance and `mismatch` just outside it in the test.
+- ⬜ **P2.2.6** `validate_timebase`: hypotheses H1-H3 against the retailer's TOU export.
+  - `core/timebase.py` (`Timebase`, `parse_windows`, `to_local`, `bucket`), the stage with periods, fit and the
+    `confirmed`, `unconfirmed` and `contradicted` verdict, `W_TIMEBASE_UNCONFIRMED` and
+    `W_TIMEBASE_UNEXPLAINED`, the golden `dvc.yaml` and the fixture workspace.
+  - Refs: the P2 spec §9, §12, §13.1 (`test_timebase`), §13.3 (`test_validate_timebase`); plan §10.2.
+  - Files: `src/energatron/core/timebase.py`, `src/energatron/services/stages/{validate_timebase,registry}.py`,
+    `src/energatron/core/models/meter.py`, `tests/unit/core/test_timebase.py`,
+    `tests/unit/services/stages/test_validate_timebase.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
+    `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; exports generated under each basis confirm that basis and contradict the
+    others; the winter-only tie gives `unconfirmed` and passes.
+- ⬜ **P2.2.7** `localise`: meter time to local time, with the DST days, and the end-to-end tests.
+  - The stage with its `timebase_gate` (a `confirmed` verdict naming the configured basis, else no table and
+    `E_CHECK_FAILED`), `energy_conserved`, `key_unique`, `local_placeable` and `local_day_lengths`; the golden
+    `dvc.yaml` with all five stages; `test_localise_tzdata` (a wrong system zone file changes nothing);
+    `test_p2_pipeline` in a scratch workspace, ending with `verify`.
+  - Refs: the P2 spec §6, §10, §11, §13.3; plan §10.2, §13; D1 §11.4.
+  - Files: `src/energatron/services/stages/{localise,registry}.py`, `src/energatron/core/models/meter.py`,
+    `tests/unit/services/stages/test_localise.py`, `tests/integration/test_{localise_tzdata,p2_pipeline}.py`,
+    `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; 23-hour and 25-hour local days appear in the test; on `unconfirmed`,
+    `contradicted` or a mismatched basis the gate leaves no table.
 
-#### P2.3 Acceptance (provisional) ⬜
-- ⬜ **P2.3.1** (provisional) P2 acceptance in the workspace.
-  - `pipeline sync`, `fingerprint`, `dvc repro`; plan §15's P2 checks as the spec makes them concrete (interval
-    counts, monthly totals against SAPN SUMMARY, merge conflicts reported, the time basis chosen by evidence,
-    DST tests); then `energatron verify` passes.
-  - Refs: the P2 spec; plan §15 (P2); D1 §11.4.
-  - Files (`demq-elektric/`): the pipeline files the spec lists; a dated note in `agent_docs/` for results that
-    mention data.
-  - Done when: every check passes; `TASKS.md` gets counts and pass/fail only.
+#### P2.3 Acceptance ⬜
+- ⬜ **P2.3.1** P2 acceptance in the workspace.
+  - The spec's §14 checks 1-9, in order: `pipeline sync` (params v2, zone and windows filled), `fingerprint`,
+    `dvc repro`; interval counts, monthly totals against SAPN SUMMARY, merge conflicts reported, the time basis
+    `confirmed` with evidence, the DST days; then `verify`, a clean state and the pending backup. If
+    `validate_timebase` is `contradicted` or `localise` fails its gate, stop and ask the owner before changing
+    `meter.timebase` (decision #11 allows nothing weaker).
+  - Refs: the P2 spec §14; plan §15 (P2); D1 §11.4.
+  - Files (`demq-elektric/`): `dvc.yaml`, `dvc.lock`, `params.yaml`, `.energatron/code_fingerprint.json`,
+    `data/staged/.gitignore`, `data/interim/.gitignore`, `data/reports/.gitignore`; a dated note in
+    `agent_docs/` for results that mention data.
+  - Done when: every §14 check passes; `TASKS.md` gets counts and pass/fail only.
+  - On /done: commit those files as one workspace commit.
 - ⛔ **P2.3.2** Owner: back up after P2.
   - Why: owner step (iCloud).
   - Refs: the runbook. Files: none.
@@ -609,6 +698,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P2.1.1 · P2 meter pipeline spec approved (owner: Q1–Q9 as written, except Q6: no waiver of decision #11); plan rev 10 and D1 rev 3 applied from its §16; P2.2–P2.3 rewritten from its order of work (P2.2.1–P2.2.7, P2.3.1) · energatron-5000 `P2.1.1: approve the P2 meter pipeline spec and apply plan rev 10 and D1 rev 3`
 - 2026-10-30 · P1.5.2 · `land` on the legacy folders (its own commit `land: 5 datasets`; 7 datasets 2/2/2/1, hourly JSON rejected, exit 8; owner checked, inputs intact); re-land a no-op; `fingerprint` (`tool_commit` only) + `dvc repro` → `catalog_index` 7 rows, 6 checks pass; `dvc status` clean; acceptance note in the workspace · demq-elektric `P1.5.2: record the pipeline run on the landed legacy files`; energatron-5000 `P1.5.2: record landing the legacy files and P1's acceptance`
 - 2026-10-30 · P1.5.1 · `make_sources.py` generators, `pdf_meta.creation_date`, parsers `bill_pdf` (elec + gas), `sapn_summary` (CSV + PDF), `retailer_usage`, `retailer_txn`, `cdr_plan`; `PARSERS` and `regions/sa.yaml` complete, `resolve_parser` on the real registry (1690 tests); review nits 1–3 fixed; owner accepted deviations (`test_wiring.py` edit, `_common.py`, extra reasons, quote-aware CSV, extra generator kwargs, `offer_cdr` `extra.source_ts_from`); reviewer's dry run on the legacy files matched D3 §15 · energatron-5000 `P1.5.1: add the other five source parsers and their fixture generators`
 - 2026-10-30 · P1.4.4 · `land` landed the two current SAPN files (its own commit, 2 datasets, inputs untouched; owner checked); `fingerprint` + `dvc repro` → `catalog_index` 2 rows, 6 checks pass; `dvc status` clean; fingerprint file committed too (`tool_commit` only) · demq-elektric `P1.4.4: record the pipeline run on the landed SAPN files`; energatron-5000 `P1.4.4: record landing the SAPN files and the pipeline run`

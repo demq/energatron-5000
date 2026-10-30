@@ -38,6 +38,15 @@
   with the same snapshot ID are no-ops; `marts/catalog/` leaves out file names and notes; `energatron pipeline
   sync` writes `dvc.yaml`, `params.yaml` and empty catalogs, and its `--check` is a workspace pre-commit hook;
   `params.yaml` carries `kind`/`schema_version` and gains keys phase by phase (§7, §8.2, §8.3, §9.2, §12, §15).
+  2026-10-30 rev 10 — P2 meter pipeline spec (`2026-10-30_p2-meter-pipeline-spec.md`) approved, and its §16
+  edits applied: `localise` also depends on `validate_timebase`'s report and builds local-time data only from a
+  `confirmed` verdict (hand-over decision #11 unchanged); `validate_meter` warns rather than fails without
+  SUMMARY or on gaps; `validate_timebase` fails only when another basis beats the configured one and warns when
+  the evidence is short or tied; interval tables have no NMI column and are keyed by `(suffix, meter_start)`;
+  merge per day; the retailer read-date alignment; `params` v2 (`meter.*`, `validation.meter`,
+  `validation.timebase`); the time zone and TOU windows live in the region profile and `pipeline sync` copies
+  them into `params.yaml`; the meter-file formats P2 reads are core modules, not registry plugins, until a
+  second format arrives; `tzdata` as a runtime dependency (§4, §9.1, §9.2, §10.1, §10.2, §14.1).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -169,6 +178,8 @@ matches the current GloBird SAPN windows), period cost calculations, monthly and
   git and DVC as subprocesses and doesn't depend on DVC.
 - pandas + pyarrow (Parquet), pydantic v2 (schemas), typer (CLI), httpx (API client), matplotlib/plotly
   (reports), duckdb (optional ad-hoc SQL over Parquet), pdfplumber (later, for bill PDFs).
+- `tzdata` (from P2) as an explicit runtime dependency, so stages read time-zone rules from a pinned
+  distribution rather than the system database (rev 10).
 - pytest + hypothesis, ruff, pyright, pre-commit, nbstripout, all dev dependencies run through `uv run`.
   - pyright is installed as `pyright[nodejs]`: Node comes as a wheel inside the venv, so no system Node is
     needed. `pandas-stubs` gives it pandas types.
@@ -472,7 +483,8 @@ Rules:
 ```
 raw/sapn_interval ─► parse_nem12 ─► merge_interval ─┬─► validate_timebase ◄── raw/retailer_usage
                                                      ├─► validate_meter    ◄── raw/sapn_summary
-                                                     └─► localise ─► usage_profile ──────────────┐
+                                                     └─► localise ◄── validate_timebase's report (gate)
+                                                              └─► usage_profile ───────────────┐
                                                               │                                  │
 raw/offer_cdr + raw/offer_manual + offer_rules*       ─► normalise_offers ─┬─► cost_elec ◄───────┤
                                                               │            └─► cost_gas ◄──┐     │
@@ -503,11 +515,11 @@ directories.
 | Stage | Main deps | Outs | Key checks (fail the stage) |
 |---|---|---|---|
 | `catalog_index` | one `raw/<source>/_catalog.jsonl` per source type (an empty file, made by `pipeline sync`, for a source with nothing landed) | `marts/catalog/` (no file names or notes) | Schema; source matches file; unique sha256 and dataset_id; IDs and paths recompute; supersedes valid |
-| `parse_nem12` | `raw/sapn_interval` | `staged/elec_interval/` (one `<dataset_id>.parquet` each) | Values per day = 1440/interval; units; 400-record coverage of `V` days; non-negative |
+| `parse_nem12` | `raw/sapn_interval` | `staged/elec_interval/` (one `<dataset_id>.parquet` each, plus `index.parquet`) | Blobs match the catalog; detector versions known; values per day = 1440/interval; units; 400-record coverage of `V` days; non-negative |
 | `merge_interval` | `staged/elec_interval` | `interim/elec_interval_nem/`, `reports/validation/merge/` | Key uniqueness; conflicts logged |
-| `validate_timebase` | `interim/elec_interval_nem/`, `raw/retailer_usage`, param `meter.timebase` | `reports/validation/timebase/` | Configured hypothesis is the best fit, within tolerance |
-| `validate_meter` | `interim/…`, `raw/sapn_summary` | `reports/validation/meter/` | Monthly totals within ±0.01 kWh of SAPN SUMMARY; gap list; % of intervals with quality `A` |
-| `localise` | `interim/elec_interval_nem/`, params `meter.*` | `interim/elec_interval_local/` | Energy conserved; DST days have 23/25 local hours |
+| `validate_timebase` | `interim/elec_interval_nem/`, `raw/retailer_usage`, params `meter.local_tz`, `meter.timebase`, `validation.timebase` | `reports/validation/timebase/` | No other hypothesis fits better than the configured one (fails only then); too little evidence, or a tie, is a warning (`unconfirmed`) |
+| `validate_meter` | `interim/…`, `raw/sapn_summary`, param `validation.meter` | `reports/validation/meter/` | Monthly totals within ±0.01 kWh of SAPN SUMMARY (fails on a mismatch); gap list and a missing SUMMARY are warnings; % of intervals with quality `A` |
+| `localise` | `interim/elec_interval_nem/`, `reports/validation/timebase/`, params `meter.local_tz`, `meter.timebase` | `interim/elec_interval_local/` | Gate: the timebase verdict is `confirmed` for the configured basis; energy conserved; DST days have 23/25 local hours |
 | `usage_profile` | `interim/elec_interval_local/`, params `analysis.*` | `marts/usage_profile/`, `reports/usage/` | Coverage threshold for the reference window |
 | `gas_bills` | `raw/gas_bill`, `raw/gas_bill_record` | `interim/gas_bills/` | Each bill's total recomputes within ±$0.05 |
 | `gas_profile` | `interim/gas_bills/` | `marts/gas_profile/` | Periods contiguous; read types flagged |
@@ -524,10 +536,10 @@ version 1 holds no keys; each block below arrives with its phase's spec as a new
 
 ```yaml
 kind: params
-schema_version: <n>
+schema_version: 2
 meter:
   timebase: nem_aest            # confirmed by validate_timebase (see §10.2)
-  local_tz: Australia/Adelaide
+  local_tz: Australia/Adelaide  # copied from the region profile by pipeline sync
 analysis:
   reference_months: 12
   sensitivity: {usage_scale: [0.9, 1.0, 1.1], alt_window: previous_12m}
@@ -539,6 +551,13 @@ pricing:
   assume_conditions_met: [PAY_ON_TIME, DIRECT_DEBIT]
   gst_rate: 0.10
 validation:
+  meter: {total_tolerance_kwh: 0.01}
+  timebase:
+    windows: {Peak: [...], Off Peak: [...], Shoulder: [...]}   # copied from the region profile; the owner may edit
+    register_tolerance_kwh: 0.05
+    register_tolerance_pct: 0.1
+    total_tolerance_kwh: 0.05
+    min_fit_periods: 3
   backtest_tolerance_pct: 1.0
 ```
 
@@ -601,13 +620,15 @@ editable dependency isn't pinned in `uv.lock`, which is why the fingerprint reco
 - Streaming parser for record types 100/200/300/400/500/900. It tolerates a missing `100`, repeated `200`
   headers and blank lines.
 - Interval length comes from the `200` record (5, 15 or 30 min). Each `300` must hold 1440/interval values.
-- Output is long format: `nmi, suffix, interval_start_nem, interval_end_nem, kwh, quality_method,
-  reason_code, update_dt, source_dataset_id`.
+- Output is long format: `suffix, meter_date, meter_start, interval_minutes, kwh, quality, quality_flag,
+  reason_code, update_dt, dataset_id` (no NMI: landing's premises check ties each dataset to the premises; no
+  `interval_end_nem`: the end is `meter_start` plus `interval_minutes`).
 - For `V` days, the `400` ranges are applied to each interval.
 
 **Merging**
-- Merge key: `(nmi, suffix, interval_start)`.
-- Precedence: newest `UpdateDateTime` wins, then the newest file `source_ts`.
+- Merge key: `(suffix, meter_start)`; the merge keeps whole days, which is equivalent because `UpdateDateTime`
+  is per day.
+- Precedence: newest `UpdateDateTime` wins, then dataset precedence (D3 §3.3). Superseded datasets are skipped.
 - Emit a conflicts report of intervals whose values differ between downloads. These are expected where
   estimates were later replaced by actuals.
 
@@ -635,7 +656,14 @@ quality type.
   - H2: timestamps are already the local wall clock
   - H3: timestamps are local standard time
 - One hypothesis should match almost exactly. Set `meter.timebase` to it; from then on, the stage asserts the
-  setting is still the best fit. The legacy notebook's hand-shifted bill-period boundaries hint at an offset
+  setting is still the best fit.
+- A retailer row read at date D covers the meter dates after the previous read up to and including D. A period
+  counts only when its total reconciles with the interval sum. A period fits a hypothesis when every register
+  fits; the verdict is `confirmed` (the configured basis strictly beats the others, with enough periods),
+  `unconfirmed` (too little evidence, or a tie, such as winter-only data) or `contradicted` (another basis
+  strictly beats it). Only `contradicted` fails the stage. Periods that fit no hypothesis (for example after a
+  change of the retailer's TOU windows) are reported as a warning. `localise` runs only on `confirmed`. The
+  region's time zone comes from `tzdata` (P2 spec §9.4, §10). The legacy notebook's hand-shifted bill-period boundaries hint at an offset
   of this kind.
 
 **DST handling:** local days of 23 h and 25 h (first Sunday of October and April) are unit-tested. Supply
@@ -875,7 +903,7 @@ Everything else waits until it's needed.
 | **Layered package: pure core → services → adapters** | The CLI, agent tools and a web API all become thin wrappers over the same use cases, so no logic is duplicated or trapped in the CLI | Discipline only |
 | **Stage logic independent of DVC** | Stages are plain functions (`run_stage(spec, inputs, params, outputs, *, code, recorded_code)`; every output is a directory with `_provenance.json`); `dvc.yaml` just calls `energatron stage <name>`. A web app can run the same functions from a job queue, and DVC stays replaceable | None |
 | **Storage behind two small interfaces** | `Catalog` (v1: JSONL files) and `BlobStore` (v1: local files under DVC). A hosted version can swap in Postgres and S3 without touching the core | A few lines |
-| **No region-specific values in code** | Distributor names, time zone, network-tariff mapping, CDR brand list and meter-file formats live in region profiles and a parser registry. SA is just the first profile | None |
+| **No region-specific values in code** | Distributor names, the time zone and TOU windows (which `pipeline sync` copies into `params.yaml`), network-tariff mapping and CDR brand list live in region profiles; the registry decides which parser recognises a file. The meter-file formats P2 reads are core modules, not registry plugins, until a second format arrives. SA is just the first profile | None |
 | **`kind` and `schema_version` on every persisted artifact** (Parquet carries both as metadata) | Other people's workspaces will lag behind the latest package; `energatron migrate` upgrades them | Two fields per schema |
 | **Machine-readable CLI** | Every command supports `--json`, has stable exit codes and never prompts when not attached to a terminal. Agents can drive it today, and the web API reuses the same response models | Small |
 | **Per-user privacy defaults** | `energatron init` creates `private/config.toml`, derives the denylist from it and installs the hooks, so others get the guardrails automatically | Part of P0/P8 |

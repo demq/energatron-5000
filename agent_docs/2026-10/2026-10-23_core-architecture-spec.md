@@ -1,10 +1,13 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 awaiting the owner's review
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
+  2026-10-30 rev 3 (P2.1.1): the changes the P2 spec (`2026-10-30_p2-meter-pipeline-spec.md`) §16 lists:
+  the format readers in core, no `SourceParser.parse`, `ServiceContext.region`, `StageRun.zone()` and the
+  `tzdata` dependency, the five P2 warnings, edited in place (listed in §1)
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -66,6 +69,19 @@ agree with them:
 - The rev 2 review: what `BlobStore.stat()` hashes and what a missing key does (§4.2, §11.4, §13); the
   `stage_result` and `fingerprint_result` kinds (§5); "ASCII letter or digit" (§8.7).
 
+**Rev 3 (2026-10-30), edited in place.** The P2 spec (§16 there) changes this spec; rev 3 makes the text agree
+with it:
+- §2: `core/` gains `text.py` (the pure helpers moved out of `adapters/sources/_common.py`), `sapn_summary.py`,
+  `retailer_usage.py` and `models/meter.py`, beside `nem12.py` and `timebase.py`.
+- §4.3: no `SourceParser.parse`. The registry chooses the parser that recognises a file; the code that reads a
+  format's values is in core and serves both `inspect` and the stages.
+- §4.8: `ServiceContext` gains `region: RegionProfile`, set by `build_context()`.
+- §7: the five P2 warnings.
+- §9.2, §9.4, §12: `StageRun.zone(key)`, its `importlib.resources` use as the second named exception, zone
+  objects only from it, and `tzdata` as a runtime dependency.
+- §13: the `test_stage_purity` additions.
+- §14: the two P2 items are settled.
+
 ---
 
 ## 2. Package layout
@@ -92,7 +108,9 @@ src/energatron/
 │   │   ├── pipeline.py      StageStatus, ReproReport, ReproLogEntry (§4.5)                        P0*
 │   │   ├── provenance.py    StageProvenance, CodeFingerprint, StageCode, stale_stages() (§10, §11) P1
 │   │   └── offers.py        Fetched (§4.6)                                                        P0*
-│   └── nem12.py  timebase.py  usage.py  tariff.py  engine.py  ranking.py                         P2+
+│   ├── text.py          decode, lines, csv_rows, is_decimal, parse_datetime, fail (from _common.py) P2
+│   ├── nem12.py  sapn_summary.py  retailer_usage.py  timebase.py  models/meter.py                 P2
+│   └── usage.py  tariff.py  engine.py  ranking.py                                                 P3+
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
 ├── services/                use cases; local file I/O only at paths passed in
@@ -315,7 +333,7 @@ class SourceParser(Protocol):
     version: int                  # recorded in the catalog as detector.version; bump on any behaviour change
     def detect(self, filename: str, head: bytes) -> Detection | None: ...
     def inspect(self, filename: str, data: bytes) -> SourceInfo: ...
-    # P2 adds: def parse(self, dataset_id: str, data: bytes) -> ParsedSource
+    # no parse(): the code that reads a format's values is in core (below)
 
 class Detection(BaseModel):           # core/models/catalog.py, like SourceInfo
     source: SourceType
@@ -330,9 +348,13 @@ class SourceInfo(BaseModel):
 ```
 
 - `head` is the first 64 KiB of the file. `detect` must not need more.
-- Parsers are pure: bytes in, models out. They live in `adapters/sources/` because they are format-specific
-  plugins chosen through a registry (`adapters/sources/registry.py: PARSERS: tuple[SourceParser, ...]`), not
-  because they do I/O. A new region or meter format means adding a module and a registry entry.
+- Parsers are pure: bytes in, models out. They live in `adapters/sources/`, and the registry
+  (`adapters/sources/registry.py: PARSERS: tuple[SourceParser, ...]`) chooses the parser that **recognises** a
+  file. A new region or meter format means adding a module and a registry entry for detection.
+- The code that reads a format's values lives in core (`core/nem12.py`, `sapn_summary.py`,
+  `retailer_usage.py`), because stages can't import `adapters/` (§3). It serves both `inspect` and the stages,
+  which name their source directories in their `SPEC` and don't go through the registry. That is acceptable
+  while each source has one format; a second format of one source reworks it (P2 spec §3.1).
 - `SourceInfo.identifiers` is compared with private config during landing, then discarded. It is never
   persisted, logged or returned in command output.
 - The P1 spec defines each parser's detection rules and how landing resolves no match or several matches.
@@ -506,6 +528,7 @@ class ServiceContext:
     catalog: Catalog
     blobs: BlobStore
     parsers: Sequence[SourceParser]
+    region: RegionProfile              # loaded by build_context(); pipeline sync copies its zone and windows (P2 spec §5.3)
     vcs: VersionControl
     runner: PipelineRunner
     clock: Clock
@@ -667,6 +690,8 @@ class EnergatronError(Exception):
     (D3 §6). Its codes are the `WarningCode` enum there.
   - Warnings in P0–P1: `W_PRIVATE_FIELDS_MISSING`, `W_BACKUP_DATALESS` (D2), `W_FINGERPRINT_METADATA` (§11.3),
     `W_BACKUP_PENDING` (§4.4), `W_PREMISES_UNCHECKED`, `W_UNKNOWN_IDENTIFIER` (D3 §11).
+  - Warnings added in P2: `W_MERGE_SAME_UPDATE`, `W_METER_GAPS`, `W_METER_UNVALIDATED`,
+    `W_TIMEBASE_UNCONFIRMED`, `W_TIMEBASE_UNEXPLAINED` (P2 spec §12).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
@@ -885,6 +910,8 @@ STAGES: dict[str, StageSpec] = {...}  # registry.py, built from each stage modul
   - `params`
   - `package_data(path) -> Path`: a file under `spec.package_data`. Any other path → `E_INTERNAL`, so a stage
     can't read package data its code entry doesn't cover.
+  - `zone(key) -> ZoneInfo`: the time zone `key`, read from the `tzdata` distribution, never from the system
+    database (§9.4; P2 spec §6). A malformed or unknown key → `E_INVALID_INPUT`.
   - `output(name) -> Path`: a temporary directory to write into
   - `check(name, passed, **details)`: a check either passes or fails. Something worth flagging that shouldn't
     fail the stage is a warning, not a check.
@@ -931,9 +958,12 @@ STAGES: dict[str, StageSpec] = {...}  # registry.py, built from each stage modul
     `marshal`, `shelve` or `pandas.read_pickle`
   - package data is read only through `StageRun.package_data()` (§9.2): no `__file__`, `__path__`, `__spec__`
     or `__loader__`
-  - two exceptions, both in every module set and listed by name in the test: `energatron/__init__.py` may call
-    `importlib.metadata.version` to set `__version__` (which no other module in a module set may read), and
-    `StageRun.package_data()` in `runner.py` may use `importlib.resources` to locate the package
+  - two named exceptions in `importlib`, both in every module set and listed by name in the test:
+    `energatron/__init__.py` may call `importlib.metadata.version` to set `__version__` (which no other module
+    in a module set may read), and `runner.py` may use `importlib.resources`: in `StageRun.package_data()` to
+    locate the package, and in `StageRun.zone()` to open a zone file of the `tzdata` distribution
+  - time zones are converted only with zone objects from `StageRun.zone()`, passed as objects: no `ZoneInfo(...)`
+    construction, no `zoneinfo.available_timezones`, no `pytz` or `dateutil.tz`, and no string as a time zone
 - **No process-wide state changes**, anywhere in `energatron`:
   - library settings: `pd.set_option`, assignments to `pd.options.<…>`, `np.seterr`, `np.set_printoptions`,
     `decimal.getcontext()` (any use), `locale.setlocale`, `warnings.filterwarnings` / `simplefilter`,
@@ -1225,12 +1255,14 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
   - instants are timezone-aware, persisted as RFC 3339 with an offset
   - instants that energatron generates (`landed_at`, `fetched_at`) are UTC (`Z`)
   - dates are `YYYY-MM-DD`
-  - local conversions use `zoneinfo` with the time zone from `params.yaml` (`meter.local_tz`)
+  - local conversions use zone objects from `StageRun.zone()`, read from the `tzdata` distribution, with the
+    time zone from `params.yaml` (`meter.local_tz`)
   - naive datetimes appear only where a source carries no zone; the P1 spec lists those per source type
 - **Money:** `Decimal`, never `float`. The rounding rules come with the P4 spec.
 - **Energy:** kWh as float64 in Parquet.
 - **Dependencies:**
   - core: pydantic, pandas, numpy
+  - runtime data: `tzdata` (an explicit dependency from P2, so the zone rules are pinned in `uv.lock`)
   - services: + pyarrow, PyYAML (`stages/runner.py` reads `params.yaml`, so the parser is in every stage's
     `packages`)
   - adapters: + typer, httpx, filelock, PyYAML
@@ -1261,7 +1293,7 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
 | `tests/architecture/test_core_purity.py` | AST scan of `core/**`. Fails on: `open`, `input` and `print` calls; calls of the attributes `read_text read_bytes write_text write_bytes open mkdir unlink rmdir rename replace touch iterdir glob rglob`; pandas `read_*` and `to_csv to_parquet to_json to_excel`; `datetime.now utcnow today`, `date.today`, `time.time` |
 | `tests/architecture/test_persisted.py` | Every `Persisted` subclass has a unique `KIND`. Every version above 1 has a complete migration chain. Golden v1 documents in `tests/fixtures/schemas/<kind>/v1.json` upgrade and validate. |
 | `tests/architecture/test_errors.py` | Codes are unique and match `^E_[A-Z_]+$`. Each has one category. The exit-code table matches §7. |
-| `tests/architecture/test_stage_purity.py` (from P1) | AST scan of every module in every registered stage's module set (§11.1), not just `services/stages/**`. Fails on: `os.environ`, `os.getenv`, `os.getcwd`, `Path.cwd`, `Path.home`, `socket.gethostname`, `platform.node`, `getpass`, `locale`, the `random`, `uuid` and `secrets` modules, `numpy.random` (imported, or reached as an attribute such as `np.random`), `time.time`, `datetime.now utcnow today`, `date.today`; and on the routes past the code entry: `importlib`, `__import__`, `pkgutil`, `runpy`, calls of the bare builtin names `exec`, `eval` and `compile` (not attribute calls such as `re.compile` or `pd.eval`), `entry_points`, `pickle`, `marshal`, `shelve`, `read_pickle`, `__file__`, `__path__`, `__spec__`, `__loader__`, `__version__`, with the two named exceptions (§9.4). |
+| `tests/architecture/test_stage_purity.py` (from P1) | AST scan of every module in every registered stage's module set (§11.1), not just `services/stages/**`. Fails on: `os.environ`, `os.getenv`, `os.getcwd`, `Path.cwd`, `Path.home`, `socket.gethostname`, `platform.node`, `getpass`, `locale`, the `random`, `uuid` and `secrets` modules, `numpy.random` (imported, or reached as an attribute such as `np.random`), `time.time`, `datetime.now utcnow today`, `date.today`; and on the routes past the code entry: `importlib`, `__import__`, `pkgutil`, `runpy`, calls of the bare builtin names `exec`, `eval` and `compile` (not attribute calls such as `re.compile` or `pd.eval`), `entry_points`, `pickle`, `marshal`, `shelve`, `read_pickle`, `__file__`, `__path__`, `__spec__`, `__loader__`, `__version__`, with the two named exceptions (§9.4). From P2 it also fails on: a `ZoneInfo(...)` construction, `zoneinfo.available_timezones`, a `pytz` or `dateutil.tz` import, and a string literal or `str` argument as `tz=` or as the first argument of `tz_localize` / `tz_convert`. |
 | `tests/architecture/test_process_state.py` | AST scan of all of `energatron` for every form listed in §9.4, matched by node shape, not only by call name: calls (`pd.set_option`, `os.chdir`, `random.seed`, `os.environ.update`, …); assignments and augmented assignments whose target is under `pd.options`, `os.environ`, `sys.path` or `sys.modules`; `del` of those; and method calls that mutate `sys.path` or `sys.modules` (`append`, `insert`, `extend`, `pop`, `remove`, `clear`, `update`, `setdefault`). Each form has a synthetic-source case in the test, so a gap in the matcher fails. The scoped forms are allowed. |
 | `tests/architecture/test_stages.py` (from P1) | The `dvc.yaml` generated from `STAGES` equals `tests/fixtures/golden/dvc.yaml` (§9.5). Every output is a directory. No `cache: false`. Every input is a concrete path, never a glob. Every stage tracks exactly its own `stages.<name>.stage_sha256`, and none depends on `uv.lock` or the whole fingerprint file. |
 | `tests/unit/services/test_run_stage.py` (from P1) | `prepare_stage`: picks exactly the declared keys from a synthetic `params.yaml`; a missing key or unknown override name → `E_USAGE`; default paths resolve under `root`. The §9.3 rules, one test each: unknown stage → `E_USAGE` from `get_stage`; a differing or missing `recorded_code` → `E_FINGERPRINT_STALE`, while a change in another stage's entry doesn't matter; undeclared `package_data` → `E_INTERNAL`; missing input or wrong params keys → `E_USAGE`; `impl` raising leaves every target untouched and no temporary directory behind; a non-energatron exception becomes `E_INTERNAL`; a failed check promotes the outputs, then raises `E_CHECK_FAILED`; an empty catalog input is accepted; with an `--input` override outside the workspace, provenance records the declared default path and the override's hash. |
@@ -1283,11 +1315,9 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
 
 ## 14. Deferred to phase specs
 
-- `SourceParser.parse`, staged table schemas and keys → P2 spec. Parsers live in `adapters/sources/`, which
-  stages can't import. So the P2 spec must also say how a stage reaches parser code, in a way that puts that
-  code in the stage's module set (§11.1).
-- Where `localise` gets its time-zone database → P2 spec. `zoneinfo` may read the macOS system database, which
-  no code entry covers; pinning it to the `tzdata` package would put it in `packages`.
+- Settled by the P2 spec (rev 3): there is no `SourceParser.parse`; the format readers are in core and are in a
+  stage's module set through ordinary imports (§4.3). `localise` gets its time zones from the `tzdata`
+  distribution through `StageRun.zone()` (§9.2, §9.4). Staged table schemas and keys are in the P2 spec.
 - Tariff and engine models, money rounding, the GST convention → P4 spec
 - `Fetched` header allow-list, CDR paging details → P4 spec
 - Recommendation payload, run manifest, decision schema → P6 spec
