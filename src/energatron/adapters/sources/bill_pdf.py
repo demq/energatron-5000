@@ -7,9 +7,9 @@ reads only the PDF's creation date; the P5 spec adds text extraction as version 
 import re
 from typing import Final
 
-from energatron.adapters.sources._common import fail
 from energatron.adapters.sources.pdf_meta import creation_date
 from energatron.core.models.catalog import Detection, SourceInfo, SourceType
+from energatron.core.text import fail
 
 PDF_MAGIC: Final = b"%PDF-"
 _ENCRYPT: Final = re.compile(rb"/Encrypt(?![A-Za-z0-9])")

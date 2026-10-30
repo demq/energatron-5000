@@ -5,7 +5,7 @@ Created in P0 because the `Catalog` and `SourceParser` ports name these models. 
 """
 
 import json
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
 from enum import StrEnum, unique
@@ -15,8 +15,8 @@ from pydantic import AfterValidator, Field, model_validator
 
 from energatron.core.canonical import JSONValue
 from energatron.core.errors import CatalogCorruptError, InvalidInputError
+from energatron.core.ids import compact_source, parse_dataset_id
 from energatron.core.ids import dataset_id as make_dataset_id
-from energatron.core.ids import parse_dataset_id
 from energatron.core.models._common import DatasetId, FrozenModel, Sha256Hex, UtcDatetime
 from energatron.core.models.storage import RAW_PREFIX
 from energatron.core.persisted import Persisted
@@ -292,3 +292,23 @@ def parse_catalog(data: bytes, source: SourceType) -> list[CatalogRecord]:
             )
         records.append(line.record)
     return records
+
+
+def precedence_order(records: Sequence[CatalogRecord]) -> list[str]:
+    """Dataset IDs, highest precedence first (P2 spec §3.3, D3 §3.3).
+
+    A newer `source_ts` wins (compared through `compact_source`, so naive and aware values order), then a newer
+    `file_mtime` (a null one ranks below every non-null one), then the later catalog position. Pure and total: no
+    two records tie, because every record has its own position.
+    """
+    ranked = sorted(
+        enumerate(records),
+        key=lambda item: (
+            compact_source(item[1].source_ts),
+            item[1].file_mtime is not None,
+            item[1].file_mtime or datetime.min,
+            item[0],
+        ),
+        reverse=True,
+    )
+    return [record.dataset_id for _, record in ranked]

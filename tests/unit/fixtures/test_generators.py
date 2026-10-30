@@ -1,13 +1,17 @@
 """The synthetic fixtures (D3 §12): made-up identifiers with a valid checksum digit, a matching private config, and
 the NEM12 generator (§12.1)."""
 
+import ast
 import json
+import math
 from datetime import date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
 from energatron.core.models.private import PrivateConfig
 from energatron.core.privacy import nmi_checksum
+from tests.fixtures import oracle
 from tests.fixtures.make_nem12 import (
     Nem12Spec,
     QualityRange,
@@ -23,7 +27,9 @@ from tests.fixtures.make_sources import (
     make_pdf,
     make_retailer_txn_csv,
     make_retailer_usage_csv,
+    make_retailer_usage_from_nem12,
     make_sapn_summary_csv,
+    make_summary_from_nem12,
 )
 from tests.fixtures.synthetic import (
     SYNTHETIC_ACCOUNT,
@@ -243,3 +249,210 @@ def test_the_cdr_plan_detail_has_data_links_and_meta_and_pretty_changes_only_whi
     assert document["data"]["planId"] == "SYNPLAN1" and document["data"]["fuelType"] == "GAS"
     pretty = make_cdr_plan_detail(plan_id="SYNPLAN1", last_updated="2025-01-01T00:00:00Z", fuel_type="GAS", pretty=True)
     assert pretty != compact and json.loads(pretty) == document
+
+
+# --- `make_nem12`: day_values, day_quality, negative_on (P2 spec §13.2) ---------------------------------------------
+
+
+def test_day_values_set_a_chosen_days_values_exactly_and_leave_other_days_alone() -> None:
+    plain = records(make_nem12(Nem12Spec(start=date(2025, 1, 1), days=3, interval_minutes=30)))
+    chosen = [f"{index / 100:.3f}" for index in range(48)]
+    spec = Nem12Spec(start=date(2025, 1, 1), days=3, interval_minutes=30, day_values={date(2025, 1, 2): chosen})
+    rows = records(make_nem12(spec))
+    assert rows[2][2:50] == chosen
+    assert [row for row in rows if row[1:2] != ["20250102"]] == [row for row in plain if row[1:2] != ["20250102"]]
+
+
+def test_day_values_with_the_wrong_count_are_refused() -> None:
+    spec = Nem12Spec(start=date(2025, 1, 1), days=1, interval_minutes=30, day_values={date(2025, 1, 1): ["1.000"]})
+    with pytest.raises(ValueError, match="48"):
+        make_nem12(spec)
+
+
+def test_day_quality_sets_a_non_v_quality_method() -> None:
+    spec = Nem12Spec(start=date(2025, 1, 1), days=2, interval_minutes=30, day_quality={date(2025, 1, 2): "E52"})
+    qualities = [row[2 + 48] for row in records(make_nem12(spec)) if row[0] == "300"]
+    assert qualities == ["A", "E52"]
+
+
+def test_day_quality_cannot_be_v_or_sit_on_a_day_with_400s() -> None:
+    day = date(2025, 1, 1)
+    with pytest.raises(ValueError):
+        make_nem12(Nem12Spec(start=day, days=1, day_quality={day: "V"}))
+    ranges = {day: (QualityRange(1, 288, "A"),)}
+    with pytest.raises(ValueError):
+        make_nem12(Nem12Spec(start=day, days=1, v_days=ranges, day_quality={day: "E52"}))
+
+
+def test_negative_on_makes_that_days_first_value_negative() -> None:
+    spec = Nem12Spec(start=date(2025, 1, 1), days=2, negative_on=date(2025, 1, 2))
+    rows = [row for row in records(make_nem12(spec)) if row[0] == "300"]
+    assert not rows[0][2].startswith("-")
+    assert rows[1][2].startswith("-") and not rows[1][3].startswith("-")
+
+
+# --- the oracle (P2 spec §13.2): independent of core, checked here against hand-made cases --------------------------
+
+
+def small_nem12() -> bytes:
+    day = date(2025, 1, 1)
+    values = ["0.100"] * 24 + ["0.200"] * 24
+    return make_nem12(
+        Nem12Spec(start=day, days=2, interval_minutes=30, day_values={day: values, day + timedelta(1): values})
+    )
+
+
+def test_the_oracle_sums_each_day_per_suffix() -> None:
+    sums = oracle.day_sums(small_nem12())
+    assert set(sums) == {("E1", date(2025, 1, 1)), ("E1", date(2025, 1, 2))}
+    assert all(math.isclose(total, 7.2) for total in sums.values())
+    assert math.isclose(oracle.period_sum(small_nem12(), date(2025, 1, 1), date(2025, 1, 2)), 14.4)
+    assert oracle.period_sum(small_nem12(), date(2025, 1, 1), date(2025, 1, 1), suffixes=("B1",)) == 0.0
+
+
+def test_the_oracle_lists_intervals_with_their_meter_start() -> None:
+    items = oracle.intervals(small_nem12())
+    assert len(items) == 96
+    assert items[0].meter_start == datetime(2025, 1, 1, 0, 0) and items[0].minutes == 30
+    assert items[47].meter_start == datetime(2025, 1, 1, 23, 30) and items[47].kwh == 0.2
+    assert items[48].meter_start == datetime(2025, 1, 2, 0, 0)
+
+
+def test_the_oracle_local_times_in_winter_and_summer() -> None:
+    winter, summer = datetime(2025, 7, 1, 10, 0), datetime(2025, 1, 1, 10, 0)
+    assert oracle.local_time(winter, "nem_aest") == datetime(2025, 7, 1, 9, 30)
+    assert oracle.local_time(winter, "local_wall") == winter
+    assert oracle.local_time(winter, "local_standard") == winter
+    assert oracle.local_time(summer, "nem_aest") == datetime(2025, 1, 1, 10, 30)
+    assert oracle.local_time(summer, "local_wall") == summer
+    assert oracle.local_time(summer, "local_standard") == datetime(2025, 1, 1, 11, 0)
+
+
+def test_the_oracle_switches_at_the_daylight_saving_instants() -> None:
+    april, october = sa_dst_dates(2025)  # 2025-04-06, 2025-10-05
+    end = datetime(april.year, april.month, april.day)
+    start = datetime(october.year, october.month, october.day)
+    # nem_aest: daylight time ends at 02:00 standard = 16:30 UTC the day before = 02:30 on the meter clock
+    assert oracle.local_time(end + timedelta(hours=2, minutes=25), "nem_aest") == end + timedelta(hours=2, minutes=55)
+    assert oracle.local_time(end + timedelta(hours=2, minutes=30), "nem_aest") == end + timedelta(hours=2)
+    # daylight time starts at 02:00 standard = 16:30 UTC the day before = 02:30 on the meter clock
+    assert oracle.local_time(start + timedelta(hours=2, minutes=25), "nem_aest") == start + timedelta(
+        hours=1, minutes=55
+    )
+    assert oracle.local_time(start + timedelta(hours=2, minutes=30), "nem_aest") == start + timedelta(hours=3)
+    assert oracle.local_time(start + timedelta(hours=1, minutes=55), "local_standard") == start + timedelta(
+        hours=1, minutes=55
+    )
+    assert oracle.local_time(start + timedelta(hours=2), "local_standard") == start + timedelta(hours=3)
+
+
+def test_the_oracle_utc_times_and_its_refusal_of_local_wall() -> None:
+    meter = datetime(2025, 7, 1, 10, 0)
+    assert oracle.utc_time(meter, "nem_aest") == datetime(2025, 7, 1, 0, 0)
+    assert oracle.utc_time(meter, "local_standard") == datetime(2025, 7, 1, 0, 30)
+    with pytest.raises(ValueError):
+        oracle.utc_time(meter, "local_wall")
+    with pytest.raises(ValueError):
+        oracle.local_time(meter, "elsewhere")
+
+
+WINDOWS = {"Off Peak": ["01:00-06:00", "10:00-15:00"], "Peak": ["06:00-10:00"], "Shoulder": ["15:00-01:00"]}
+
+
+@pytest.mark.parametrize(
+    ("minute", "label"),
+    [(0, "Shoulder"), (55, "Shoulder"), (60, "Off Peak"), (355, "Off Peak"), (360, "Peak"), (595, "Peak"),
+     (600, "Off Peak"), (895, "Off Peak"), (900, "Shoulder"), (1439, "Shoulder")],
+)  # fmt: skip
+def test_the_oracle_places_a_minute_in_a_window_including_one_that_wraps_midnight(minute: int, label: str) -> None:
+    assert oracle.window_label(minute, WINDOWS) == label
+
+
+def test_the_oracle_tou_sums_follow_the_basis() -> None:
+    day = date(2025, 7, 1)
+    values = [f"{index / 10:.3f}" for index in range(48)]  # winter day, 30-minute intervals
+    nem12 = make_nem12(Nem12Spec(start=day, days=1, interval_minutes=30, day_values={day: values}))
+    items = oracle.intervals(nem12)
+    wall = oracle.tou_sums(items, WINDOWS, "local_wall")
+    nem = oracle.tou_sums(items, WINDOWS, "nem_aest")
+    assert math.isclose(math.fsum(wall.values()), math.fsum(item.kwh for item in items))
+    assert math.isclose(wall["Peak"], math.fsum(float(v) for v in values[12:20]))  # 06:00-10:00
+    assert math.isclose(nem["Peak"], math.fsum(float(v) for v in values[13:21]))  # shifted by 30 minutes
+    assert wall != nem
+
+
+def test_the_summary_from_nem12_carries_the_oracles_period_totals_in_field_7() -> None:
+    nem12 = make_nem12(Nem12Spec(start=date(2025, 1, 1), days=6, interval_minutes=30, suffixes=("E1", "B1")))
+    periods = [(date(2025, 1, 1), date(2025, 1, 3)), (date(2025, 1, 4), date(2025, 1, 6))]
+    rows = make_summary_from_nem12(nem12, periods=periods).decode().split("\r\n")[:-1]
+    assert len(rows) == 2
+    for row, (start, end) in zip(rows, periods, strict=True):
+        fields = row.split(",")
+        assert fields[4:6] == [f"{start:%d/%m/%Y}", f"{end:%d/%m/%Y}"]
+        expected = oracle.period_sum(nem12, start, end, suffixes=("E1",))
+        assert float(fields[6]) == pytest.approx(expected, abs=0.0006)  # the B1 register isn't counted
+        assert expected < oracle.period_sum(nem12, start, end)
+
+
+def test_the_usage_from_nem12_follows_the_basis_and_reconciles_with_the_total() -> None:
+    nem12 = make_nem12(dst_spec(2025, interval_minutes=30))
+    reads = [datetime(2025, 4, 3), datetime(2025, 4, 10), datetime(2025, 10, 1), datetime(2025, 10, 8)]
+    labels = ("Off Peak", "Peak", "Shoulder")
+    texts = {
+        basis: make_retailer_usage_from_nem12(nem12, basis=basis, windows=WINDOWS, reads=reads, labels=labels)
+        for basis in oracle.BASES
+    }
+    assert len(set(texts.values())) == 3  # the three bases give three different exports
+    rows = [line.split(",") for line in texts["nem_aest"].decode().split("\r\n")[1:-1]]
+    assert [row[1] for row in rows] == [f"{read:%Y-%m-%dT%H:%M:%S}" for read in reads]
+    for previous, row in zip(reads, rows[1:], strict=False):
+        read = datetime.fromisoformat(row[1])
+        total = oracle.period_sum(nem12, previous.date() + timedelta(days=1), read.date())
+        assert float(row[-1]) == pytest.approx(total, abs=0.0002)
+        assert sum(float(value) for value in row[2:-1]) == pytest.approx(total, abs=0.0004)
+
+
+def test_the_usage_from_nem12_can_leave_the_newest_row_blank() -> None:
+    nem12 = make_nem12(Nem12Spec(start=date(2025, 1, 1), days=3, interval_minutes=30))
+    reads = [datetime(2025, 1, 1), datetime(2025, 1, 3)]
+    data = make_retailer_usage_from_nem12(
+        nem12,
+        basis="local_wall",
+        windows=WINDOWS,
+        reads=reads,
+        labels=("Off Peak", "Peak", "Shoulder"),
+        blank_last=True,
+    )
+    assert data.decode().split("\r\n")[2] == f"{SYNTHETIC_ACCOUNT},2025-01-03T00:00:00,,,,"
+
+
+# --- the oracle stays independent of the code it checks (P2 spec §13.2) ---------------------------------------------
+
+FIXTURES = Path(__file__).resolve().parents[2] / "fixtures"
+
+
+def _imported_modules(path: Path) -> set[str]:
+    found: set[str] = set()
+    for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+        if isinstance(node, ast.Import):
+            found.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module is not None and node.level == 0:
+            found.add(node.module)
+            found.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return found
+
+
+def test_the_oracle_and_its_fixture_imports_never_import_energatron() -> None:
+    seen: set[Path] = set()
+    pending = [FIXTURES / "oracle.py"]
+    while pending:
+        path = pending.pop()
+        if path in seen:
+            continue
+        seen.add(path)
+        for module in _imported_modules(path):
+            assert module.split(".")[0] != "energatron", f"{path.name} imports {module}"
+            candidate = FIXTURES.parent.parent / Path(*module.split(".")).with_suffix(".py")
+            if module.startswith("tests.fixtures.") and candidate.exists():
+                pending.append(candidate)
+    assert FIXTURES / "oracle.py" in seen

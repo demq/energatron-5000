@@ -5,12 +5,13 @@ days) from the spec, never from the values. Malformed variants are made by the t
 """
 
 import random
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 
 from energatron.core.privacy import nmi_checksum
+from tests.fixtures.oracle import sa_dst_dates
 from tests.fixtures.synthetic import SYNTHETIC_NMI, SYNTHETIC_SERIAL
 
 
@@ -38,6 +39,9 @@ class Nem12Spec:
     seed: int = 0
     trailer_900: bool = True
     line_ending: str = "\n"
+    day_values: Mapping[date, Sequence[str]] = field(default_factory=dict)  # exact values for chosen days, as text
+    day_quality: Mapping[date, str] = field(default_factory=dict)  # a non-V QualityMethod for chosen days, e.g. "E52"
+    negative_on: date | None = None  # that day's first value is made negative
 
 
 def _update_dt(spec: Nem12Spec, day: date) -> datetime:
@@ -72,6 +76,12 @@ def make_nem12(spec: Nem12Spec) -> bytes:
     if 1440 % spec.interval_minutes:
         raise ValueError("the interval must divide a day")
     intervals = 1440 // spec.interval_minutes
+    for day, chosen in spec.day_values.items():
+        if len(chosen) != intervals:
+            raise ValueError(f"day_values for {day} needs {intervals} values")
+    for day, method in spec.day_quality.items():
+        if day in spec.v_days or method.upper().startswith("V"):
+            raise ValueError(f"day_quality for {day} must be a non-V quality on a day without 400 ranges")
     rng = random.Random(spec.seed)
     rows: list[str] = []
     if spec.header_100:
@@ -89,9 +99,13 @@ def make_nem12(spec: Nem12Spec) -> bytes:
                     rows.append("")
                 rows.append(header)
             ranges = spec.v_days.get(day)
-            quality = "V" if ranges else "A"
+            quality = "V" if ranges else spec.day_quality.get(day, "A")
             stamp = f"{_update_dt(spec, day):%Y%m%d%H%M%S}"
-            values = ",".join(_values(rng, intervals, spec.interval_minutes))
+            drawn = _values(rng, intervals, spec.interval_minutes)  # always drawn, so other days keep their values
+            chosen = list(spec.day_values.get(day, drawn))
+            if day == spec.negative_on:
+                chosen[0] = "-" + chosen[0].removeprefix("-")
+            values = ",".join(chosen)
             rows.append(f"300,{day:%Y%m%d},{values},{quality},,,{stamp},{stamp}")
             rows.extend(f"400,{item.start},{item.end},{item.method},{item.reason}," for item in ranges or ())
     if spec.trailer_900:
@@ -109,16 +123,6 @@ def sapn_filename(
     """`<NMI with checksum digit>_<from>_<to>_<generated>_SAPN_<kind>.<ext>`; the helper adds the checksum digit."""
     start, end = window
     return f"{nmi10}{nmi_checksum(nmi10)}_{start:%Y%m%d}_{end:%Y%m%d}_{generated:%Y%m%d%H%M%S}_SAPN_{kind}.{ext}"
-
-
-def _first_sunday(year: int, month: int) -> date:
-    first = date(year, month, 1)
-    return first + timedelta(days=(6 - first.weekday()) % 7)
-
-
-def sa_dst_dates(year: int) -> tuple[date, date]:
-    """South Australia's daylight-saving changes: the first Sunday in April (ends) and in October (starts)."""
-    return _first_sunday(year, 4), _first_sunday(year, 10)
 
 
 def dst_spec(year: int, **kw: Any) -> Nem12Spec:

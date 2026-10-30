@@ -5,12 +5,14 @@ by editing the output, so the generators stay simple.
 """
 
 import json
+import math
 import zlib
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Literal
 
+from tests.fixtures import oracle
 from tests.fixtures.synthetic import SYNTHETIC_ACCOUNT, SYNTHETIC_NMI11, SYNTHETIC_SERIAL
 
 CRLF = "\r\n"
@@ -39,6 +41,24 @@ def make_sapn_summary_csv(
         for row in rows
     ]
     return "".join(line + CRLF for line in lines).encode("utf-8")
+
+
+def make_summary_from_nem12(nem12: bytes, *, periods: Sequence[tuple[date, date]]) -> bytes:
+    """A SUMMARY CSV whose field 7 is each period's kWh over the NEM12's consumption registers (suffix `E…`).
+
+    A period is its meter dates `start…end`, both inclusive. The total comes from the oracle, to three decimals;
+    the other three numbers are made up.
+    """
+    suffixes = sorted({item.suffix for item in oracle.intervals(nem12) if item.suffix.startswith("E")})
+    rows = [
+        SummaryRow(
+            start,
+            end,
+            numbers=(f"{oracle.period_sum(nem12, start, end, suffixes=suffixes):.3f}", "2.000", "3.000", "0.500"),
+        )
+        for start, end in periods
+    ]
+    return make_sapn_summary_csv(rows)
 
 
 # --- Retailer usage export (D3 §5.4) ---------------------------------------------------------------------------------
@@ -73,6 +93,42 @@ def make_retailer_usage_csv(
             numbers = [100 + 10 * offset + index for index in range(len(labels))]
             values = [f"{number}.000" for number in numbers] + [f"{sum(numbers)}.000"]
         lines.append(",".join([account, f"{read:%Y-%m-%dT%H:%M:%S}", *values]))
+    return "".join(line + CRLF for line in lines).encode("utf-8")
+
+
+def make_retailer_usage_from_nem12(
+    nem12: bytes,
+    *,
+    basis: str,
+    windows: Mapping[str, Sequence[str]],
+    reads: Sequence[datetime],
+    labels: Sequence[str],
+    account: str = SYNTHETIC_ACCOUNT,
+    serial: str = SYNTHETIC_SERIAL,
+    register: str = "E1",
+    blank_last: bool = False,
+) -> bytes:
+    """A portal usage export computed from a NEM12 as a retailer on time basis `basis` would bill it.
+
+    One row per read, in the order given: the register values are the NEM12's `register` energy over the meter
+    dates after the previous read up to and including this read's date (the first row covers every date up to its
+    own), placed in `windows` by local start under `basis`, to four decimals. The columns follow `labels`, which
+    must be keys of `windows`; `Total` is the period's whole energy. `blank_last` empties the newest row's values.
+    """
+    items = [item for item in oracle.intervals(nem12) if item.suffix == register]
+    header = ["Account Code", "Read Datetime", *(f"{register} ({serial} - {label})" for label in labels), "Total"]
+    lines = [",".join(header)]
+    previous: date | None = None
+    for position, read in enumerate(reads):
+        first = date.min if previous is None else previous + timedelta(days=1)
+        period = [item for item in items if first <= item.meter_start.date() <= read.date()]
+        sums = oracle.tou_sums(period, windows, basis)
+        if blank_last and position == len(reads) - 1:
+            values = [""] * (len(labels) + 1)
+        else:
+            values = [f"{sums[label]:.4f}" for label in labels] + [f"{math.fsum(item.kwh for item in period):.4f}"]
+        lines.append(",".join([account, f"{read:%Y-%m-%dT%H:%M:%S}", *values]))
+        previous = read.date()
     return "".join(line + CRLF for line in lines).encode("utf-8")
 
 

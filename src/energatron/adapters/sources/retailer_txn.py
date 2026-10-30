@@ -8,17 +8,10 @@ import re
 from datetime import datetime
 from typing import Final
 
-from energatron.adapters.sources._common import (
-    csv_rows,
-    decode,
-    fail,
-    head_lines,
-    is_decimal,
-    lines,
-    parse_datetime,
-)
+from energatron.adapters.sources._common import head_lines
 from energatron.core.canonical import JSONValue
 from energatron.core.models.catalog import Coverage, Detection, Evidence, SourceInfo, SourceType
+from energatron.core.text import csv_rows, decode, fail, is_decimal, lines, parse_datetime
 
 _SOURCE: Final = SourceType.RETAILER_TXN
 _FILENAME: Final = re.compile(r"(?i)transactions_all\.csv$")

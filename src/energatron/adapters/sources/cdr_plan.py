@@ -9,10 +9,10 @@ import re
 from datetime import datetime
 from typing import Final, NoReturn
 
-from energatron.adapters.sources._common import BOM, fail
 from energatron.core.canonical import JSONValue
 from energatron.core.ids import offer_snapshot_id
 from energatron.core.models.catalog import Detection, SourceInfo, SourceType
+from energatron.core.text import BOM, fail
 
 _SOURCE: Final = SourceType.OFFER_CDR
 _RFC3339: Final = re.compile(r"\d{4}-\d{2}-\d{2}[Tt]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:[Zz]|[+-]\d{2}:\d{2})")
