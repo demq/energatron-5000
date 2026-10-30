@@ -1,6 +1,7 @@
 """`adapters/wiring.py`: `build_context()`, `SystemClock`, the live code entries and no placeholder left (D2 §5.9;
 D1 §4.7, §4.8)."""
 
+import importlib.resources
 from datetime import UTC, timedelta
 from pathlib import Path
 from typing import Any
@@ -34,6 +35,9 @@ def test_the_context_holds_the_workspace_and_its_configs(tmp_path: Path) -> None
     assert ctx.config.region == "sa"
     assert ctx.private is not None
     assert tuple(ctx.parsers) == PARSERS  # `regions/sa.yaml` lists all seven P1 parsers
+    assert ctx.region == wiring.load_region_profile("sa")
+    assert ctx.region.local_tz is not None
+    assert ctx.region.tou_windows is not None
     assert dict(ctx.offers) == {}
     assert isinstance(ctx.vcs, GitDvcVersionControl)
     assert isinstance(ctx.clock, wiring.SystemClock)
@@ -120,6 +124,19 @@ def test_an_unknown_region_is_invalid_input(tmp_path: Path) -> None:
     assert caught.value.details["field"] == "region"
 
 
+V2 = "kind: region_profile\nschema_version: 2\nname: bad\nparsers: []\n"
+WINDOWS = "tou_windows: {Alpha: ['08:00-20:00'], Beta: ['20:00-08:00']}\n"
+
+
+def shipped_profile_at(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> None:
+    """Make `regions/bad.yaml` in package data hold `text`; other packages (`tzdata`) resolve as usual."""
+    write(tmp_path, "regions/bad.yaml", text)
+    real = importlib.resources.files
+    monkeypatch.setattr(
+        wiring.importlib.resources, "files", lambda package: tmp_path if package == "energatron" else real(package)
+    )
+
+
 @pytest.mark.parametrize(
     "text",
     [
@@ -127,13 +144,27 @@ def test_an_unknown_region_is_invalid_input(tmp_path: Path) -> None:
         "kind: region_profile\nschema_version: 99\nname: bad\nparsers: []\n",  # newer than the tool
         "- not a mapping\n",
         "kind: [unclosed\n",  # not YAML
+        "kind: region_profile\nschema_version: 1\nname: bad\nparsers: []\n",  # v1: migrates to a null zone
+        V2 + "local_tz: Australia/Adelaide\n" + "tou_windows: null\n",  # null windows
+        V2 + "local_tz: null\n" + WINDOWS,  # null zone
+        V2 + "local_tz: Nowhere/Nowhere\n" + WINDOWS,  # well-formed zone key that tzdata doesn't have
+        V2 + "local_tz: Australia\n" + WINDOWS,  # a directory in tzdata, not a zone
+        V2 + "local_tz: Australia/Adelaide\ntou_windows: {Alpha: ['08:00-20:00']}\n",  # leaves the night uncovered
+        V2 + "local_tz: Australia/Adelaide\ntou_windows: {Alpha: ['08:00-24:00'], Beta: ['00:00-08:00']}\n",
     ],
 )
 def test_a_broken_shipped_profile_is_internal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> None:
-    write(tmp_path, "regions/bad.yaml", text)
-    monkeypatch.setattr(wiring.importlib.resources, "files", lambda _package: tmp_path)
+    shipped_profile_at(tmp_path, monkeypatch, text)
     with pytest.raises(InternalError):
         wiring.load_region_profile("bad")
+
+
+def test_a_shipped_v2_profile_with_a_real_zone_and_partitioning_windows_loads(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    shipped_profile_at(tmp_path, monkeypatch, V2 + "local_tz: Australia/Adelaide\n" + WINDOWS)
+    profile = wiring.load_region_profile("bad")
+    assert profile.local_tz == "Australia/Adelaide"
 
 
 def test_the_system_clock_is_aware_utc() -> None:

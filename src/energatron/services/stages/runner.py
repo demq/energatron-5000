@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
 from typing import ClassVar, Final, Literal
+from zoneinfo import ZoneInfo
 
 import yaml
 from pydantic import Field
@@ -29,9 +30,9 @@ from energatron.core.errors import (
     UsageError,
     WarningCode,
 )
-from energatron.core.models._common import StageName
+from energatron.core.models._common import ZONE_KEY, StageName
 from energatron.core.models.catalog import CATALOG_FILENAME, SourceType, catalog_lines
-from energatron.core.models.params import Params
+from energatron.core.models.params import REGION_FIELDS, Params
 from energatron.core.models.provenance import (
     PROVENANCE_FILENAME,
     CheckResult,
@@ -132,6 +133,7 @@ def prepare_stage(
         raise InvalidInputError("params.yaml isn't a mapping.", kind=Params.KIND)
     values: dict[str, JSONValue] = Params.from_document(doc).model_dump(mode="json")
     params = {key: _pick(values, key) for key in spec.params}
+    _refuse_unset_region_values(values, spec.params)
     return PreparedStage(
         inputs=MappingProxyType(inputs), params=MappingProxyType(params), outputs=MappingProxyType(outputs)
     )
@@ -142,6 +144,27 @@ def _resolve(what: str, defaults: Mapping[str, str], root: Path, overrides: Mapp
     if unknown:
         raise UsageError(f"Unknown {what} name: {', '.join(unknown)}.", names=unknown)
     return {name: root / overrides.get(name, Path(default)) for name, default in defaults.items()}
+
+
+def _refuse_unset_region_values(values: Mapping[str, JSONValue], declared: tuple[str, ...]) -> None:
+    """A declared key that is, or holds, a region value still `null` → `E_INVALID_INPUT` (P2 spec §5.1).
+
+    Only `pipeline sync` fills the zone and the TOU windows from the region profile, so a stage never sees `null`.
+    """
+    for field in REGION_FIELDS:
+        if any(field == key or field.startswith(f"{key}.") for key in declared) and _is_null(values, field):
+            raise InvalidInputError(
+                f"params.yaml has no value for {field} yet: run `energatron pipeline sync`.", field=field
+            )
+
+
+def _is_null(values: Mapping[str, JSONValue], field: str) -> bool:
+    current: JSONValue = values
+    for part in field.split("."):
+        if not isinstance(current, Mapping) or part not in current:
+            return False
+        current = current[part]
+    return current is None
 
 
 def _pick(values: Mapping[str, JSONValue], key: str) -> JSONValue:
@@ -194,6 +217,21 @@ class StageRun:
         if not declared or ".." in parts or path.startswith("/"):
             raise InternalError(f"Stage {self._spec.name} didn't declare package data {path}.")
         return Path(str(importlib.resources.files("energatron"))).joinpath(*parts)
+
+    def zone(self, key: str) -> ZoneInfo:
+        """The time zone `key` (e.g. `meter.local_tz`) from the `tzdata` distribution, never the system database.
+
+        A key that isn't tzdata path-like text, or names no zone in the installed `tzdata` → `E_INVALID_INPUT` with
+        `details.field: "meter.local_tz"` (P2 spec §6). Stage code converts time zones only with zones from here.
+        """
+        if ZONE_KEY.fullmatch(key) is None:
+            raise InvalidInputError("The time zone isn't a valid zone key.", field="meter.local_tz")
+        resource = importlib.resources.files("tzdata").joinpath("zoneinfo", *key.split("/"))
+        try:
+            with resource.open("rb") as handle:
+                return ZoneInfo.from_file(handle, key=key)
+        except OSError, ValueError:  # a missing file or a directory; or bytes that aren't a zone file
+            raise InvalidInputError("The time zone isn't in the installed tzdata.", field="meter.local_tz") from None
 
     def output(self, name: str) -> Path:
         """The temporary directory to write output `name` into."""

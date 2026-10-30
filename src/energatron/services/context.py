@@ -11,6 +11,7 @@ from pydantic import Field
 
 from energatron.core.errors import ResultWarning
 from energatron.core.models.private import PrivateConfig
+from energatron.core.models.region import RegionProfile
 from energatron.core.models.workspace import WorkspaceConfig, WorkspacePaths
 from energatron.core.persisted import Persisted
 from energatron.ports.blobs import BlobStore
@@ -30,6 +31,7 @@ class ServiceContext:
     catalog: Catalog
     blobs: BlobStore
     parsers: Sequence[SourceParser]
+    region: RegionProfile  # loaded by build_context(); pipeline sync copies its zone and windows (P2 spec §5.3)
     vcs: VersionControl
     runner: PipelineRunner
     clock: Clock

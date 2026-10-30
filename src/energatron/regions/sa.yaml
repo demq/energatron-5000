@@ -1,5 +1,10 @@
-# South Australia (D3 §10.3).
+# South Australia (D3 §10.3; P2 spec §5.2).
 kind: region_profile
-schema_version: 1
+schema_version: 2
 name: sa
+local_tz: Australia/Adelaide
+tou_windows: # plan §3.3: the retailer's windows for this network
+  Peak: ["06:00-10:00", "15:00-01:00"]
+  Off Peak: ["01:00-06:00"]
+  Shoulder: ["10:00-15:00"]
 parsers: [elec_bill, gas_bill, offer_cdr, retailer_txn, retailer_usage, sapn_interval, sapn_summary]

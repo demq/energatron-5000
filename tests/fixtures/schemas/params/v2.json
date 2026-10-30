@@ -1,0 +1,28 @@
+{
+  "kind": "params",
+  "meter": {
+    "local_tz": "Test/Zone",
+    "timebase": "nem_aest"
+  },
+  "schema_version": 2,
+  "validation": {
+    "meter": {
+      "total_tolerance_kwh": 0.01
+    },
+    "timebase": {
+      "min_fit_periods": 3,
+      "register_tolerance_kwh": 0.05,
+      "register_tolerance_pct": 0.1,
+      "total_tolerance_kwh": 0.05,
+      "windows": {
+        "Alpha": [
+          "08:00-20:00"
+        ],
+        "Beta": [
+          "20:00-02:00",
+          "02:00-08:00"
+        ]
+      }
+    }
+  }
+}

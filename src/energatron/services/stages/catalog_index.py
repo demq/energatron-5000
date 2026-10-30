@@ -12,6 +12,7 @@ guard in case that validator is ever loosened.
 
 from collections import Counter
 from collections.abc import Iterable
+from datetime import UTC
 from typing import Final
 
 import pandas as pd
@@ -35,8 +36,8 @@ SCHEMA: Final = pa.schema(
         ("sha256", pa.string()),
         ("stored_path", pa.string()),
         ("bytes", pa.int64()),
-        ("landed_at", pa.timestamp("us", tz="UTC")),
-        ("file_mtime", pa.timestamp("us", tz="UTC")),
+        ("landed_at", pa.timestamp("us", tz=UTC)),
+        ("file_mtime", pa.timestamp("us", tz=UTC)),
         ("source_ts", pa.string()),
         ("source_ts_compact", pa.string()),
         ("coverage_start", pa.date32()),

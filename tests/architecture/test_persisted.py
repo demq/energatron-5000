@@ -1,9 +1,9 @@
 """Persisted documents (D1 §5, §13): kinds, versions, migrations and golden documents.
 
 The first part checks the real package: every `Persisted` model has a unique `KIND`, every version above 1 has
-a complete migration chain, and every kind's golden `tests/fixtures/schemas/<kind>/v1.json` upgrades and
-validates. The second part checks the machinery on synthetic kinds, in a registry that each test gets empty and
-that is restored afterwards.
+a complete migration chain, and every kind has a golden `tests/fixtures/schemas/<kind>/v<n>.json` for each of its
+versions, each of which upgrades and validates. The second part checks the machinery on synthetic kinds, in a
+registry that each test gets empty and that is restored afterwards.
 """
 
 import json
@@ -65,16 +65,19 @@ def test_every_version_above_one_has_a_complete_migration_chain() -> None:
     assert steps == {(kind, version) for kind, model in kinds.items() for version in range(1, model.SCHEMA_VERSION)}
 
 
-def test_golden_v1_documents_upgrade_and_validate() -> None:
+def test_golden_documents_upgrade_and_validate() -> None:
     kinds = package_kinds()
     golden_dirs: set[str] = set()
     if SCHEMAS_DIR.is_dir():
         golden_dirs = {path.name for path in SCHEMAS_DIR.iterdir() if path.is_dir()}
-    assert golden_dirs == set(kinds), "every kind needs a golden v1.json, and every golden directory a kind"
+    assert golden_dirs == set(kinds), "every kind needs golden documents, and every golden directory a kind"
     for kind, model in sorted(kinds.items()):
-        document = json.loads((SCHEMAS_DIR / kind / "v1.json").read_text(encoding="utf-8"))
-        assert (document["kind"], document["schema_version"]) == (kind, 1)
-        model.from_document(document)
+        files = {path.name for path in (SCHEMAS_DIR / kind).iterdir()}
+        assert files == {f"v{version}.json" for version in range(1, model.SCHEMA_VERSION + 1)}, kind
+        for version in range(1, model.SCHEMA_VERSION + 1):
+            document = json.loads((SCHEMAS_DIR / kind / f"v{version}.json").read_text(encoding="utf-8"))
+            assert (document["kind"], document["schema_version"]) == (kind, version)
+            model.from_document(document)
 
 
 # The machinery, on synthetic kinds

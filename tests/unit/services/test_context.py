@@ -17,6 +17,7 @@ from energatron import ports
 from energatron.core.models.catalog import CatalogRecord, Detection, SourceInfo, SourceType
 from energatron.core.models.offers import Fetched
 from energatron.core.models.pipeline import ReproReport, StageStatus
+from energatron.core.models.region import RegionProfile
 from energatron.core.models.storage import StoredBlob
 from energatron.core.models.vcs import BackupReport, BackupStatus
 from energatron.core.models.workspace import WorkspaceConfig, WorkspacePaths
@@ -124,6 +125,15 @@ class FakeOffers:
         raise NotImplementedError
 
 
+TEST_REGION = RegionProfile(
+    name="sa",
+    local_tz="Test/Zone",
+    tou_windows={"Alpha": ("08:00-20:00",), "Beta": ("20:00-08:00",)},
+    parsers=(SourceType.SAPN_INTERVAL,),
+)
+"""A made-up region profile: a zone and labels that exist nowhere (P2 spec §13.1)."""
+
+
 def build(**changes: object) -> ServiceContext:
     context = ServiceContext(
         paths=WorkspacePaths(root=Path("/scratch/workspace")),
@@ -132,6 +142,7 @@ def build(**changes: object) -> ServiceContext:
         catalog=FakeCatalog(),
         blobs=FakeBlobs(),
         parsers=(FakeParser(),),
+        region=TEST_REGION,
         vcs=FakeVcs(),
         runner=FakeRunner(),
         clock=FixedClock(),
@@ -139,7 +150,7 @@ def build(**changes: object) -> ServiceContext:
     return dataclasses.replace(context, **changes)  # pyright: ignore[reportArgumentType]
 
 
-def test_the_context_holds_every_port_and_offers_default_to_empty() -> None:
+def test_the_context_holds_every_port_and_the_region_and_offers_default_to_empty() -> None:
     context = build()
     assert [field.name for field in dataclasses.fields(context)] == [
         "paths",
@@ -148,12 +159,14 @@ def test_the_context_holds_every_port_and_offers_default_to_empty() -> None:
         "catalog",
         "blobs",
         "parsers",
+        "region",
         "vcs",
         "runner",
         "clock",
         "offers",
     ]
     assert dict(context.offers) == {}
+    assert context.region is TEST_REGION
     assert context.private is None
     assert context.vcs.backup_status().refs_backed_up is False
 

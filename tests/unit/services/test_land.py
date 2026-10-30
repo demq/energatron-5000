@@ -15,6 +15,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
+import yaml
 
 from energatron.adapters.sources.sapn_nem12 import SAPN_INTERVAL
 from energatron.adapters.storage.fs_blobs import FsBlobStore
@@ -44,6 +45,7 @@ from energatron.core.models.catalog import (
     SourceType,
     blob_key,
 )
+from energatron.core.models.params import Params
 from energatron.core.models.storage import StoredBlob
 from energatron.core.models.vcs import BackupReport, BackupStatus
 from energatron.core.models.workspace import WorkspacePaths
@@ -56,7 +58,7 @@ from energatron.services.stages.registry import STAGES
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
 from tests.fixtures.synthetic import SYNTHETIC_NMI, SYNTHETIC_NMI11, SYNTHETIC_SERIAL, synthetic_private_config
 from tests.unit.adapters._workspace import make_workspace, write
-from tests.unit.services.test_context import FixedClock, build
+from tests.unit.services.test_context import TEST_REGION, FixedClock, build
 
 SHA = "1a2b3c4" + "d" * 33
 ALL_SOURCES = sorted(source.value for source in SourceType)
@@ -173,7 +175,9 @@ class OfferStandIn:
 def paths(tmp_path: Path) -> WorkspacePaths:
     paths = make_workspace(tmp_path, private=None)
     write(paths.root, "dvc.yaml", emit_dvc_yaml(STAGES))
-    write(paths.root, "params.yaml", "kind: params\nschema_version: 1\n")
+    write(
+        paths.root, "params.yaml", yaml.safe_dump(Params.defaults(TEST_REGION).model_dump(mode="json"), sort_keys=False)
+    )
     catalog = JsonlCatalog(paths)
     for source in SourceType:
         catalog.initialise(source)

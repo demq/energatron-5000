@@ -115,3 +115,49 @@ def test_4_adding_a_directory_with_read_only_files_and_empty_year_directories_su
     assert json.loads(dvc(scratch.root, "status", "--json")) == {}
     assert os.access(scratch.root / "data" / "raw" / "sapn_interval" / "2025", os.F_OK)
     assert run(scratch.root, "git", "check-ignore", "-q", "data/raw/sapn_interval") == ""
+
+
+PARAM_STAGE = """\
+stages:
+  checked:
+    cmd: python3 -c "import os; os.makedirs('out', exist_ok=True); open('out/done', 'w').write('x')"
+    params:
+    - validation.timebase
+    - meter.local_tz
+    outs:
+    - out
+"""
+PARAMS = """\
+meter:
+  local_tz: Test/Zone
+validation:
+  timebase:
+    windows:
+      Alpha: ["08:00-20:00"]
+      Beta: ["20:00-08:00"]
+    min_fit_periods: 3
+"""
+
+
+def test_5_a_dict_valued_param_key_is_tracked_as_a_whole_subtree(tmp_path: Path) -> None:
+    """P2 spec §11: a stage declaring `validation.timebase` goes stale when any key under it changes, and `status`
+    names the declared key as one modified value. (`prepare_stage` passing the subtree whole is checked in
+    `test_run_stage.py`.)"""
+    scratch = make_scratch(tmp_path, remote=False)
+    scratch.write("dvc.yaml", PARAM_STAGE)
+    scratch.write("params.yaml", PARAMS)
+    scratch.commit_all()
+    dvc(scratch.root, "repro", "--quiet")
+    assert json.loads(dvc(scratch.root, "status", "--json")) == {}
+
+    scratch.write("params.yaml", PARAMS.replace("min_fit_periods: 3", "min_fit_periods: 4"))
+    status = json.loads(dvc(scratch.root, "status", "--json"))
+    assert status["checked"] == [{"changed deps": {"params.yaml": {"validation.timebase": "modified"}}}]
+
+    scratch.write("params.yaml", PARAMS.replace("08:00-20:00", "07:00-20:00"))
+    status = json.loads(dvc(scratch.root, "status", "--json"))
+    assert status["checked"] == [{"changed deps": {"params.yaml": {"validation.timebase": "modified"}}}]
+
+    scratch.write("params.yaml", PARAMS.replace("Test/Zone", "Other/Zone"))
+    status = json.loads(dvc(scratch.root, "status", "--json"))
+    assert status["checked"] == [{"changed deps": {"params.yaml": {"meter.local_tz": "modified"}}}]

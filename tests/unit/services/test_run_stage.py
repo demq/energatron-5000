@@ -1,9 +1,11 @@
 """The stage contract: `prepare_stage`, `run_stage` and `StageRun` (D1 §9.1-9.3, §10). Synthetic stages and values."""
 
 import json
+import zoneinfo
 from collections.abc import Callable, Mapping
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import pyarrow as pa
@@ -20,6 +22,7 @@ from energatron.core.errors import (
     WarningCode,
 )
 from energatron.core.ids import dataset_id
+from energatron.core.models import _common
 from energatron.core.models.provenance import CodeFingerprint, StageCode, StageProvenance
 from energatron.services.files import write_parquet
 from energatron.services.stages import registry, runner
@@ -164,6 +167,129 @@ def test_prepare_stage_refuses_an_unknown_override_name(root: Path, tmp_path: Pa
     kwargs = {"input_overrides": overrides} if which == "input" else {"output_overrides": overrides}
     with pytest.raises(UsageError):
         prepare_stage(spec_of(), root=root, params_file=root / "params.yaml", **kwargs)  # type: ignore[arg-type]
+
+
+PARAMS_V2 = """\
+kind: params
+schema_version: 2
+meter:
+  timebase: nem_aest
+  local_tz: Test/Zone
+validation:
+  meter:
+    total_tolerance_kwh: 0.01
+  timebase:
+    windows:
+      Alpha: ["08:00-20:00"]
+      Beta: ["20:00-08:00"]
+    register_tolerance_kwh: 0.05
+    register_tolerance_pct: 0.1
+    total_tolerance_kwh: 0.05
+    min_fit_periods: 3
+"""
+
+
+def test_a_dict_valued_declared_param_reaches_the_stage_whole(root: Path) -> None:
+    (root / "params.yaml").write_text(PARAMS_V2)
+    received: dict[str, JSONValue] = {}
+
+    def impl(run: StageRun) -> None:
+        received.update(run.params)
+
+    run(spec_of(impl, params=("validation.meter", "validation.timebase", "meter.local_tz")), root)
+    assert received["validation.meter"] == {"total_tolerance_kwh": 0.01}
+    assert received["validation.timebase"] == {
+        "windows": {"Alpha": ["08:00-20:00"], "Beta": ["20:00-08:00"]},
+        "register_tolerance_kwh": 0.05,
+        "register_tolerance_pct": 0.1,
+        "total_tolerance_kwh": 0.05,
+        "min_fit_periods": 3,
+    }
+    assert received["meter.local_tz"] == "Test/Zone"
+
+
+def test_a_dict_valued_param_is_recorded_in_provenance_with_its_hash(root: Path) -> None:
+    (root / "params.yaml").write_text(PARAMS_V2)
+    run(spec_of(params=("validation.meter",)), root)
+    params = provenance_of(root / "data" / "out" / "result").params
+    assert params.values == {"validation.meter": {"total_tolerance_kwh": 0.01}}
+    assert params.sha256 == content_hash({"validation.meter": {"total_tolerance_kwh": 0.01}})
+
+
+@pytest.mark.parametrize(
+    ("keys", "field"),
+    [
+        (("meter.local_tz",), "meter.local_tz"),
+        (("validation.timebase.windows",), "validation.timebase.windows"),
+        (("validation.timebase",), "validation.timebase.windows"),
+        (("validation",), "validation.timebase.windows"),
+        (("meter", "validation.meter"), "meter.local_tz"),
+    ],
+)
+def test_a_stage_that_declares_a_null_zone_or_windows_is_invalid_input(
+    root: Path, keys: tuple[str, ...], field: str
+) -> None:
+    """A v1 file migrates to v2 with both `null` (P2 spec §5.1); the stage must not see them."""
+    with pytest.raises(InvalidInputError) as caught:
+        prepare_stage(spec_of(params=keys), root=root, params_file=root / "params.yaml")
+    assert caught.value.details["field"] == field
+    assert "pipeline sync" in caught.value.message
+
+
+@pytest.mark.parametrize("keys", [(), ("meter.timebase",), ("validation.meter",)])
+def test_declared_keys_that_are_set_pass_while_the_zone_is_null(root: Path, keys: tuple[str, ...]) -> None:
+    prepared = prepare_stage(spec_of(params=keys), root=root, params_file=root / "params.yaml")
+    assert set(prepared.params) == set(keys)
+
+
+# StageRun.zone (P2 spec §6)
+
+
+def make_run(root: Path) -> StageRun:
+    return StageRun(spec_of(), {}, {}, {})
+
+
+def test_zone_returns_the_tzdata_zone(root: Path) -> None:
+    zone = make_run(root).zone("Australia/Adelaide")
+    assert isinstance(zone, ZoneInfo)
+    assert zone.key == "Australia/Adelaide"
+    assert datetime(2025, 7, 1, 12, 0, tzinfo=zone).utcoffset() == timedelta(hours=9, minutes=30)
+    assert datetime(2025, 1, 1, 12, 0, tzinfo=zone).utcoffset() == timedelta(hours=10, minutes=30)
+
+
+def test_zone_reads_the_tzdata_distribution_not_the_system_database(
+    root: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A wrong system zone file changes nothing: with the search path pointed at an empty folder, the zone still
+    comes from the `tzdata` package."""
+    monkeypatch.setattr(zoneinfo, "TZPATH", (str(root),))
+    zone = make_run(root).zone("Australia/Adelaide")
+    assert datetime(2025, 1, 1, 12, 0, tzinfo=zone).utcoffset() == timedelta(hours=10, minutes=30)
+
+
+@pytest.mark.parametrize(
+    "key",
+    [
+        "",
+        " ",
+        "Australia Adelaide",
+        "../Adelaide",
+        "Australia/../Adelaide",
+        "/Australia/Adelaide",
+        "Australia/Adelaide/",
+        "Australia//Adelaide",
+        "Australia/Adelaide\n",  # `$` would let a trailing newline through
+        "Australia\\Adelaide",
+        "Australia/Nowhere",  # well-formed, but no such file
+        "Australia",  # a directory
+        "zone.tab",
+        "Nowhere/Nowhere/Nowhere",
+    ],
+)
+def test_zone_refuses_a_malformed_or_unknown_key(root: Path, key: str) -> None:
+    with pytest.raises(InvalidInputError) as caught:
+        make_run(root).zone(key)
+    assert caught.value.details["field"] == "meter.local_tz"
 
 
 # The registry (D1 §9.2, §9.3 step 1)
@@ -493,3 +619,9 @@ def test_provenance_lists_inputs_in_declared_order_whatever_the_callers_order(ro
         contents.append((target / "_provenance.json").read_bytes())
     assert contents[0] == contents[1]
     assert [item.name for item in provenance_of(target).inputs] == ["text", "other"]
+
+
+def test_the_zone_key_pattern_is_the_one_core_defines() -> None:
+    """One definition, in `core/models/_common.py`: the stage's `zone()` and the `ZoneKey` field type agree."""
+    assert runner.ZONE_KEY is _common.ZONE_KEY
+    assert _common.ZONE_KEY.pattern == r"^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$"  # the P2 spec §6 pattern, verbatim

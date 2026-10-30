@@ -10,7 +10,6 @@ from energatron.core.canonical import JSONValue, content_hash, sha256_hex
 from energatron.core.errors import InvalidInputError
 from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
-from energatron.core.models.params import Params
 from energatron.core.models.pipeline import ReproLogEntry
 from energatron.core.models.provenance import CodeFingerprint, StageCode, StageProvenance, stale_stages
 from energatron.core.models.region import RegionProfile
@@ -253,25 +252,20 @@ def test_provenance_rules(doc: dict[str, Any]) -> None:
         StageProvenance.from_document(doc)
 
 
-# Params (D3 §10.2)
-
-
-def test_params_v1_holds_no_settings() -> None:
-    assert Params.from_document({"kind": "params", "schema_version": 1}).model_dump() == {
-        "kind": "params",
-        "schema_version": 1,
-    }
-    with pytest.raises(InvalidInputError):
-        Params.from_document({"kind": "params", "schema_version": 1, "meter": {"timebase": "nem_aest"}})
-
-
 # RegionProfile (D3 §10.3)
 
 
 def test_the_sa_region_profile_shape() -> None:
     parsers = ["elec_bill", "gas_bill", "offer_cdr", "retailer_txn", "retailer_usage", "sapn_interval", "sapn_summary"]
     profile = RegionProfile.from_document(
-        {"kind": "region_profile", "schema_version": 1, "name": "sa", "parsers": parsers}
+        {
+            "kind": "region_profile",
+            "schema_version": 2,
+            "name": "sa",
+            "local_tz": None,
+            "tou_windows": None,
+            "parsers": parsers,
+        }
     )
     assert profile.parsers == tuple(SourceType(parser) for parser in parsers)
 
@@ -281,6 +275,13 @@ def test_the_sa_region_profile_shape() -> None:
     [{"name": "SA"}, {"name": ""}, {"parsers": ["sapn_interval", "sapn_interval"]}, {"parsers": ["nem13"]}],
 )
 def test_region_profile_rules(changes: dict[str, JSONValue]) -> None:
-    doc: dict[str, JSONValue] = {"kind": "region_profile", "schema_version": 1, "name": "sa", "parsers": []}
+    doc: dict[str, JSONValue] = {
+        "kind": "region_profile",
+        "schema_version": 2,
+        "name": "sa",
+        "local_tz": None,
+        "tou_windows": None,
+        "parsers": [],
+    }
     with pytest.raises(InvalidInputError):
         RegionProfile.from_document(doc | changes)

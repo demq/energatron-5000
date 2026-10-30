@@ -300,6 +300,11 @@ class WarningCode(StrEnum):
     W_BACKUP_PENDING = "W_BACKUP_PENDING"  # a commit was made that no backup holds yet (D1 §4.4, D3 §11)
     W_PREMISES_UNCHECKED = "W_PREMISES_UNCHECKED"  # nothing in the file could confirm the premises (D3 §6)
     W_UNKNOWN_IDENTIFIER = "W_UNKNOWN_IDENTIFIER"  # a meter serial or account not in the private config (D3 §6)
+    W_MERGE_SAME_UPDATE = "W_MERGE_SAME_UPDATE"  # days that differ with equal UpdateDateTime (P2 spec §7.2)
+    W_METER_GAPS = "W_METER_GAPS"  # missing meter dates (P2 spec §8)
+    W_METER_UNVALIDATED = "W_METER_UNVALIDATED"  # no SUMMARY row covers the merged data (P2 spec §8)
+    W_TIMEBASE_UNCONFIRMED = "W_TIMEBASE_UNCONFIRMED"  # too little evidence, or the configured basis tied (P2 §9.4)
+    W_TIMEBASE_UNEXPLAINED = "W_TIMEBASE_UNEXPLAINED"  # periods no time-basis hypothesis fits (P2 spec §9.4)
 
 
 class ResultWarning(BaseModel):

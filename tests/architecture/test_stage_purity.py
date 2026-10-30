@@ -28,6 +28,8 @@ BANNED_MODULES = (
     "pickle",
     "marshal",
     "shelve",
+    "pytz",  # time zones come from `StageRun.zone()` (P2 spec §6)
+    "dateutil.tz",
 )
 # Qualified names a stage may not use, nor anything under them.
 BANNED_NAMES = (
@@ -44,7 +46,18 @@ BANNED_NAMES = (
     "datetime.datetime.utcnow",
     "datetime.datetime.today",
     "datetime.date.today",
+    "zoneinfo.available_timezones",
+    "zoneinfo.reset_tzpath",
 )
+# Calls of these are banned. The class itself may only be named in an annotation or as the receiver of `from_file`,
+# which is how `StageRun.zone()` reads tzdata; any other reference (`map(ZoneInfo, keys)`, `f = ZoneInfo`) is a
+# construction waiting to happen. Known limit of the static scan: `getattr(zoneinfo, "ZoneInfo")` isn't seen.
+BANNED_CALLS = frozenset({"zoneinfo.ZoneInfo", "zoneinfo.ZoneInfo.no_cache", "zoneinfo.ZoneInfo.clear_cache"})
+ZONE_CLASS = "zoneinfo.ZoneInfo"
+ZONE_CLASS_ALLOWED_ATTRIBUTE = "from_file"
+# Calls whose first positional argument is a time zone, and keywords that take one.
+TZ_METHODS = frozenset({"tz_localize", "tz_convert"})
+TZ_KEYWORD = "tz"
 # Bare names or attributes, whatever they belong to.
 BANNED_IDENTIFIERS = frozenset(
     {
@@ -77,6 +90,7 @@ def impurities(source: str) -> set[str]:
     tree = ast.parse(source)
     aliases = import_aliases(tree)
     inner = {id(node.value) for node in ast.walk(tree) if isinstance(node, ast.Attribute)}
+    annotated = _annotation_nodes(tree)
     found: set[str] = set()
     for node in ast.walk(tree):
         match node:
@@ -92,15 +106,64 @@ def impurities(source: str) -> set[str]:
                         found.add(f"uses {alias.name}")
             case ast.Call(func=ast.Name(id=name)) if name in BANNED_BUILTIN_CALLS:
                 found.add(f"calls {name}")
+            case ast.Call(func=func) if (called := qualified_name(func, aliases)) in BANNED_CALLS:
+                found.add(f"calls {called}")
             case ast.Name() | ast.Attribute() if id(node) not in inner:
                 last = node.id if isinstance(node, ast.Name) else node.attr
                 name = qualified_name(node, aliases)
+                if name == ZONE_CLASS and id(node) not in annotated:
+                    found.add(f"uses {name}")
                 if last in BANNED_IDENTIFIERS:
                     found.add(f"uses {last}")
                 elif name is not None and _under(name, BANNED_MODULES + BANNED_NAMES):
                     found.add(f"uses {name}")
             case _:
                 pass
+        if (
+            isinstance(node, ast.Attribute)
+            and node.attr != ZONE_CLASS_ALLOWED_ATTRIBUTE
+            and id(node.value) not in annotated
+            and qualified_name(node.value, aliases) == ZONE_CLASS
+        ):
+            found.add(f"uses {ZONE_CLASS}")  # `ZoneInfo.no_cache`, `ZoneInfo.__call__`, ...
+    found |= _string_zones(tree)
+    return found
+
+
+def _annotation_nodes(tree: ast.Module) -> set[int]:
+    """The ids of every node inside a type annotation (parameter, return or variable)."""
+    roots: list[ast.expr] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.arg) and node.annotation is not None:
+            roots.append(node.annotation)
+        elif isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef) and node.returns is not None:
+            roots.append(node.returns)
+        elif isinstance(node, ast.AnnAssign):
+            roots.append(node.annotation)
+    return {id(inner) for root in roots for inner in ast.walk(root)}
+
+
+def _is_string(node: ast.expr) -> bool:
+    """A string literal, an f-string or a `str(...)` call: a zone passed by name, not as an object."""
+    return (
+        (isinstance(node, ast.Constant) and isinstance(node.value, str))
+        or isinstance(node, ast.JoinedStr)
+        or (isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "str")
+    )
+
+
+def _string_zones(tree: ast.Module) -> set[str]:
+    """Time zones passed as strings: `tz=` keywords, and the first argument of `tz_localize` and `tz_convert`."""
+    found: set[str] = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if any(keyword.arg == TZ_KEYWORD and _is_string(keyword.value) for keyword in node.keywords):
+            found.add("passes a string tz")
+        if isinstance(node.func, ast.Attribute) and node.func.attr in TZ_METHODS:
+            first = node.args[0] if node.args else next((k.value for k in node.keywords if k.arg == TZ_KEYWORD), None)
+            if first is not None and _is_string(first):
+                found.add(f"passes a string to {node.func.attr}")
     return found
 
 
@@ -168,6 +231,35 @@ def test_the_stage_module_sets_include_the_two_named_exceptions() -> None:
         ("x = __spec__\n", "uses __spec__"),
         ("x = __loader__\n", "uses __loader__"),
         ("import energatron\nenergatron.__version__\n", "uses __version__"),
+        # time zones (P2 spec §6): only zone objects from `StageRun.zone()` may be used
+        ('from zoneinfo import ZoneInfo\nZoneInfo("Region/City")\n', "calls zoneinfo.ZoneInfo"),
+        ('import zoneinfo\nzoneinfo.ZoneInfo("Region/City")\n', "calls zoneinfo.ZoneInfo"),
+        ("import zoneinfo as zi\nzi.ZoneInfo(key)\n", "calls zoneinfo.ZoneInfo"),
+        ('from zoneinfo import ZoneInfo\nZoneInfo.no_cache("Region/City")\n', "calls zoneinfo.ZoneInfo.no_cache"),
+        # a bare reference is as bad as a call: it can be mapped, aliased or stored, then called out of sight
+        ("from zoneinfo import ZoneInfo\nlist(map(ZoneInfo, keys))\n", "uses zoneinfo.ZoneInfo"),
+        ("from zoneinfo import ZoneInfo\nf = ZoneInfo\nf(key)\n", "uses zoneinfo.ZoneInfo"),
+        ("import zoneinfo\nf = zoneinfo.ZoneInfo\nf(key)\n", "uses zoneinfo.ZoneInfo"),
+        ("import zoneinfo as zi\nmake = [zi.ZoneInfo][0]\n", "uses zoneinfo.ZoneInfo"),
+        ("from zoneinfo import ZoneInfo\nx = isinstance(y, ZoneInfo)\n", "uses zoneinfo.ZoneInfo"),
+        ("from zoneinfo import ZoneInfo\nfunctools.partial(ZoneInfo, key)\n", "uses zoneinfo.ZoneInfo"),
+        ("from zoneinfo import ZoneInfo\nZoneInfo(key)\n", "uses zoneinfo.ZoneInfo"),
+        ("from zoneinfo import ZoneInfo\nZoneInfo.no_cache(key)\n", "uses zoneinfo.ZoneInfo"),
+        ("import zoneinfo\nzoneinfo.ZoneInfo.__call__(zoneinfo.ZoneInfo, key)\n", "uses zoneinfo.ZoneInfo"),
+        ("import zoneinfo\nzoneinfo.available_timezones()\n", "uses zoneinfo.available_timezones"),
+        ("from zoneinfo import available_timezones\navailable_timezones()\n", "uses zoneinfo.available_timezones"),
+        ("import pytz\n", "imports pytz"),
+        ("from pytz import timezone\n", "imports pytz"),
+        ("from dateutil import tz\n", "imports dateutil.tz"),
+        ("import dateutil.tz\n", "imports dateutil.tz"),
+        ('import pandas as pd\npd.Timestamp(x, tz="UTC")\n', "passes a string tz"),
+        ("import pandas as pd\npd.Timestamp(x, tz=str(key))\n", "passes a string tz"),
+        ('import pandas as pd\npd.Timestamp(x, tz=f"{a}/{b}")\n', "passes a string tz"),
+        ('import pandas as pd\npd.date_range(a, b, tz="Region/City")\n', "passes a string tz"),
+        ('s.dt.tz_localize("Region/City")\n', "passes a string to tz_localize"),
+        ('s.dt.tz_convert("UTC")\n', "passes a string to tz_convert"),
+        ("s.dt.tz_convert(str(key))\n", "passes a string to tz_convert"),
+        ('s.dt.tz_localize(tz="Region/City")\n', "passes a string to tz_localize"),
     ],
 )
 def test_the_matcher_catches_each_banned_form(source: str, finding: str) -> None:
@@ -182,6 +274,16 @@ def test_the_matcher_catches_each_banned_form(source: str, finding: str) -> None
         "import numpy as np\nnp.array([1])\n",
         "from datetime import datetime\ndatetime(2026, 1, 1)\n",
         "import pandas as pd\nwith pd.option_context('mode.copy_on_write', True):\n    pass\n",
+        # a zone object from `StageRun.zone()` is fine, wherever it goes
+        "from zoneinfo import ZoneInfo\ndef f(zone: ZoneInfo) -> None:\n    pass\n",
+        "from zoneinfo import ZoneInfo\nZoneInfo.from_file(handle, key=key)\n",
+        "import zoneinfo\nzoneinfo.ZoneInfo.from_file(handle, key=key)\n",
+        "from zoneinfo import ZoneInfo\nx: ZoneInfo | None = None\n",
+        "from zoneinfo import ZoneInfo\ndef f(a: ZoneInfo, *, b: list[ZoneInfo]) -> ZoneInfo:\n    return a\n",
+        "import zoneinfo\ndef f(a: zoneinfo.ZoneInfo) -> zoneinfo.ZoneInfo:\n    return a\n",
+        "import pandas as pd\npd.Timestamp(x, tz=zone)\n",
+        "s.dt.tz_localize(zone)\ns.dt.tz_convert(zone)\ns.dt.tz_localize(tz=zone)\n",
+        "import datetime\ndatetime.datetime(2026, 1, 1, tzinfo=datetime.UTC)\n",
     ],
 )
 def test_the_matcher_allows_the_harmless_lookalikes(source: str) -> None:

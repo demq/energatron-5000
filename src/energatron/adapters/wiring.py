@@ -3,7 +3,7 @@
 Driving adapters (the CLI now) reach the driven adapters only through here. The raw zone is `JsonlCatalog` and
 `FsBlobStore` (P1.2.2); the `PipelineRunner` is `DvcRunner` (P1.3.3). `code_fingerprint()` computes the live code
 fingerprint of every registered stage, and `stage_code()` one stage's live entry (D1 §11). `parsers` are the
-registered parsers the workspace region's profile lists (D3 §10.3).
+registered parsers the workspace region's profile lists (D3 §10.3); `region` is that profile (P2 spec §5.3).
 """
 
 import importlib.resources
@@ -54,7 +54,8 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
     config = read_workspace_config(paths)
     bundle_dir = backup_bundle_dir(read_local_config(paths))
     private = read_private_config(paths)
-    parsers = parsers_for(load_region_profile(config.region))
+    region = load_region_profile(config.region)
+    parsers = parsers_for(region)
     vcs = GitDvcVersionControl(paths, clock=clock, bundle_dir=bundle_dir, policy=config.backup)
     return ServiceContext(
         paths=paths,
@@ -63,6 +64,7 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
         catalog=JsonlCatalog(paths),
         blobs=FsBlobStore(paths),
         parsers=parsers,
+        region=region,
         vcs=vcs,
         runner=DvcRunner(paths, fingerprint=lambda: code_fingerprint()),
         clock=clock,
@@ -73,7 +75,8 @@ def load_region_profile(name: str) -> RegionProfile:
     """The region profile `regions/<name>.yaml` from package data (D3 §10.3).
 
     No such profile → `E_INVALID_INPUT` with `details.field: "region"` (D2 §6.1). A profile the package ships that
-    can't be read or validated, or is newer than this tool, is a bug → `E_INTERNAL`.
+    can't be read or validated, is newer than this tool, leaves its time zone or TOU windows `null`, or names a zone
+    the installed `tzdata` doesn't have, is a bug → `E_INTERNAL` (P2 spec §5.2).
     """
     resource = importlib.resources.files("energatron").joinpath("regions", f"{name}.yaml")
     if not resource.is_file():
@@ -82,9 +85,14 @@ def load_region_profile(name: str) -> RegionProfile:
         document = yaml.safe_load(resource.read_text(encoding="utf-8"))
         if not isinstance(document, dict):
             raise InternalError("A region profile isn't a YAML mapping.", region=name)
-        return RegionProfile.from_document(document)
+        profile = RegionProfile.from_document(document)
     except (yaml.YAMLError, InvalidInputError, SchemaTooNewError) as error:
         raise InternalError("A region profile in the package is invalid.", region=name) from error
+    if profile.local_tz is None or profile.tou_windows is None:
+        raise InternalError("A region profile in the package leaves its time zone or TOU windows unset.", region=name)
+    if not importlib.resources.files("tzdata").joinpath("zoneinfo", *profile.local_tz.split("/")).is_file():
+        raise InternalError("A region profile in the package names a time zone that tzdata doesn't have.", region=name)
+    return profile
 
 
 def code_fingerprint() -> CodeFingerprint:

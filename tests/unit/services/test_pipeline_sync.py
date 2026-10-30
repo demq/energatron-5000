@@ -4,34 +4,34 @@ The workspace is a scratch folder with the real `JsonlCatalog`; `VersionControl`
 as `dvc add` does, adds one `/<source>` line per tracked directory to `data/raw/.gitignore`. Nothing commits.
 """
 
+import copy
+import dataclasses
 import os
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import ClassVar, Literal
+from typing import Any
 
 import pytest
 import yaml
-from pydantic import Field
 
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
-from energatron.core import persisted
-from energatron.core.canonical import JSONValue
 from energatron.core.errors import InvalidInputError, PipelineNotSyncedError, SchemaTooNewError
 from energatron.core.models.catalog import SourceType
 from energatron.core.models.params import Params
+from energatron.core.models.region import RegionProfile
 from energatron.core.models.vcs import BackupReport, BackupStatus
 from energatron.core.models.workspace import WorkspacePaths
-from energatron.core.persisted import Persisted
 from energatron.services import pipeline_sync
 from energatron.services.context import ServiceContext
 from energatron.services.pipeline_sync import PipelineSyncResult
 from energatron.services.stages.dvc_yaml import emit_dvc_yaml
 from energatron.services.stages.registry import STAGES
 from tests.unit.adapters._workspace import make_workspace, write
-from tests.unit.services.test_context import build
+from tests.unit.services.test_context import TEST_REGION, build
 
 GOLDEN = Path(__file__).resolve().parents[2] / "fixtures" / "golden" / "dvc.yaml"
 PARAMS_V1 = "kind: params\nschema_version: 1\n"
+DEFAULTS = Params.defaults(TEST_REGION).model_dump(mode="json")
 ALL_SOURCES = sorted(source.value for source in SourceType)
 
 
@@ -82,6 +82,10 @@ def ctx(paths: WorkspacePaths, vcs: TrackingVcs) -> ServiceContext:
     return build(paths=paths, catalog=JsonlCatalog(paths), vcs=vcs)
 
 
+def dump(doc: dict[str, Any]) -> str:
+    return yaml.safe_dump(doc, sort_keys=False)
+
+
 def snapshot(root: Path) -> dict[str, tuple[bytes, int]]:
     """Every file under `root` but the workspace marker, with its bytes and mtime."""
     found: dict[str, tuple[bytes, int]] = {}
@@ -110,7 +114,10 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     result = synced(ctx)
     root = ctx.paths.root
     assert (root / "dvc.yaml").read_bytes() == GOLDEN.read_bytes()
-    assert (root / "params.yaml").read_text(encoding="utf-8") == PARAMS_V1
+    text = (root / "params.yaml").read_text(encoding="utf-8")
+    assert text.startswith("kind: params\nschema_version: 2\nmeter:\n")
+    assert yaml.safe_load(text) == DEFAULTS
+    assert DEFAULTS["meter"]["local_tz"] == TEST_REGION.local_tz  # the test region's, not a shipped one
     for source in SourceType:
         assert ctx.paths.catalog_path(source).read_bytes() == b""
     assert result.dvc_yaml_written is True
@@ -175,7 +182,7 @@ def test_a_missing_dvc_yaml_is_drift_and_is_written(ctx: ServiceContext) -> None
 
 
 def test_a_current_params_file_is_validated_and_left_alone(ctx: ServiceContext) -> None:
-    params = write(ctx.paths.root, "params.yaml", "# my comment\nkind: params\nschema_version: 1\n")
+    params = write(ctx.paths.root, "params.yaml", "# my comment\n" + dump(DEFAULTS))
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, False)
     assert params.read_text(encoding="utf-8").startswith("# my comment\n")
@@ -208,7 +215,7 @@ def test_an_invalid_params_file_is_invalid_input_in_sync_and_check(ctx: ServiceC
 
 
 def test_a_newer_params_file_is_schema_too_new_and_nothing_is_written(ctx: ServiceContext, vcs: TrackingVcs) -> None:
-    write(ctx.paths.root, "params.yaml", "kind: params\nschema_version: 2\n")
+    write(ctx.paths.root, "params.yaml", "kind: params\nschema_version: 3\n")
     before = snapshot(ctx.paths.root)
     with pytest.raises(SchemaTooNewError):
         pipeline_sync.sync(ctx)
@@ -218,59 +225,111 @@ def test_a_newer_params_file_is_schema_too_new_and_nothing_is_written(ctx: Servi
     assert vcs.tracked == []
 
 
-@pytest.fixture
-def params_v2(monkeypatch: pytest.MonkeyPatch) -> type[Persisted]:
-    """Make `params` a test-only v2 kind, adding `meter.timebase` (default 30), with a v1 → v2 migration that inserts
-    it. The registries are swapped for copies, so the real `Params` comes back after the test."""
-    kinds = {kind: model for kind, model in persisted.registered_kinds().items() if kind != Params.KIND}
-    monkeypatch.setattr(persisted, "_KINDS", kinds)
-    monkeypatch.setattr(persisted, "_MIGRATIONS", dict(persisted.registered_migrations()))
-
-    class ParamsV2(Persisted):
-        KIND: ClassVar[str] = "params"
-        SCHEMA_VERSION: ClassVar[int] = 2
-        kind: Literal["params"] = "params"
-        schema_version: Literal[2] = 2
-
-        meter: dict[str, int] = Field(default_factory=lambda: {"timebase": 30})
-        note: str | None = None
-
-    @persisted.migration("params", from_version=1)
-    def _v1_to_v2(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:  # pyright: ignore[reportUnusedFunction]
-        return {**doc, "schema_version": 2, "meter": {"timebase": 30}}
-
-    return ParamsV2
+def edited(**sections: Any) -> dict[str, Any]:
+    """The defaults with whole `meter` / `validation` leaves replaced: `edited(**{"meter.local_tz": "Other/Zone"})`."""
+    doc = copy.deepcopy(DEFAULTS)
+    for dotted, value in sections.items():
+        *parents, leaf = dotted.split(".")
+        target = doc
+        for part in parents:
+            target = target[part]
+        target[leaf] = value
+    return doc
 
 
-def test_params_v2_is_registered_only_inside_the_fixture(params_v2: type[Persisted]) -> None:
-    assert persisted.registered_kinds()["params"] is params_v2
-
-
-def test_an_older_params_file_is_drift_then_rewritten_keeping_its_values(
-    ctx: ServiceContext, params_v2: type[Persisted]
-) -> None:
-    synced_v1 = PARAMS_V1.replace("schema_version: 1\n", "schema_version: 1\nnote: kept\n")
+def prepare_synced(ctx: ServiceContext, params: dict[str, Any] | str) -> None:
+    """A workspace that is in sync but for `params.yaml`, which holds `params`."""
     write(ctx.paths.root, "dvc.yaml", emit_dvc_yaml(STAGES))
     for source in SourceType:
         write(ctx.paths.root, f"data/raw/{source.value}/_catalog.jsonl", "")
-    write(ctx.paths.root, "params.yaml", "# a comment that is lost\n" + synced_v1)
+    write(ctx.paths.root, "params.yaml", params if isinstance(params, str) else dump(params))
+
+
+def params_on_disk(ctx: ServiceContext) -> dict[str, Any]:
+    return yaml.safe_load((ctx.paths.root / "params.yaml").read_text(encoding="utf-8"))
+
+
+def test_an_older_params_file_is_drift_then_rewritten_with_the_zone_and_windows_filled(ctx: ServiceContext) -> None:
+    prepare_synced(ctx, "# a comment that is lost\n" + PARAMS_V1)
     assert drift_of(ctx) == ["params.yaml"]
 
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     text = (ctx.paths.root / "params.yaml").read_text(encoding="utf-8")
     assert text.startswith("kind: params\nschema_version: 2\n")
-    assert yaml.safe_load(text) == {"kind": "params", "schema_version": 2, "meter": {"timebase": 30}, "note": "kept"}
+    assert (
+        yaml.safe_load(text) == DEFAULTS
+    )  # the v1 file held nothing to keep: the zone and windows come from the profile
     pipeline_sync.check(ctx)
     assert synced(ctx).params_rewritten is False
 
 
-def test_a_missing_params_file_gets_the_current_versions_defaults(
-    ctx: ServiceContext, params_v2: type[Persisted]
-) -> None:
-    assert synced(ctx).params_written is True
-    text = (ctx.paths.root / "params.yaml").read_text(encoding="utf-8")
-    assert text == "kind: params\nschema_version: 2\nmeter:\n  timebase: 30\nnote: null\n"
+def test_a_missing_params_file_is_written_from_the_defaults_of_the_contexts_profile(ctx: ServiceContext) -> None:
+    result = synced(ctx)
+    assert (result.params_written, result.params_rewritten) == (True, False)
+    assert params_on_disk(ctx) == DEFAULTS
+    other = RegionProfile(name="sa", local_tz="Other/Place", tou_windows={"Gamma": ("00:00-00:00",)}, parsers=())
+    elsewhere = dataclasses.replace(ctx, region=other)
+    (ctx.paths.root / "params.yaml").unlink()
+    synced(elsewhere)
+    assert params_on_disk(ctx)["meter"]["local_tz"] == "Other/Place"
+    assert params_on_disk(ctx)["validation"]["timebase"]["windows"] == {"Gamma": ["00:00-00:00"]}
+
+
+def test_a_hand_edited_zone_is_drift_and_is_rewritten_alone(ctx: ServiceContext) -> None:
+    owners = edited(
+        **{
+            "meter.local_tz": "Owner/Choice",
+            "meter.timebase": "local_wall",
+            "validation.meter.total_tolerance_kwh": 0.5,
+            "validation.timebase.windows": {"Gamma": ["00:00-00:00"]},
+            "validation.timebase.min_fit_periods": 7,
+        }
+    )
+    prepare_synced(ctx, owners)
+    assert drift_of(ctx) == ["params.yaml"]
+    result = synced(ctx)
+    assert (result.params_written, result.params_rewritten) == (False, True)
+    expected = copy.deepcopy(owners)
+    expected["meter"]["local_tz"] = TEST_REGION.local_tz
+    assert params_on_disk(ctx) == expected  # only the zone changed; the edited windows and every other value survive
+    pipeline_sync.check(ctx)
+
+
+def test_an_edited_windows_value_and_every_other_edited_value_survive_with_no_drift(ctx: ServiceContext) -> None:
+    owners = edited(
+        **{
+            "meter.timebase": "local_standard",
+            "validation.timebase.windows": {"Gamma": ["00:00-12:00"], "Delta": ["12:00-00:00"]},
+            "validation.timebase.register_tolerance_pct": 0.2,
+        }
+    )
+    prepare_synced(ctx, "# my comment\n" + dump(owners))
+    pipeline_sync.check(ctx)
+    result = synced(ctx)
+    assert (result.params_written, result.params_rewritten) == (False, False)
+    assert (ctx.paths.root / "params.yaml").read_text(encoding="utf-8").startswith("# my comment\n")
+
+
+@pytest.mark.parametrize(
+    ("leaf", "expected"),
+    [
+        ("meter.local_tz", TEST_REGION.local_tz),
+        ("validation.timebase.windows", {"Alpha": ["08:00-20:00"], "Beta": ["20:00-08:00"]}),
+    ],
+)
+def test_a_null_zone_or_windows_value_is_drift_and_is_filled(ctx: ServiceContext, leaf: str, expected: Any) -> None:
+    prepare_synced(ctx, edited(**{leaf: None, "meter.timebase": "local_wall"}))
+    assert drift_of(ctx) == ["params.yaml"]
+    assert synced(ctx).params_rewritten is True
+    on_disk = params_on_disk(ctx)
+    *parents, last = leaf.split(".")
+    target = on_disk
+    for part in parents:
+        target = target[part]
+    assert target[last] == expected
+    assert on_disk["meter"]["timebase"] == "local_wall"
+    pipeline_sync.check(ctx)
 
 
 # Catalogs
@@ -329,11 +388,19 @@ def test_a_dry_run_writes_and_tracks_nothing_but_reports_what_it_would_do(
     assert result.pointer_files == []
 
 
-def test_a_dry_run_of_an_older_params_file_reports_the_rewrite(ctx: ServiceContext, params_v2: type[Persisted]) -> None:
+def test_a_dry_run_of_an_older_params_file_reports_the_rewrite(ctx: ServiceContext) -> None:
     write(ctx.paths.root, "params.yaml", PARAMS_V1)
     before = snapshot(ctx.paths.root)
     result = pipeline_sync.sync(ctx, dry_run=True)
     assert result.params_rewritten is True
+    assert snapshot(ctx.paths.root) == before
+
+
+def test_a_dry_run_of_a_drifted_zone_reports_the_rewrite(ctx: ServiceContext) -> None:
+    write(ctx.paths.root, "params.yaml", dump(edited(**{"meter.local_tz": "Owner/Choice"})))
+    before = snapshot(ctx.paths.root)
+    result = pipeline_sync.sync(ctx, dry_run=True)
+    assert (result.params_written, result.params_rewritten) == (False, True)
     assert snapshot(ctx.paths.root) == before
 
 

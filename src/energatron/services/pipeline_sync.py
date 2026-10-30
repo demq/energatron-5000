@@ -4,6 +4,9 @@
 - `params.yaml` is written with the current version's defaults when missing, and rewritten through the migration
   chain when older, keeping every value (comments are lost). DVC reads declared params from the file itself, so an
   in-memory upgrade isn't enough (D3 §10.2). A newer file → `E_SCHEMA_TOO_NEW`.
+- The region's values are copied from `ctx.region` (P2 spec §5.3): `meter.local_tz` is the region's, so a file whose
+  zone differs (or is `null`) is rewritten with only that value changed; `validation.timebase.windows` is replaced only
+  while `null`, because the owner may edit it. Every other value is the owner's and is kept.
 - Every source without a catalog gets an empty one, and the directories created are tracked (`dvc add`).
 - Nothing is committed: the result lists the pointer files to commit.
 
@@ -16,7 +19,7 @@ import logging
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import ClassVar, Final, Literal
+from typing import Any, ClassVar, Final, Literal, cast
 
 import yaml
 
@@ -24,6 +27,7 @@ from energatron.core.canonical import JSONValue
 from energatron.core.errors import InvalidInputError, PipelineNotSyncedError, StorageError
 from energatron.core.models.catalog import SourceType
 from energatron.core.models.params import Params
+from energatron.core.models.region import RegionProfile
 from energatron.core.models.storage import RAW_PREFIX
 from energatron.core.persisted import Persisted, registered_kinds
 from energatron.services.context import ServiceContext, ServiceResult
@@ -37,7 +41,7 @@ DVC_YAML: Final = "dvc.yaml"
 PARAMS_YAML: Final = "params.yaml"
 RAW_GITIGNORE: Final = f"{RAW_PREFIX}.gitignore"
 
-type ParamsState = Literal["missing", "older", "current"]
+type ParamsState = Literal["missing", "older", "drifted", "current"]  # "older", "drifted": rewritten
 
 
 class PipelineSyncResult(ServiceResult):
@@ -113,7 +117,7 @@ def sync(ctx: ServiceContext, *, dry_run: bool = False) -> PipelineSyncResult:
     result = PipelineSyncResult(
         dvc_yaml_written=plan.dvc_yaml is not None,
         params_written=plan.params_state == "missing",
-        params_rewritten=plan.params_state == "older",
+        params_rewritten=plan.params_state in ("older", "drifted"),
         catalogs_created=created,
         pointer_files=pointers,
         dry_run=dry_run,
@@ -135,15 +139,15 @@ def _plan(ctx: ServiceContext) -> _Plan:
     root = ctx.paths.root
     expected = emit_dvc_yaml(STAGES)
     dvc_yaml = None if _read_bytes(root / DVC_YAML) == expected.encode("utf-8") else expected
-    state, params_text = _params(_read_bytes(root / PARAMS_YAML))
+    state, params_text = _params(_read_bytes(root / PARAMS_YAML), ctx.region)
     return _Plan(dvc_yaml=dvc_yaml, params_state=state, params_text=params_text, missing=ctx.catalog.missing_sources())
 
 
-def _params(data: bytes | None) -> tuple[ParamsState, str | None]:
+def _params(data: bytes | None, profile: RegionProfile) -> tuple[ParamsState, str | None]:
     """The file's state and the text to write (None when it's current). Invalid → `E_INVALID_INPUT`."""
     model = _params_model()
     if data is None:
-        return "missing", _dump(model.model_validate({}))
+        return "missing", _dump(model.defaults(profile))
     try:
         doc = yaml.safe_load(data.decode("utf-8"))
     except UnicodeDecodeError, yaml.YAMLError:
@@ -152,16 +156,30 @@ def _params(data: bytes | None) -> tuple[ParamsState, str | None]:
         raise InvalidInputError("params.yaml isn't a mapping.", kind=Params.KIND)
     document: dict[str, JSONValue] = {str(key): value for key, value in doc.items()}  # pyright: ignore[reportUnknownVariableType]
     params = model.from_document(document)  # E_INVALID_INPUT, or E_SCHEMA_TOO_NEW for a newer file
-    if document.get("schema_version") == model.SCHEMA_VERSION:
-        return "current", None
-    return "older", _dump(params)
+    filled = _with_region_values(model, params, profile)
+    if document.get("schema_version") != model.SCHEMA_VERSION:
+        return "older", _dump(filled)
+    if filled != params:
+        return "drifted", _dump(filled)
+    return "current", None
 
 
-def _params_model() -> type[Persisted]:
+def _with_region_values(model: type[Params], params: Params, profile: RegionProfile) -> Params:
+    """`params` with the region's zone, and the region's windows where `params` has none (P2 spec §5.3)."""
+    values = cast(dict[str, Any], params.model_dump(mode="json"))
+    values["meter"]["local_tz"] = profile.local_tz
+    if values["validation"]["timebase"]["windows"] is None:
+        values["validation"]["timebase"]["windows"] = (
+            None if profile.tou_windows is None else {label: list(w) for label, w in profile.tou_windows.items()}
+        )
+    return model.model_validate(values)
+
+
+def _params_model() -> type[Params]:
     model = registered_kinds().get(Params.KIND)
     if model is None:  # `Params` registers itself on import
         raise InvalidInputError("No params model is registered.", kind=Params.KIND)
-    return model
+    return cast(type[Params], model)
 
 
 def _dump(params: Persisted) -> str:

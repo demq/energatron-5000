@@ -58,6 +58,11 @@ EXPECTED_WARNINGS = frozenset(
         "W_BACKUP_PENDING",  # D1 §4.4, D3 §11
         "W_PREMISES_UNCHECKED",  # D3 §6
         "W_UNKNOWN_IDENTIFIER",  # D3 §6
+        "W_MERGE_SAME_UPDATE",  # P2 spec §7.2, §12
+        "W_METER_GAPS",  # P2 spec §8, §12
+        "W_METER_UNVALIDATED",  # P2 spec §8, §12
+        "W_TIMEBASE_UNCONFIRMED",  # P2 spec §9.4, §12
+        "W_TIMEBASE_UNEXPLAINED",  # P2 spec §9.4, §12
     }
 )
 

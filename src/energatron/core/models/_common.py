@@ -4,11 +4,13 @@ Validator messages never repeat the value: some fields hold identifiers or filen
 """
 
 import re
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timedelta
 from typing import Annotated
 
 from pydantic import AfterValidator, AwareDatetime, BaseModel, ConfigDict
 
+from energatron.core.errors import InvalidInputError
 from energatron.core.ids import parse_dataset_id
 
 
@@ -26,6 +28,10 @@ _SHA256 = re.compile(r"[0-9a-f]{64}")
 _COMMIT_SHA = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")  # SHA-1 or SHA-256 object names (D1 §4.4)
 _STAGE_NAME = re.compile(r"[a-z][a-z0-9_]*")
 _REGION = re.compile(r"[a-z][a-z0-9_]*")
+ZONE_KEY = re.compile(r"^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$")
+"""The form of a time zone key: tzdata path-like text (P2 spec §6). `ZoneKey` and `StageRun.zone()` both use it."""
+_WINDOW = re.compile(r"([0-9]{2}):([0-9]{2})-([0-9]{2}):([0-9]{2})")
+_MINUTES_PER_DAY = 1440
 _BUNDLE_NAME = re.compile(r"[0-9]{8}T[0-9]{6}Z-[0-9a-f]{7}\.bundle")  # D2 §8.2
 
 
@@ -65,6 +71,68 @@ def _relative_posix(value: str) -> str:
     return value
 
 
+def _zone_key(value: str) -> str:
+    if ZONE_KEY.fullmatch(value) is None:
+        raise ValueError("a time zone key is tzdata path-like text, such as Region/City")
+    return value
+
+
+def _minute_of_day(hours: str, minutes: str) -> int:
+    hour, minute = int(hours), int(minutes)
+    if hour > 23 or minute > 59 or minute % 5:
+        raise ValueError("a window edge is HH:MM from 00:00 to 23:55, a multiple of 5 minutes")
+    return hour * 60 + minute
+
+
+def window_minutes(text: str) -> list[int]:
+    """The minutes of the day (0-1439, in time order from the start) that a window `HH:MM-HH:MM` covers.
+
+    Start inclusive, end exclusive; an end at or before the start wraps past midnight (equal edges are the whole
+    day). `24:00` isn't a time, and every edge is a multiple of 5 minutes. A malformed window → `ValueError`, whose
+    text never repeats the window.
+    """
+    found = _WINDOW.fullmatch(text)
+    if found is None:
+        raise ValueError("a window is HH:MM-HH:MM")
+    start = _minute_of_day(found[1], found[2])
+    end = _minute_of_day(found[3], found[4])
+    if end > start:
+        return list(range(start, end))
+    return [*range(start, _MINUTES_PER_DAY), *range(0, end)]
+
+
+def windows_partition_the_day(windows: Mapping[str, Sequence[str]], *, field: str) -> None:
+    """Every window parses, each label has one, and together they cover every minute of the day exactly once.
+
+    Otherwise `E_INVALID_INPUT` with `details.field` set to `field`; the message never repeats a window.
+    """
+    if not windows:
+        raise InvalidInputError("The TOU windows list no label.", field=field)
+    counts = [0] * _MINUTES_PER_DAY
+    for label_windows in windows.values():
+        if not label_windows:
+            raise InvalidInputError("A TOU label has no window.", field=field)
+        for text in label_windows:
+            try:
+                minutes = window_minutes(text)
+            except ValueError as error:
+                raise InvalidInputError(f"A TOU window is malformed: {error}.", field=field) from None
+            for minute in minutes:
+                counts[minute] += 1
+    if any(count != 1 for count in counts):
+        raise InvalidInputError("The TOU windows must cover every minute of the day exactly once.", field=field)
+
+
+def partitioned_windows[T: Mapping[str, Sequence[str]]](field: str) -> Callable[[T], T]:
+    """A pydantic validator for a window mapping that names `field` in its error (see `windows_partition_the_day`)."""
+
+    def check(windows: T) -> T:
+        windows_partition_the_day(windows, field=field)
+        return windows
+
+    return check
+
+
 def _utc(value: datetime) -> datetime:
     if value.utcoffset() != timedelta(0):
         raise ValueError("expected a UTC time")
@@ -96,6 +164,10 @@ StageName = Annotated[str, AfterValidator(_stage_name)]
 
 RegionName = Annotated[str, AfterValidator(_region)]
 """A region profile's name, snake_case, such as `sa` (D2 §6.1, D3 §10.3)."""
+
+ZoneKey = Annotated[str, AfterValidator(_zone_key)]
+"""A time zone key in the form tzdata uses, such as `Region/City`. Only the form is checked: whether the zone exists
+is checked where tzdata is read (`build_context()`, `StageRun.zone()`)."""
 
 RelativePosixPath = Annotated[str, AfterValidator(_relative_posix)]
 """A relative POSIX path: no leading `/`, no backslash, no empty, `.` or `..` component (D1 §12)."""
