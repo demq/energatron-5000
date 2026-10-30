@@ -363,7 +363,7 @@ def real(tmp_path: Path) -> WorkspacePaths:
     paths = make_workspace(tmp_path, private=None)
     dvc_init(paths.root)
     write(paths.root, "dvc.yaml", emit_dvc_yaml(STAGES))
-    write(paths.root, "params.yaml", params_v2_text())  # DVC reads the declared keys from the file itself
+    write(paths.root, "params.yaml", params_v2_text(region=True))  # DVC reads the declared keys from the file itself
     for source in SourceType:
         write(paths.root, f"data/raw/{source.value}/_catalog.jsonl", "")
     return paths
@@ -379,7 +379,9 @@ def test_the_venv_energatron_runs_whatever_path_the_caller_has_and_prints_nothin
     monkeypatch.setenv("ENERGATRON_JSON", "1")
     runner = DvcRunner(real, fingerprint=wiring.code_fingerprint)
     with caplog.at_level(logging.INFO, logger=PIPELINE_LOGGER):
-        assert runner.repro() == report(ran=["catalog_index", "parse_nem12", "merge_interval", "validate_meter"])
+        assert runner.repro() == report(
+            ran=["catalog_index", "parse_nem12", "merge_interval", "validate_meter", "validate_timebase"]
+        )
     captured = capfd.readouterr()
     assert captured.out == ""
     messages = [record.getMessage() for record in caplog.records if record.name == PIPELINE_LOGGER]

@@ -1,9 +1,9 @@
 """`energatron verify` in a scratch workspace with real git and DVC (D1 §11.4, §13).
 
-The workspace runs the real pipeline (`catalog_index`, `parse_nem12`, `merge_interval`, `validate_meter`) over three
-synthetic landed blobs. `verify` refuses a stale fingerprint or pipeline; on a current one it passes; an output changed
-by hand and committed to DVC, or a stored blob changed or removed, fails it with `E_CHECK_FAILED`
-(`not_reproducible`), naming the stage or the dataset. Nothing here touches the real workspace.
+The workspace runs the real pipeline (`catalog_index`, `parse_nem12`, `merge_interval`, `validate_meter`,
+`validate_timebase`) over three synthetic landed blobs. `verify` refuses a stale fingerprint or pipeline; on a current
+one it passes; an output changed by hand and committed to DVC, or a stored blob changed or removed, fails it with
+`E_CHECK_FAILED` (`not_reproducible`), naming the stage or the dataset. Nothing here touches the real workspace.
 """
 
 import json
@@ -113,7 +113,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
     assert result["data"] == {
         "kind": "verify_result",
         "schema_version": 1,
-        "stages": ["catalog_index", "parse_nem12", "merge_interval", "validate_meter"],
+        "stages": ["catalog_index", "parse_nem12", "merge_interval", "validate_meter", "validate_timebase"],
         "datasets": 3,
     }
     assert not scratch_dir(scratch).exists()
@@ -134,7 +134,13 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
     code, result = envelope(capsys, "verify", "--json")
     assert code == 4
     assert result["error"]["code"] == "E_FINGERPRINT_STALE"
-    assert result["error"]["details"]["stages"] == ["catalog_index", "merge_interval", "parse_nem12", "validate_meter"]
+    assert result["error"]["details"]["stages"] == [
+        "catalog_index",
+        "merge_interval",
+        "parse_nem12",
+        "validate_meter",
+        "validate_timebase",
+    ]
 
 
 def test_a_stale_pipeline_is_refused(capsys: pytest.CaptureFixture[str], scratch: Scratch) -> None:

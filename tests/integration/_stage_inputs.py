@@ -15,9 +15,11 @@ from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
 from energatron.services.stages.registry import STAGES
 from energatron.services.stages.runner import prepare_stage, run_stage
+from tests.fixtures.params_text import params_v2_text
 from tests.fixtures.pipeline_workspace import build_raw_zone
 
-PARAMS_YAML: Final = "kind: params\nschema_version: 1\n"
+PARAMS_YAML: Final = params_v2_text(region=True)
+"""The zone and windows are filled, as `pipeline sync` leaves them: `validate_timebase` refuses `null` ones."""
 _SOURCE_TS: Final = datetime(2026, 1, 2, 3, 4, 5)
 
 
@@ -83,11 +85,17 @@ def _validate_meter(root: Path) -> None:
     _run_upstream(root, "parse_nem12", "merge_interval")
 
 
+def _validate_timebase(root: Path) -> None:
+    """The same inputs as `validate_meter`; the fixture raw zone's usage exports are the second raw input."""
+    _validate_meter(root)
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
     "merge_interval": _merge_interval,
     "validate_meter": _validate_meter,
+    "validate_timebase": _validate_timebase,
 }
 
 

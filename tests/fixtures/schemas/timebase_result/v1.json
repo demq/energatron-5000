@@ -1,0 +1,28 @@
+{
+  "best": [
+    "nem_aest"
+  ],
+  "configured": "nem_aest",
+  "fits": {
+    "local_standard": 1,
+    "local_wall": 1,
+    "nem_aest": 3
+  },
+  "incomplete": 1,
+  "kind": "timebase_result",
+  "not_midnight": 0,
+  "periods": {
+    "not_covered": 1,
+    "total_mismatch": 0,
+    "used": 3
+  },
+  "schema_version": 1,
+  "tolerances": {
+    "min_fit_periods": 3,
+    "register_tolerance_kwh": 0.05,
+    "register_tolerance_pct": 0.1,
+    "total_tolerance_kwh": 0.05
+  },
+  "unexplained": 0,
+  "verdict": "confirmed"
+}

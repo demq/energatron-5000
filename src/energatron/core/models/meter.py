@@ -3,8 +3,8 @@
 Parquet kinds are metadata only (D1 §5): a file carries `energatron.kind` and `energatron.schema_version`, and the
 stage that writes it owns the column types, because core holds no pyarrow. This module names the kinds, their
 versions and their columns, so the stages that share a table agree on them. Each P2 stage sub-task adds its kinds.
-The JSON kinds of the reports are `Persisted` models and join this module with their stages (`MergeSummary` and
-`MeterReport` so far).
+The JSON kinds of the reports are `Persisted` models and join this module with their stages (`MergeSummary`,
+`MeterReport` and `TimebaseResult` so far).
 """
 
 from datetime import date
@@ -13,6 +13,7 @@ from typing import ClassVar, Final, Literal
 from pydantic import NonNegativeInt
 
 from energatron.core.models._common import DatasetId, FrozenModel
+from energatron.core.models.params import TimebaseName
 from energatron.core.persisted import Persisted
 
 STAGED_KIND: Final = "elec_interval_staged"
@@ -101,6 +102,26 @@ QUALITY_COLUMNS: Final = ("suffix", "month", "quality_flag", "intervals", "kwh",
 """`quality_monthly.parquet` of `validate_meter`: intervals, energy and share per register, meter month and flag."""
 QUALITY_SORT: Final = ("suffix", "month", "quality_flag")
 
+PERIODS_KIND: Final = "timebase_periods"
+PERIODS_VERSION: Final = 1
+PERIODS_COLUMNS: Final = (
+    "period_start",
+    "period_end",
+    "status",
+    "dataset_id",
+    "label",
+    "reported_kwh",
+    "kwh_nem_aest",
+    "kwh_local_wall",
+    "kwh_local_standard",
+    "fit_nem_aest",
+    "fit_local_wall",
+    "fit_local_standard",
+)
+"""`periods.parquet` of `validate_timebase`: one row per retailer period and TOU label (P2 spec §9.5). The `kwh_` and
+`fit_` columns hold the register recomputed under each basis and whether it fits; null unless the period is used."""
+PERIODS_SORT: Final = ("period_end", "label")
+
 
 class SkippedDatasets(FrozenModel):
     """The catalogued datasets `merge_interval` did not use, by reason, each list highest precedence first."""
@@ -161,3 +182,51 @@ class MeterReport(Persisted):
     first_date: dict[str, date]
     last_date: dict[str, date]
     a_share: float | None
+
+
+class BasisCounts(FrozenModel):
+    """One number per time-basis hypothesis."""
+
+    nem_aest: NonNegativeInt
+    local_wall: NonNegativeInt
+    local_standard: NonNegativeInt
+
+
+class PeriodCounts(FrozenModel):
+    """How many retailer periods ended in each status of `periods.parquet`."""
+
+    used: NonNegativeInt
+    not_covered: NonNegativeInt
+    total_mismatch: NonNegativeInt
+
+
+class TimebaseTolerances(FrozenModel):
+    register_tolerance_kwh: float
+    register_tolerance_pct: float
+    total_tolerance_kwh: float
+    min_fit_periods: NonNegativeInt
+
+
+class TimebaseResult(Persisted):
+    """`timebase_result` v1: `result.json` of `validate_timebase` (P2 spec §9.5). Counts and names only.
+
+    `configured` is `meter.timebase`. `fits` counts the used periods that fit each basis; `best` lists the bases with
+    the most fits, sorted (empty when none fits anywhere). `periods` counts the periods by status. `incomplete` counts
+    read datetimes with no complete row in any dataset and `not_midnight` the reads dropped for not being at 00:00.
+    `unexplained` counts the used periods that fit no basis.
+    """
+
+    KIND: ClassVar[str] = "timebase_result"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["timebase_result"] = "timebase_result"
+    schema_version: Literal[1] = 1
+
+    configured: TimebaseName
+    verdict: Literal["confirmed", "unconfirmed", "contradicted"]
+    fits: BasisCounts
+    best: list[TimebaseName]
+    periods: PeriodCounts
+    incomplete: NonNegativeInt
+    not_midnight: NonNegativeInt
+    unexplained: NonNegativeInt
+    tolerances: TimebaseTolerances

@@ -48,3 +48,16 @@ stages:
       - stages.validate_meter.stage_sha256
     outs:
     - data/reports/validation/meter
+  validate_timebase:
+    cmd: energatron stage validate_timebase
+    deps:
+    - data/interim/elec_interval_nem
+    - data/raw/retailer_usage
+    params:
+    - meter.local_tz
+    - meter.timebase
+    - validation.timebase
+    - .energatron/code_fingerprint.json:
+      - stages.validate_timebase.stage_sha256
+    outs:
+    - data/reports/validation/timebase
