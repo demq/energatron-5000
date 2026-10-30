@@ -62,19 +62,32 @@ def _parse_nem12(root: Path) -> None:
     build_raw_zone(root)
 
 
+def _run_upstream(root: Path, *names: str) -> None:
+    """Run the registered stages `names`, in order, on the workspace `root`."""
+    for name in names:
+        spec = STAGES[name]
+        prepared = prepare_stage(spec, root=root, params_file=root / "params.yaml")
+        code = wiring.stage_code(name)
+        run_stage(spec, prepared.inputs, prepared.params, prepared.outputs, code=code, recorded_code=code.stage_sha256)
+
+
 def _merge_interval(root: Path) -> None:
     """The fixture raw zone, parsed: `merge_interval` reads `parse_nem12`'s tables."""
     build_raw_zone(root)
-    spec = STAGES["parse_nem12"]
-    prepared = prepare_stage(spec, root=root, params_file=root / "params.yaml")
-    code = wiring.stage_code("parse_nem12")
-    run_stage(spec, prepared.inputs, prepared.params, prepared.outputs, code=code, recorded_code=code.stage_sha256)
+    _run_upstream(root, "parse_nem12")
+
+
+def _validate_meter(root: Path) -> None:
+    """The fixture raw zone, parsed and merged: `validate_meter` reads the merged table and the SUMMARY CSV."""
+    build_raw_zone(root)
+    _run_upstream(root, "parse_nem12", "merge_interval")
 
 
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
     "merge_interval": _merge_interval,
+    "validate_meter": _validate_meter,
 }
 
 

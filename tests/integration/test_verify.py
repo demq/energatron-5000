@@ -1,9 +1,9 @@
 """`energatron verify` in a scratch workspace with real git and DVC (D1 §11.4, §13).
 
-The workspace runs the real pipeline (`catalog_index`, `parse_nem12`, `merge_interval`) over three synthetic landed
-blobs. `verify` refuses a stale fingerprint or pipeline; on a current one it passes; an output changed by hand and
-committed to DVC, or a stored blob changed or removed, fails it with `E_CHECK_FAILED` (`not_reproducible`), naming the
-stage or the dataset. Nothing here touches the real workspace.
+The workspace runs the real pipeline (`catalog_index`, `parse_nem12`, `merge_interval`, `validate_meter`) over three
+synthetic landed blobs. `verify` refuses a stale fingerprint or pipeline; on a current one it passes; an output changed
+by hand and committed to DVC, or a stored blob changed or removed, fails it with `E_CHECK_FAILED`
+(`not_reproducible`), naming the stage or the dataset. Nothing here touches the real workspace.
 """
 
 import json
@@ -96,7 +96,7 @@ def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     assert envelope(capsys, "pipeline", "sync", "--json")[0] == 0
     land_interval(scratch.paths)
     land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,bill\n3,4\n")
-    land(scratch.paths, SourceType.SAPN_SUMMARY, b"synthetic,summary\n5,6\n")
+    land(scratch.paths, SourceType.GAS_BILL, b"synthetic,earlier gas\n7,8\n")
     assert envelope(capsys, "fingerprint", "--json")[0] == 0
     dvc(scratch.root, "repro", "--quiet")
     return scratch
@@ -113,7 +113,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
     assert result["data"] == {
         "kind": "verify_result",
         "schema_version": 1,
-        "stages": ["catalog_index", "parse_nem12", "merge_interval"],
+        "stages": ["catalog_index", "parse_nem12", "merge_interval", "validate_meter"],
         "datasets": 3,
     }
     assert not scratch_dir(scratch).exists()
@@ -134,7 +134,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
     code, result = envelope(capsys, "verify", "--json")
     assert code == 4
     assert result["error"]["code"] == "E_FINGERPRINT_STALE"
-    assert result["error"]["details"]["stages"] == ["catalog_index", "merge_interval", "parse_nem12"]
+    assert result["error"]["details"]["stages"] == ["catalog_index", "merge_interval", "parse_nem12", "validate_meter"]
 
 
 def test_a_stale_pipeline_is_refused(capsys: pytest.CaptureFixture[str], scratch: Scratch) -> None:
@@ -165,7 +165,8 @@ def test_an_output_changed_by_hand_and_committed_to_dvc_is_not_reproducible(
 def test_a_stored_blob_changed_or_removed_by_hand_is_named(
     capsys: pytest.CaptureFixture[str], scratch: Scratch
 ) -> None:
-    # the interval blob is left alone: `parse_nem12` reads it, so changing it makes that stage stale instead
+    # the interval blob is left alone: `parse_nem12` reads it, so changing it makes that stage stale instead (as the
+    # SAPN SUMMARY blobs would, for `validate_meter`; none is landed here)
     records = [r for r in JsonlCatalog(scratch.paths).records() if r.source is not SourceType.SAPN_INTERVAL]
     changed, removed = (scratch.root / record.stored_path for record in records)
     changed.chmod(0o644)

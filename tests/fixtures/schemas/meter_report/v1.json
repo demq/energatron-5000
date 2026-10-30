@@ -1,0 +1,20 @@
+{
+  "a_share": 0.75,
+  "first_date": {
+    "E1": "2025-01-01"
+  },
+  "gap_days": 2,
+  "intervals": {
+    "E1": 96
+  },
+  "kind": "meter_report",
+  "last_date": {
+    "E1": "2025-01-05"
+  },
+  "schema_version": 1,
+  "summary_rows": {
+    "match": 1,
+    "mismatch": 0,
+    "not_covered": 1
+  }
+}

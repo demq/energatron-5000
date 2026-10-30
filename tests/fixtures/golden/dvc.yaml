@@ -37,3 +37,14 @@ stages:
     outs:
     - data/interim/elec_interval_nem
     - data/reports/validation/merge
+  validate_meter:
+    cmd: energatron stage validate_meter
+    deps:
+    - data/interim/elec_interval_nem
+    - data/raw/sapn_summary
+    params:
+    - validation.meter
+    - .energatron/code_fingerprint.json:
+      - stages.validate_meter.stage_sha256
+    outs:
+    - data/reports/validation/meter
