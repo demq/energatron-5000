@@ -161,3 +161,59 @@ def test_5_a_dict_valued_param_key_is_tracked_as_a_whole_subtree(tmp_path: Path)
     scratch.write("params.yaml", PARAMS.replace("Test/Zone", "Other/Zone"))
     status = json.loads(dvc(scratch.root, "status", "--json"))
     assert status["checked"] == [{"changed deps": {"params.yaml": {"meter.local_tz": "modified"}}}]
+
+
+DIRECTORY_STAGE = """\
+stages:
+  parse:
+    cmd: python3 -c "import os, pathlib; os.makedirs('out', exist_ok=True);
+      n = len(list(pathlib.Path('{raw}').rglob('*'))); pathlib.Path('out/count').write_text(str(n))"
+    deps:
+    - {raw}
+    outs:
+    - out
+"""
+
+
+def test_6_a_stage_can_depend_on_a_whole_tracked_raw_directory(tmp_path: Path) -> None:
+    """P2 spec §11: `parse_nem12` declares `data/raw/sapn_interval`, the directory that `data/raw/sapn_interval.dvc`
+    tracks. DVC accepts it as a dependency, and the stage goes stale when a dataset lands: a new blob (read-only, as
+    `FsBlobStore` leaves it, in a new year directory) and a catalog line together. Landing again, by `dvc add`, and
+    running the stage brings the pipeline back to a clean state."""
+    scratch = make_scratch(tmp_path, remote=False)
+    dirs = raw_dirs(scratch)
+    landed_blob(scratch)
+    raw = "data/raw/sapn_interval"
+    dvc(scratch.root, "add", "--quiet", *dirs)
+    scratch.write("dvc.yaml", DIRECTORY_STAGE.format(raw=raw))
+    scratch.commit_all()
+    dvc(scratch.root, "repro", "--quiet")
+    assert json.loads(dvc(scratch.root, "status", "--json")) == {}
+
+    new_blob = scratch.write(f"{raw}/2027/synthetic_second.csv", "synthetic,second\n")
+    new_blob.chmod(0o444)
+    with (scratch.root / raw / "_catalog.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"synthetic": 2}\n')
+    status = json.loads(dvc(scratch.root, "status", "--json"))
+    assert status["parse"] == [{"changed deps": {raw: "modified"}}]
+
+    dvc(scratch.root, "add", "--quiet", *dirs)  # `land` adds every raw directory again
+    assert json.loads(dvc(scratch.root, "status", "--json"))["parse"] == [{"changed deps": {raw: "modified"}}]
+    dvc(scratch.root, "repro", "--quiet")
+    assert json.loads(dvc(scratch.root, "status", "--json")) == {}
+    assert (scratch.root / "out" / "count").read_text() == "6"  # the stage ran again: 3 directories, 2 blobs, 1 catalog
+
+
+def test_7_a_dataset_that_lands_in_another_source_leaves_the_stage_up_to_date(tmp_path: Path) -> None:
+    scratch = make_scratch(tmp_path, remote=False)
+    dirs = raw_dirs(scratch)
+    dvc(scratch.root, "add", "--quiet", *dirs)
+    raw = "data/raw/sapn_interval"
+    scratch.write("dvc.yaml", DIRECTORY_STAGE.format(raw=raw))
+    scratch.commit_all()
+    dvc(scratch.root, "repro", "--quiet")
+    scratch.write("data/raw/sapn_summary/2026/synthetic.csv", "synthetic,other\n")
+    with (scratch.root / "data/raw/sapn_summary/_catalog.jsonl").open("a", encoding="utf-8") as handle:
+        handle.write('{"synthetic": 3}\n')
+    status = json.loads(dvc(scratch.root, "status", "--json"))
+    assert "parse" not in status

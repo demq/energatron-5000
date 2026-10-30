@@ -97,42 +97,49 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P2.2.2
+- Last done: P2.2.3
 - Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files` (unchanged);
-  energatron-5000 `P2.2.2: move the format readers into core and add dataset precedence`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2101 passed in ~3m45;
+  energatron-5000 `P2.2.3: add the parse_nem12 stage and the pipeline fixture workspace`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2161 passed in ~3m35;
   `pre-commit run --files <changed>` passed; privacy guard `--figures` on the changed files and `TASKS.md` 0 violations
 - Review: none
-- Next: P2.2.3
+- Next: P2.2.4
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- Spec stage done (archived in `agent_docs/2026-10/`); D1–D3 approved (D1 rev 3), plan rev 10, D4 = the P0–P2
+- Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 3), plan rev 10, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved.
-- P0 and P1 agent work are all ✅; both repos on `main`, no remote, nothing pushed. P2.2.1 (foundations) and
-  P2.2.2 (format readers, precedence) are ✅.
+- P0 and P1 agent work are all done; both repos on `main`, no remote, nothing pushed. P2.2.1 (foundations), P2.2.2
+  (format readers, precedence) and P2.2.3 (`parse_nem12`) are done.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
   P1.5.3.
 
-**Read first** (for P2.2.3, `parse_nem12`)
-- The P2 spec: §3.1, §7.1, §11, §12, §13.3 (`test_parse_nem12`); D1 §9, §13.
-- `core/nem12.py`, `core/sapn_summary.py`, `core/retailer_usage.py` (the readers the stage calls),
-  `precedence_order` in `core/models/catalog.py`, `services/stages/runner.py` (`StageRun`).
+**Read first** (for P2.2.4, `merge_interval`)
+- The P2 spec: §7.2, §12, §13.3 (`test_merge_interval`); D1 §9, §13.
+- `services/stages/parse_nem12.py` (its output tables and schemas, `index.parquet`), `core/models/meter.py`,
+  `precedence_order` in `core/models/catalog.py`, `tests/fixtures/pipeline_workspace.py`,
+  `tests/unit/services/stages/test_parse_nem12.py` (the test pattern), `services/stages/registry.py`.
 
 **Facts**
-- Owner decision on the P2 spec (2026-10-30): Q1–Q9 approved as written, except Q6: no waiver of hand-over
+- Owner decision on the P2 spec (2026-10-30): Q1-Q9 approved as written, except Q6: no waiver of hand-over
   decision #11, so `localise` runs only on a `confirmed` verdict (spec §9.4, §10, §15).
 - Built in P2.2.1: `Params` v2, `RegionProfile` v2, `ServiceContext.region`, `StageRun.zone(key)`, `ZONE_KEY`,
   the window helpers in `core/models/_common.py`, `REGION_FIELDS` in `params.py`. Stage modules must not use
   `ZoneInfo(...)`, string `tz=`, `pytz` or `dateutil.tz` (`test_stage_purity`).
 - Built in P2.2.2: `core/text.py`, `core/nem12.py` (`scan_nem12`, `read_nem12`), `core/sapn_summary.py`,
-  `core/retailer_usage.py`, `precedence_order`; the P1 parsers keep `version` 1 and call the `scan_*` functions.
-  `read_*` result types have no identifier field. Fixtures: `make_nem12` `day_values`/`day_quality`/`negative_on`,
-  `make_sources` `make_summary_from_nem12`/`make_retailer_usage_from_nem12`, the independent `tests/fixtures/oracle.py`.
-- Owner accepted the three recorded deviations of P2.2.2 and keeps `duplicate_label` (the usage reader fails loudly
-  on two register columns with one label).
-- P2.2.1 and P2.2.2 changed every registered stage's code entry (`precedence_order` sits under `runner.py`).
+  `core/retailer_usage.py`, `precedence_order`; the P1 parsers keep `version` 1. `read_*` result types have no
+  identifier field. Fixtures: `make_nem12` `day_values`/`day_quality`/`negative_on`, `make_sources`
+  `make_summary_from_nem12`/`make_retailer_usage_from_nem12`, the independent `tests/fixtures/oracle.py`.
+- Built in P2.2.3: stage `parse_nem12` (reads the whole `data/raw/sapn_interval` dir; one `<dataset_id>.parquet` per
+  readable dataset, kind `elec_interval_staged` v1, plus `index.parquet`, kind `elec_interval_index` v1; eight checks),
+  registered after `catalog_index`; `tests/fixtures/pipeline_workspace.py` (two overlapping SAPN datasets, one conflict
+  day, a V day, an E52 day, a SUMMARY CSV, two usage exports, both 2025 DST changes; grows with each stage). DVC accepts
+  a whole raw directory as a dep. `core/models/meter.py` holds kinds, versions, column names and sort keys only; the
+  pyarrow schemas are in `parse_nem12.py` (core may not import pyarrow): import them from there or move them.
+- Owner accepted (2026-10-30) the P2.2.3 deviations: `meter.py` without pyarrow, `E_INVALID_INPUT` for a missing
+  `_catalog.jsonl`, and the edited `verify`, `dvc_runner` and assumption tests (two stages now).
+- P2.2.1-P2.2.3 changed every registered stage's code entry.
 - The workspace's acceptance note for P1 is `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`;
   it may mention data, so nothing from it is copied here. The hourly JSON in the legacy folder stays unlanded
   (`E_UNKNOWN_SOURCE`); `sapn_interval` has 2 datasets.
@@ -634,7 +641,7 @@ verdict, with no waiver of hand-over decision #11.
     `read_nem12` accept and reject exactly the same files; no `read_*` result type has an identifier field.
   - Handover: the three readers (`scan_*`, `read_*`), `core/text.py` and `precedence_order` live in core, the P1 parsers call them unchanged at `version` 1 (2101 tests). Decision: owner accepted three deviations (`scan_nem12` raises `no_data`, `read_nem12` rejects non-integer ReasonCode and empty QualityMethod, `add_unique` moved) and keeps `duplicate_label`.
     Watch: the workspace is out of sync until P2.3.1 (`pipeline sync`; `land --dry-run` gives `E_PIPELINE_NOT_SYNCED`), and `uv run` there rewrites `uv.lock`.
-- ⬜ **P2.2.3** `parse_nem12`.
+- ✅ **P2.2.3** `parse_nem12`.
   - The stage and its `index.parquet`, the staged table, the kinds in `core/models/meter.py`, the registry entry,
     the golden `dvc.yaml`, and `tests/fixtures/pipeline_workspace.py` (two overlapping SAPN datasets with one
     conflict day, a SUMMARY CSV, two usage exports, spanning both DST changes of a year; it grows with each stage).
@@ -646,6 +653,8 @@ verdict, with no waiver of hand-over decision #11.
     `tests/integration/` (the raw-directory dep test), `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; every `parse_nem12` check passes and fails in its test; no NMI or serial
     in any output.
+  - Handover: `parse_nem12` (eight checks, `elec_interval_staged` and `elec_interval_index` v1), `meter.py` kinds, the pipeline fixture workspace, golden `dvc.yaml` (2161 tests). Decision: owner accepted `meter.py` without pyarrow, `E_INVALID_INPUT` for a missing catalog and the edited verify, runner and assumption tests.
+    Watch: the pyarrow schemas live in `parse_nem12.py`; `merge_interval` imports or moves them.
 - ⬜ **P2.2.4** `merge_interval` and its conflicts report.
   - The stage, `intervals.parquet`, `conflicts.parquet`, `summary.json`, `W_MERGE_SAME_UPDATE`, the golden
     `dvc.yaml` and the fixture workspace.
@@ -709,6 +718,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P2.2.3 · `parse_nem12` stage (whole raw dir, per-dataset tables and `index.parquet`, eight checks), `core/models/meter.py` kinds, fixture workspace `pipeline_workspace.py`, golden `dvc.yaml`, raw-directory DVC dep confirmed (2161 tests); review nits 1-4 fixed; owner accepted the recorded deviations · energatron-5000 `P2.2.3: add the parse_nem12 stage and the pipeline fixture workspace`
 - 2026-10-30 · P2.2.2 · format readers (`core/nem12.py`, `sapn_summary.py`, `retailer_usage.py`, `text.py`) with `scan_*`/`read_*`, P1 parsers on `scan_*` unchanged at v1, `precedence_order`, fixture additions and the independent oracle (2101 tests); review nits 1–3 fixed; owner accepted three deviations and keeps `duplicate_label` · energatron-5000 `P2.2.2: move the format readers into core and add dataset precedence`
 - 2026-10-30 · P2.2.1 · `Params` v2 and `RegionProfile` v2 (null zone and windows after migration), `regions/sa.yaml` v2, `ServiceContext.region`, `pipeline sync` fills zone and windows, `StageRun.zone()` on `tzdata`, five P2 warning codes, `test_stage_purity` zone bans, `test_no_region_values` (1877 tests); review nits 1–2 fixed; owner accepted the five deviations and the `getattr(zoneinfo, "ZoneInfo")` known limit · energatron-5000 `P2.2.1: add Params v2, RegionProfile v2, StageRun.zone() and the P2 warnings`
 - 2026-10-30 · P2.1.1 · P2 meter pipeline spec approved (owner: Q1–Q9 as written, except Q6: no waiver of decision #11); plan rev 10 and D1 rev 3 applied from its §16; P2.2–P2.3 rewritten from its order of work (P2.2.1–P2.2.7, P2.3.1) · energatron-5000 `P2.1.1: approve the P2 meter pipeline spec and apply plan rev 10 and D1 rev 3`

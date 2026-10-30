@@ -18,3 +18,12 @@ stages:
       - stages.catalog_index.stage_sha256
     outs:
     - data/marts/catalog
+  parse_nem12:
+    cmd: energatron stage parse_nem12
+    deps:
+    - data/raw/sapn_interval
+    params:
+    - .energatron/code_fingerprint.json:
+      - stages.parse_nem12.stage_sha256
+    outs:
+    - data/staged/elec_interval

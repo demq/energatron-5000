@@ -12,6 +12,7 @@ from typing import Final
 from energatron.core.canonical import JSONValue, canonical_json, sha256_hex
 from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
+from tests.fixtures.pipeline_workspace import build_raw_zone
 
 PARAMS_YAML: Final = "kind: params\nschema_version: 1\n"
 _SOURCE_TS: Final = datetime(2026, 1, 2, 3, 4, 5)
@@ -53,7 +54,15 @@ def _catalog_index(root: Path) -> None:
         (directory / "_catalog.jsonl").write_bytes(lines)
 
 
-BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {"catalog_index": _catalog_index}
+def _parse_nem12(root: Path) -> None:
+    """The fixture raw zone of the P2 stages: two overlapping SAPN datasets, a SUMMARY CSV and two usage exports."""
+    build_raw_zone(root)
+
+
+BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
+    "catalog_index": _catalog_index,
+    "parse_nem12": _parse_nem12,
+}
 
 
 def build_inputs(stage: str, root: Path) -> None:

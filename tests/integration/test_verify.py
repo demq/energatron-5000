@@ -1,15 +1,15 @@
 """`energatron verify` in a scratch workspace with real git and DVC (D1 §11.4, §13).
 
-The workspace runs the real pipeline (`catalog_index`) over two synthetic landed blobs. `verify` refuses a stale
-fingerprint or pipeline; on a current one it passes; an output changed by hand and committed to DVC, or a stored blob
-changed or removed, fails it with `E_CHECK_FAILED` (`not_reproducible`), naming the stage or the dataset. Nothing here
-touches the real workspace.
+The workspace runs the real pipeline (`catalog_index`, `parse_nem12`) over three synthetic landed blobs. `verify`
+refuses a stale fingerprint or pipeline; on a current one it passes; an output changed by hand and committed to DVC, or
+a stored blob changed or removed, fails it with `E_CHECK_FAILED` (`not_reproducible`), naming the stage or the
+dataset. Nothing here touches the real workspace.
 """
 
 import json
 import os
 import sys
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +22,9 @@ from energatron.core.canonical import sha256_hex
 from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import CatalogRecord, SourceType
 from energatron.core.models.workspace import WorkspacePaths
+from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
+from tests.fixtures.pipeline_workspace import make_record
+from tests.fixtures.synthetic import SYNTHETIC_NMI
 from tests.integration._scratch import Scratch, dvc, make_scratch
 
 pytestmark = pytest.mark.integration
@@ -69,6 +72,19 @@ def land(paths: WorkspacePaths, source: SourceType, payload: bytes) -> str:
     return ident
 
 
+def land_interval(paths: WorkspacePaths) -> str:
+    """Store a small generated NEM12 file and catalog it with the record the real parser builds, which `parse_nem12`
+    reads without a failed check."""
+    spec = Nem12Spec(start=date(2025, 6, 1), days=2, interval_minutes=30)
+    window = (spec.start, spec.start + timedelta(days=1))
+    name = sapn_filename("DETAILED", SYNTHETIC_NMI, window, datetime(2025, 7, 1, 9, 0, 0))
+    data = make_nem12(spec)
+    record = make_record(SourceType.SAPN_INTERVAL, name, data)
+    FsBlobStore(paths).put(record.stored_path, data)
+    JsonlCatalog(paths).append(record)
+    return record.dataset_id
+
+
 @pytest.fixture
 def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> Scratch:
     """A current pipeline: synced, two blobs landed, fingerprinted and reproduced."""
@@ -78,8 +94,9 @@ def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     scratch = make_scratch(tmp_path, remote=False)
     monkeypatch.chdir(scratch.root)
     assert envelope(capsys, "pipeline", "sync", "--json")[0] == 0
-    land(scratch.paths, SourceType.SAPN_INTERVAL, b"synthetic,interval\n1,2\n")
+    land_interval(scratch.paths)
     land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,bill\n3,4\n")
+    land(scratch.paths, SourceType.SAPN_SUMMARY, b"synthetic,summary\n5,6\n")
     assert envelope(capsys, "fingerprint", "--json")[0] == 0
     dvc(scratch.root, "repro", "--quiet")
     return scratch
@@ -93,7 +110,12 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
     code, result = envelope(capsys, "verify", "--json")
     assert code == 0, result["error"]
     assert result["command"] == "verify"
-    assert result["data"] == {"kind": "verify_result", "schema_version": 1, "stages": ["catalog_index"], "datasets": 2}
+    assert result["data"] == {
+        "kind": "verify_result",
+        "schema_version": 1,
+        "stages": ["catalog_index", "parse_nem12"],
+        "datasets": 3,
+    }
     assert not scratch_dir(scratch).exists()
     assert json.loads(dvc(scratch.root, "status", "--json")) == {}
 
@@ -112,7 +134,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
     code, result = envelope(capsys, "verify", "--json")
     assert code == 4
     assert result["error"]["code"] == "E_FINGERPRINT_STALE"
-    assert result["error"]["details"]["stages"] == ["catalog_index"]
+    assert result["error"]["details"]["stages"] == ["catalog_index", "parse_nem12"]
 
 
 def test_a_stale_pipeline_is_refused(capsys: pytest.CaptureFixture[str], scratch: Scratch) -> None:
@@ -143,7 +165,8 @@ def test_an_output_changed_by_hand_and_committed_to_dvc_is_not_reproducible(
 def test_a_stored_blob_changed_or_removed_by_hand_is_named(
     capsys: pytest.CaptureFixture[str], scratch: Scratch
 ) -> None:
-    records = list(JsonlCatalog(scratch.paths).records())
+    # the interval blob is left alone: `parse_nem12` reads it, so changing it makes that stage stale instead
+    records = [r for r in JsonlCatalog(scratch.paths).records() if r.source is not SourceType.SAPN_INTERVAL]
     changed, removed = (scratch.root / record.stored_path for record in records)
     changed.chmod(0o644)
     changed.write_bytes(changed.read_bytes() + b"altered\n")
@@ -158,3 +181,18 @@ def test_a_stored_blob_changed_or_removed_by_hand_is_named(
         "stages": [],
         "datasets": sorted(record.dataset_id for record in records),
     }
+
+
+def test_a_changed_interval_blob_is_refused_as_a_stale_pipeline(
+    capsys: pytest.CaptureFixture[str], scratch: Scratch
+) -> None:
+    """`parse_nem12` depends on the whole interval directory, so a blob changed by hand makes that stage stale."""
+    (record,) = (r for r in JsonlCatalog(scratch.paths).records() if r.source is SourceType.SAPN_INTERVAL)
+    blob = scratch.root / record.stored_path
+    blob.chmod(0o644)
+    blob.write_bytes(blob.read_bytes() + b"altered\n")
+    code, result = envelope(capsys, "verify", "--json")
+    assert code == 4
+    assert result["error"]["code"] == "E_PIPELINE_STALE"
+    assert result["error"]["details"]["stages"] == ["parse_nem12"]
+    assert not scratch_dir(scratch).exists()
