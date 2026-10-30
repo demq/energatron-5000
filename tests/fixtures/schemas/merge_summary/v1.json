@@ -1,0 +1,18 @@
+{
+  "conflict_days": 1,
+  "conflict_intervals": 48,
+  "datasets_skipped": {
+    "superseded": [],
+    "unread": []
+  },
+  "datasets_used": [
+    "sapn_interval-20261023T100345-aaaaaaaa"
+  ],
+  "days": {
+    "E1": 3
+  },
+  "kind": "merge_summary",
+  "overlap_days": 2,
+  "same_update_conflicts": 0,
+  "schema_version": 1
+}

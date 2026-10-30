@@ -8,7 +8,7 @@ from types import MappingProxyType
 from typing import Final
 
 from energatron.core.errors import InternalError, UsageError
-from energatron.services.stages import catalog_index, parse_nem12
+from energatron.services.stages import catalog_index, merge_interval, parse_nem12
 from energatron.services.stages.runner import StageSpec
 
 
@@ -26,7 +26,7 @@ def _build(specs: Iterable[StageSpec]) -> Mapping[str, StageSpec]:
     return MappingProxyType(stages)
 
 
-STAGES: Final[Mapping[str, StageSpec]] = _build([catalog_index.SPEC, parse_nem12.SPEC])
+STAGES: Final[Mapping[str, StageSpec]] = _build([catalog_index.SPEC, parse_nem12.SPEC, merge_interval.SPEC])
 """Every stage, in `dvc.yaml` order."""
 
 

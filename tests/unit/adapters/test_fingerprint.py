@@ -214,7 +214,7 @@ def test_fingerprint_writes_the_file_sorted_and_only_when_it_changed(
     data = ran.envelope()["data"]
     assert data["kind"] == "fingerprint_result"
     assert data["written"] is True
-    assert data["changed_stages"] == list(STAGES)
+    assert data["changed_stages"] == sorted(STAGES)
     text = recorded_path(workspace).read_text(encoding="utf-8")
     assert text == json.dumps(live.model_dump(mode="json"), sort_keys=True, indent=2, ensure_ascii=False) + "\n"
     assert CodeFingerprint.from_document(json.loads(text)) == live

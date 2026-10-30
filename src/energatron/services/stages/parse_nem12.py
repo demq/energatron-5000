@@ -14,7 +14,6 @@ from pathlib import Path
 from typing import Final
 
 import pandas as pd
-import pyarrow as pa
 
 from energatron.core.canonical import sha256_hex
 from energatron.core.errors import InvalidInputError
@@ -39,39 +38,12 @@ from energatron.core.models.meter import (
 from energatron.core.nem12 import Nem12Facts, Nem12Read, read_nem12
 from energatron.services.files import write_parquet
 from energatron.services.stages.runner import StageRun, StageSpec
+from energatron.services.stages.tables import INDEX_SCHEMA, STAGED_SCHEMA
 
 SOURCE: Final = SourceType.SAPN_INTERVAL
 KNOWN_DETECTOR_VERSIONS: Final = frozenset({1})
 """The `sapn_interval` parser versions whose files this stage reads (P2 spec §3.1)."""
 INDEX_FILENAME: Final = "index.parquet"
-
-STAGED_SCHEMA: Final = pa.schema(
-    [
-        ("suffix", pa.string()),
-        ("meter_date", pa.date32()),
-        ("meter_start", pa.timestamp("us")),
-        ("interval_minutes", pa.int16()),
-        ("kwh", pa.float64()),
-        ("quality", pa.string()),
-        ("quality_flag", pa.string()),
-        ("reason_code", pa.int16()),
-        ("update_dt", pa.timestamp("us")),
-        ("dataset_id", pa.string()),
-    ]
-)
-INDEX_SCHEMA: Final = pa.schema(
-    [
-        ("dataset_id", pa.string()),
-        ("precedence", pa.int32()),
-        ("is_current", pa.bool_()),
-        ("read_ok", pa.bool_()),
-        ("interval_minutes", pa.int16()),
-        ("suffixes", pa.list_(pa.string())),
-        ("days", pa.int32()),
-        ("coverage_start", pa.date32()),
-        ("coverage_end", pa.date32()),
-    ]
-)
 
 
 @dataclass

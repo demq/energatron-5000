@@ -97,13 +97,13 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P2.2.3
+- Last done: P2.2.4
 - Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files` (unchanged);
-  energatron-5000 `P2.2.3: add the parse_nem12 stage and the pipeline fixture workspace`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2161 passed in ~3m35;
+  energatron-5000 `P2.2.4: add the merge_interval stage and its conflicts report`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2202 passed in ~3m49;
   `pre-commit run --files <changed>` passed; privacy guard `--figures` on the changed files and `TASKS.md` 0 violations
 - Review: none
-- Next: P2.2.4
+- Next: P2.2.5
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -111,15 +111,15 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 3), plan rev 10, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved.
 - P0 and P1 agent work are all done; both repos on `main`, no remote, nothing pushed. P2.2.1 (foundations), P2.2.2
-  (format readers, precedence) and P2.2.3 (`parse_nem12`) are done.
+  (format readers, precedence), P2.2.3 (`parse_nem12`) and P2.2.4 (`merge_interval`) are done.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
   P1.5.3.
 
-**Read first** (for P2.2.4, `merge_interval`)
-- The P2 spec: §7.2, §12, §13.3 (`test_merge_interval`); D1 §9, §13.
-- `services/stages/parse_nem12.py` (its output tables and schemas, `index.parquet`), `core/models/meter.py`,
-  `precedence_order` in `core/models/catalog.py`, `tests/fixtures/pipeline_workspace.py`,
-  `tests/unit/services/stages/test_parse_nem12.py` (the test pattern), `services/stages/registry.py`.
+**Read first** (for P2.2.5, `validate_meter`)
+- The P2 spec: §8, §12, §13.3 (`test_validate_meter`); D1 §9, §13.
+- `services/stages/merge_interval.py` (its outputs and `MergeSummary`), `services/stages/tables.py` (shared schemas),
+  `core/models/meter.py`, `core/sapn_summary.py`, `tests/fixtures/pipeline_workspace.py`,
+  `tests/unit/services/stages/test_merge_interval.py` (the test pattern), `services/stages/registry.py`.
 
 **Facts**
 - Owner decision on the P2 spec (2026-10-30): Q1-Q9 approved as written, except Q6: no waiver of hand-over
@@ -127,19 +127,21 @@ Then clear the context and type `/next`.
 - Built in P2.2.1: `Params` v2, `RegionProfile` v2, `ServiceContext.region`, `StageRun.zone(key)`, `ZONE_KEY`,
   the window helpers in `core/models/_common.py`, `REGION_FIELDS` in `params.py`. Stage modules must not use
   `ZoneInfo(...)`, string `tz=`, `pytz` or `dateutil.tz` (`test_stage_purity`).
-- Built in P2.2.2: `core/text.py`, `core/nem12.py` (`scan_nem12`, `read_nem12`), `core/sapn_summary.py`,
-  `core/retailer_usage.py`, `precedence_order`; the P1 parsers keep `version` 1. `read_*` result types have no
-  identifier field. Fixtures: `make_nem12` `day_values`/`day_quality`/`negative_on`, `make_sources`
-  `make_summary_from_nem12`/`make_retailer_usage_from_nem12`, the independent `tests/fixtures/oracle.py`.
-- Built in P2.2.3: stage `parse_nem12` (reads the whole `data/raw/sapn_interval` dir; one `<dataset_id>.parquet` per
-  readable dataset, kind `elec_interval_staged` v1, plus `index.parquet`, kind `elec_interval_index` v1; eight checks),
-  registered after `catalog_index`; `tests/fixtures/pipeline_workspace.py` (two overlapping SAPN datasets, one conflict
-  day, a V day, an E52 day, a SUMMARY CSV, two usage exports, both 2025 DST changes; grows with each stage). DVC accepts
-  a whole raw directory as a dep. `core/models/meter.py` holds kinds, versions, column names and sort keys only; the
-  pyarrow schemas are in `parse_nem12.py` (core may not import pyarrow): import them from there or move them.
-- Owner accepted (2026-10-30) the P2.2.3 deviations: `meter.py` without pyarrow, `E_INVALID_INPUT` for a missing
-  `_catalog.jsonl`, and the edited `verify`, `dvc_runner` and assumption tests (two stages now).
-- P2.2.1-P2.2.3 changed every registered stage's code entry.
+- Built in P2.2.2: `core/text.py`, `core/nem12.py`, `core/sapn_summary.py`, `core/retailer_usage.py`,
+  `precedence_order`. `read_*` result types have no identifier field. Fixtures: `make_nem12`, `make_sources`
+  (`make_summary_from_nem12`, `make_retailer_usage_from_nem12`), the independent `tests/fixtures/oracle.py`.
+- Built in P2.2.3: stage `parse_nem12` (per-dataset `elec_interval_staged` v1 tables plus `index.parquet`, kind
+  `elec_interval_index` v1); `tests/fixtures/pipeline_workspace.py` (two overlapping SAPN datasets, one conflict day,
+  a V day, an E52 day, a SUMMARY CSV, two usage exports, both 2025 DST changes; grows with each stage).
+- Built in P2.2.4: stage `merge_interval` (registered third): `intervals.parquet` (`elec_interval_nem` v1),
+  `conflicts.parquet` (`merge_conflicts` v1), `summary.json` (`MergeSummary`, `merge_summary` v1); `W_MERGE_SAME_UPDATE`;
+  the shared pyarrow schemas in `services/stages/tables.py` (a stage may not import another stage; `meter.py` has
+  kinds, versions, column names and sort keys only, as core may not import pyarrow); `tests/integration/_stage_inputs.py`
+  builds each stage's inputs (a new stage adds a builder that runs its upstream stages first).
+- Owner accepted (2026-10-30) the P2.2.4 deviations: open `MergeSummary` shapes (dataset-ID lists, conflict counts,
+  concatenated flags), `services/stages/tables.py`, and `E_INVALID_INPUT` for a missing, mismatched or re-columned
+  staged table.
+- P2.2.1-P2.2.4 changed every registered stage's code entry.
 - The workspace's acceptance note for P1 is `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`;
   it may mention data, so nothing from it is copied here. The hourly JSON in the legacy folder stays unlanded
   (`E_UNKNOWN_SOURCE`); `sapn_interval` has 2 datasets.
@@ -655,7 +657,7 @@ verdict, with no waiver of hand-over decision #11.
     in any output.
   - Handover: `parse_nem12` (eight checks, `elec_interval_staged` and `elec_interval_index` v1), `meter.py` kinds, the pipeline fixture workspace, golden `dvc.yaml` (2161 tests). Decision: owner accepted `meter.py` without pyarrow, `E_INVALID_INPUT` for a missing catalog and the edited verify, runner and assumption tests.
     Watch: the pyarrow schemas live in `parse_nem12.py`; `merge_interval` imports or moves them.
-- ⬜ **P2.2.4** `merge_interval` and its conflicts report.
+- ✅ **P2.2.4** `merge_interval` and its conflicts report.
   - The stage, `intervals.parquet`, `conflicts.parquet`, `summary.json`, `W_MERGE_SAME_UPDATE`, the golden
     `dvc.yaml` and the fixture workspace.
   - Refs: the P2 spec §7.2, §12, §13.3 (`test_merge_interval`).
@@ -663,6 +665,8 @@ verdict, with no waiver of hand-over decision #11.
     `tests/unit/services/stages/test_merge_interval.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
     `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; merged rows = distinct days x `1440 / L` per suffix in the test.
+  - Handover: `merge_interval` (newest `update_dt` wins per `(suffix, meter_date)`, `intervals`, `conflicts` and `summary`, `W_MERGE_SAME_UPDATE`), shared `services/stages/tables.py`, golden `dvc.yaml` and `merge_summary` v1 (2202 tests). Decision: owner accepted the open summary shapes, `tables.py` and the `E_INVALID_INPUT` input guard.
+    Watch: `validate_meter` reads `intervals.parquet` and `summary.json`; import schemas from `tables.py`, never from another stage.
 - ⬜ **P2.2.5** `validate_meter`: monthly totals against SAPN SUMMARY, the gap list, quality shares.
   - The stage and its four reports, `W_METER_GAPS` and `W_METER_UNVALIDATED`, the golden `dvc.yaml` and the
     fixture workspace.
@@ -718,6 +722,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-10-30 · P2.2.4 · `merge_interval` stage (newest `update_dt` per day, `intervals`, `conflicts`, `summary`, `W_MERGE_SAME_UPDATE`), shared `services/stages/tables.py`, golden `dvc.yaml` and `merge_summary` v1 (2202 tests); owner accepted the three recorded deviations · energatron-5000 `P2.2.4: add the merge_interval stage and its conflicts report`
 - 2026-10-30 · P2.2.3 · `parse_nem12` stage (whole raw dir, per-dataset tables and `index.parquet`, eight checks), `core/models/meter.py` kinds, fixture workspace `pipeline_workspace.py`, golden `dvc.yaml`, raw-directory DVC dep confirmed (2161 tests); review nits 1-4 fixed; owner accepted the recorded deviations · energatron-5000 `P2.2.3: add the parse_nem12 stage and the pipeline fixture workspace`
 - 2026-10-30 · P2.2.2 · format readers (`core/nem12.py`, `sapn_summary.py`, `retailer_usage.py`, `text.py`) with `scan_*`/`read_*`, P1 parsers on `scan_*` unchanged at v1, `precedence_order`, fixture additions and the independent oracle (2101 tests); review nits 1–3 fixed; owner accepted three deviations and keeps `duplicate_label` · energatron-5000 `P2.2.2: move the format readers into core and add dataset precedence`
 - 2026-10-30 · P2.2.1 · `Params` v2 and `RegionProfile` v2 (null zone and windows after migration), `regions/sa.yaml` v2, `ServiceContext.region`, `pipeline sync` fills zone and windows, `StageRun.zone()` on `tzdata`, five P2 warning codes, `test_stage_purity` zone bans, `test_no_region_values` (1877 tests); review nits 1–2 fixed; owner accepted the five deviations and the `getattr(zoneinfo, "ZoneInfo")` known limit · energatron-5000 `P2.2.1: add Params v2, RegionProfile v2, StageRun.zone() and the P2 warnings`
