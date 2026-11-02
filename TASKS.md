@@ -97,28 +97,30 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P2.2.7
-- Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files` (unchanged);
-  energatron-5000 `P2.2.7: add the localise stage and the end-to-end P2 tests`
+- Last done: P2.3.1
+- Last commit: demq-elektric `P2.3.1: record the P2 pipeline run and acceptance in the workspace`;
+  energatron-5000 `P2.3.1: record P2 acceptance in the workspace`
 - Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2357 passed in ~6m;
-  `pre-commit run --files <changed>` passed; privacy guard `--figures` on the changed files and `TASKS.md` 0 violations
+  workspace `verify`, `dvc status`, `pipeline sync --check`, `fingerprint --check` clean; privacy guard `--figures` on
+  the committed files, the commit messages and `TASKS.md` 0 violations
 - Review: none
-- Next: P2.3.1
+- Next: no ⬜ sub-task left; owner steps open, then the P3 spec sub-task (to be added)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 3), plan rev 10, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved.
-- P0 and P1 agent work are all done; both repos on `main`, no remote, nothing pushed. All of P2.2 (six stages) is
-  done. P2.3.1 (acceptance in the workspace) is next; P2.3.2 is an owner backup step.
+- P0, P1 and P2 agent work are all done and accepted in the workspace; both repos on `main`, no remote, nothing
+  pushed. No ⬜ sub-task is left. The next phase is P3 (usage profile, plan §15), which starts with its own spec
+  sub-task; the owner asks for it, or it is added to this file first.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
-  P1.5.3, then P2.3.2.
+  P1.5.3, P2.3.2. The workspace backup is pending (nothing is backed up yet).
 
-**Read first** (for P2.3.1)
-- The P2 spec §14 (the nine acceptance checks, in order), §11, §10; plan §15 (P2); D1 §11.4.
-- `demq-elektric/CLAUDE.md`, and the P1 acceptance note `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`
-  (it may mention data, so nothing from it is copied into the tool repo).
+**Read first** (for the P3 spec)
+- Plan §15 (P3), D1, the P2 spec §10-§11 (the `elec_interval_local` table) and §15 (deferred items).
+- The P2 acceptance note `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md` (it mentions
+  data, so nothing from it is copied into the tool repo).
 
 **Facts**
 - Owner decision on the P2 spec (2026-10-30): Q1-Q9 approved as written, except Q6: no waiver of hand-over
@@ -144,11 +146,12 @@ Then clear the context and type `/next`.
 - none
 
 **Watch out**
-- The workspace is out of sync with the tool until P2.3.1: `params.yaml` needs `pipeline sync`, and `land --dry-run`
-  fails with `E_PIPELINE_NOT_SYNCED` until then. `fingerprint --check` reports stale too (spec §2); re-run
-  `fingerprint` after each tool commit before any `dvc repro`, and commit it with `dvc.lock`.
-- `uv run` inside `demq-elektric/` rewrites its `uv.lock` (the tool gained `tzdata`); P2.3.1 must commit that.
-  Until then restore it with `git checkout -- uv.lock` if a session ran `uv run` there.
+- The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). After a tool
+  commit that changes `src/energatron/`, `fingerprint --check` reports stale (spec §2): re-run `fingerprint` before any
+  `dvc repro`, and commit it with `dvc.lock`.
+- The workspace time basis is `confirmed` as `nem_aest`. The retailer's tariff windows changed on or about early
+  July 2025 (probe in the workspace note); `params` keeps one window set (spec §17 Q5), so tariff-time costing for
+  later dates needs window history before P4 relies on it.
 - If `validate_timebase` is `contradicted` or `localise` fails its gate in the workspace, stop and ask the owner before
   changing `meter.timebase` (decision #11 allows nothing weaker).
 - `offer_cdr` records `extra.source_ts_from: "content"` (D3 §3.3; §5.7's list omits it).
@@ -699,7 +702,7 @@ verdict, with no waiver of hand-over decision #11.
     Watch: the real workspace's gate needs a `confirmed` verdict on its own data; P2.3.1 stops and asks the owner on `contradicted` or a failed gate.
 
 #### P2.3 Acceptance ⬜
-- ⬜ **P2.3.1** P2 acceptance in the workspace.
+- ✅ **P2.3.1** P2 acceptance in the workspace.
   - The spec's §14 checks 1-9, in order: `pipeline sync` (params v2, zone and windows filled), `fingerprint`,
     `dvc repro`; interval counts, monthly totals against SAPN SUMMARY, merge conflicts reported, the time basis
     `confirmed` with evidence, the DST days; then `verify`, a clean state and the pending backup. If
@@ -711,6 +714,8 @@ verdict, with no waiver of hand-over decision #11.
     `agent_docs/` for results that mention data.
   - Done when: every §14 check passes; `TASKS.md` gets counts and pass/fail only.
   - On /done: commit those files as one workspace commit.
+  - Handover: workspace synced to params v2 and all six stages run; time basis `confirmed` (`nem_aest`), 22 SUMMARY rows match, 0 merge conflicts, 3 short and 3 long DST days; one workspace commit. Decision: the retailer's July-September reads fit no hypothesis because its tariff windows changed (found by probe, in the workspace note), so the clock basis stands.
+    Watch: `params` holds one window set, so tariff-time costing after the change needs window history (spec §17 Q5).
 - ⛔ **P2.3.2** Owner: back up after P2.
   - Why: owner step (iCloud).
   - Refs: the runbook. Files: none.
@@ -722,6 +727,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-02 · P2.3.1 · P2 acceptance in the workspace: `pipeline sync` (params v2), `fingerprint`, `dvc repro` (5 stages, 24 checks), time basis `confirmed`, 22 of 22 SUMMARY rows match, 0 merge conflicts, 3 short and 3 long DST days, `verify` ok; backup pending · demq-elektric `P2.3.1: record the P2 pipeline run and acceptance in the workspace`; energatron-5000 `P2.3.1: record P2 acceptance in the workspace`
 - 2026-11-02 · P2.2.7 · `localise` stage (gated on a `confirmed` verdict, `elec_interval_local` v1, four checks), golden `dvc.yaml` with six stages, `test_localise_tzdata` and `test_p2_pipeline` (2357 tests); examined by the same agent, no findings; four existing pipeline tests now land the fixture raw zone · energatron-5000 `P2.2.7: add the localise stage and the end-to-end P2 tests`
 - 2026-10-30 · P2.2.6 · `core/timebase.py` and the `validate_timebase` stage (hypotheses H1-H3 against the retailer export, verdict, `timebase_periods`/`timebase_result` v1, `W_TIMEBASE_UNCONFIRMED`/`UNEXPLAINED`), golden `dvc.yaml`, `params_v2_text(region=True)` (2328 tests) · energatron-5000 `P2.2.6: add the validate_timebase stage and core/timebase`
 - 2026-10-30 · P2.2.5 · `validate_meter` stage (monthly totals against SAPN SUMMARY, gaps, quality shares, `meter_report` v1, `W_METER_GAPS`, `W_METER_UNVALIDATED`), `load_table`, shared `params_v2_text`, golden `dvc.yaml` (2254 tests); review nits 1, 2, 4 fixed, nit 3 answered; owner accepted the four recorded deviations · energatron-5000 `P2.2.5: add the validate_meter stage and its reports`
