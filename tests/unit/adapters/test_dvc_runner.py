@@ -20,13 +20,13 @@ from energatron.adapters import wiring
 from energatron.adapters.pipeline.dvc_runner import PIPELINE_LOGGER, DvcRunner
 from energatron.core.canonical import content_hash, sha256_hex
 from energatron.core.errors import CheckFailedError, EnergatronError, StageFailedError, SubprocessError
-from energatron.core.models.catalog import SourceType
 from energatron.core.models.pipeline import ReproReport, StageStatus
 from energatron.core.models.provenance import CodeFingerprint, StageCode
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH, emit_dvc_yaml
 from energatron.services.stages.registry import STAGES
 from tests.fixtures.params_text import params_v2_text
+from tests.fixtures.pipeline_workspace import build_raw_zone
 from tests.unit.adapters._workspace import make_workspace, write
 
 DVC = str(Path(sys.executable).parent / "dvc")
@@ -359,13 +359,13 @@ def test_a_dvc_error_with_no_failed_stage_is_a_subprocess_error(built: Fake) -> 
 
 @pytest.fixture
 def real(tmp_path: Path) -> WorkspacePaths:
-    """A scratch workspace holding the real pipeline (every registered stage) over empty catalogs."""
+    """A scratch workspace holding the real pipeline (every registered stage) over the fixture raw zone, whose time
+    basis `validate_timebase` can confirm, as `localise` needs."""
     paths = make_workspace(tmp_path, private=None)
     dvc_init(paths.root)
     write(paths.root, "dvc.yaml", emit_dvc_yaml(STAGES))
     write(paths.root, "params.yaml", params_v2_text(region=True))  # DVC reads the declared keys from the file itself
-    for source in SourceType:
-        write(paths.root, f"data/raw/{source.value}/_catalog.jsonl", "")
+    build_raw_zone(paths.root)
     return paths
 
 
@@ -380,7 +380,14 @@ def test_the_venv_energatron_runs_whatever_path_the_caller_has_and_prints_nothin
     runner = DvcRunner(real, fingerprint=wiring.code_fingerprint)
     with caplog.at_level(logging.INFO, logger=PIPELINE_LOGGER):
         assert runner.repro() == report(
-            ran=["catalog_index", "parse_nem12", "merge_interval", "validate_meter", "validate_timebase"]
+            ran=[
+                "catalog_index",
+                "parse_nem12",
+                "merge_interval",
+                "validate_meter",
+                "validate_timebase",
+                "localise",
+            ]
         )
     captured = capfd.readouterr()
     assert captured.out == ""

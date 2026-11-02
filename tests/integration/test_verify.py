@@ -1,9 +1,9 @@
 """`energatron verify` in a scratch workspace with real git and DVC (D1 §11.4, §13).
 
 The workspace runs the real pipeline (`catalog_index`, `parse_nem12`, `merge_interval`, `validate_meter`,
-`validate_timebase`) over three synthetic landed blobs. `verify` refuses a stale fingerprint or pipeline; on a current
-one it passes; an output changed by hand and committed to DVC, or a stored blob changed or removed, fails it with
-`E_CHECK_FAILED` (`not_reproducible`), naming the stage or the dataset. Nothing here touches the real workspace.
+`validate_timebase`, `localise`) over four synthetic landed blobs. `verify` refuses a stale fingerprint or pipeline; on
+a current one it passes; an output changed by hand and committed to DVC, or a stored blob changed or removed, fails it
+with `E_CHECK_FAILED` (`not_reproducible`), naming the stage or the dataset. Nothing here touches the real workspace.
 """
 
 import json
@@ -23,7 +23,8 @@ from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import CatalogRecord, SourceType
 from energatron.core.models.workspace import WorkspacePaths
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
-from tests.fixtures.pipeline_workspace import make_record
+from tests.fixtures.make_sources import make_retailer_usage_from_nem12
+from tests.fixtures.pipeline_workspace import LABELS, WINDOWS, make_record
 from tests.fixtures.synthetic import SYNTHETIC_NMI
 from tests.integration._scratch import Scratch, dvc, make_scratch
 
@@ -72,29 +73,43 @@ def land(paths: WorkspacePaths, source: SourceType, payload: bytes) -> str:
     return ident
 
 
-def land_interval(paths: WorkspacePaths) -> str:
-    """Store a small generated NEM12 file and catalog it with the record the real parser builds, which `parse_nem12`
-    reads without a failed check."""
-    spec = Nem12Spec(start=date(2025, 6, 1), days=2, interval_minutes=30)
-    window = (spec.start, spec.start + timedelta(days=1))
-    name = sapn_filename("DETAILED", SYNTHETIC_NMI, window, datetime(2025, 7, 1, 9, 0, 0))
+def land_interval_and_usage(paths: WorkspacePaths) -> tuple[str, str]:
+    """Store a generated NEM12 file and a retailer export made from it, each catalogued with the record the real parser
+    builds, which `parse_nem12` and `validate_timebase` read without a failed check. Forty winter days and three
+    midnight-to-midnight periods give `validate_timebase` the evidence to confirm `nem_aest`, which `localise` needs."""
+    spec = Nem12Spec(start=date(2025, 6, 1), days=40, interval_minutes=30)
+    window = (spec.start, spec.start + timedelta(days=spec.days - 1))
+    name = sapn_filename("DETAILED", SYNTHETIC_NMI, window, datetime(2025, 7, 11, 9, 0, 0))
     data = make_nem12(spec)
-    record = make_record(SourceType.SAPN_INTERVAL, name, data)
-    FsBlobStore(paths).put(record.stored_path, data)
-    JsonlCatalog(paths).append(record)
-    return record.dataset_id
+    usage = make_retailer_usage_from_nem12(
+        data,
+        basis="nem_aest",
+        windows=WINDOWS,
+        reads=[datetime(2025, 6, 5), datetime(2025, 6, 12), datetime(2025, 6, 19), datetime(2025, 6, 26)],
+        labels=LABELS,
+    )
+    idents: list[str] = []
+    for source, filename, payload in (
+        (SourceType.SAPN_INTERVAL, name, data),
+        (SourceType.RETAILER_USAGE, "synthetic_usage.csv", usage),
+    ):
+        record = make_record(source, filename, payload)
+        FsBlobStore(paths).put(record.stored_path, payload)
+        JsonlCatalog(paths).append(record)
+        idents.append(record.dataset_id)
+    return idents[0], idents[1]
 
 
 @pytest.fixture
 def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> Scratch:
-    """A current pipeline: synced, two blobs landed, fingerprinted and reproduced."""
+    """A current pipeline: synced, four blobs landed, fingerprinted and reproduced."""
     for name in ("ENERGATRON_JSON", "ENERGATRON_WORKSPACE"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("PATH", f"{BIN}{os.pathsep}{os.environ.get('PATH', '')}")
     scratch = make_scratch(tmp_path, remote=False)
     monkeypatch.chdir(scratch.root)
     assert envelope(capsys, "pipeline", "sync", "--json")[0] == 0
-    land_interval(scratch.paths)
+    land_interval_and_usage(scratch.paths)
     land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,bill\n3,4\n")
     land(scratch.paths, SourceType.GAS_BILL, b"synthetic,earlier gas\n7,8\n")
     assert envelope(capsys, "fingerprint", "--json")[0] == 0
@@ -113,8 +128,15 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
     assert result["data"] == {
         "kind": "verify_result",
         "schema_version": 1,
-        "stages": ["catalog_index", "parse_nem12", "merge_interval", "validate_meter", "validate_timebase"],
-        "datasets": 3,
+        "stages": [
+            "catalog_index",
+            "parse_nem12",
+            "merge_interval",
+            "validate_meter",
+            "validate_timebase",
+            "localise",
+        ],
+        "datasets": 4,
     }
     assert not scratch_dir(scratch).exists()
     assert json.loads(dvc(scratch.root, "status", "--json")) == {}
@@ -136,6 +158,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
     assert result["error"]["code"] == "E_FINGERPRINT_STALE"
     assert result["error"]["details"]["stages"] == [
         "catalog_index",
+        "localise",
         "merge_interval",
         "parse_nem12",
         "validate_meter",
@@ -171,9 +194,10 @@ def test_an_output_changed_by_hand_and_committed_to_dvc_is_not_reproducible(
 def test_a_stored_blob_changed_or_removed_by_hand_is_named(
     capsys: pytest.CaptureFixture[str], scratch: Scratch
 ) -> None:
-    # the interval blob is left alone: `parse_nem12` reads it, so changing it makes that stage stale instead (as the
-    # SAPN SUMMARY blobs would, for `validate_meter`; none is landed here)
-    records = [r for r in JsonlCatalog(scratch.paths).records() if r.source is not SourceType.SAPN_INTERVAL]
+    # the interval and usage blobs are left alone: `parse_nem12` and `validate_timebase` read them, so changing one
+    # makes that stage stale instead (as the SAPN SUMMARY blobs would, for `validate_meter`; none is landed here)
+    bills = (SourceType.ELEC_BILL, SourceType.GAS_BILL)
+    records = [r for r in JsonlCatalog(scratch.paths).records() if r.source in bills]
     changed, removed = (scratch.root / record.stored_path for record in records)
     changed.chmod(0o644)
     changed.write_bytes(changed.read_bytes() + b"altered\n")

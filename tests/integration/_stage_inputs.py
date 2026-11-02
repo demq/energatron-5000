@@ -90,12 +90,21 @@ def _validate_timebase(root: Path) -> None:
     _validate_meter(root)
 
 
+def _localise(root: Path) -> None:
+    """The fixture raw zone, parsed, merged and judged: `localise` reads the merged table and the time-basis report.
+
+    The zone's exports are generated under `nem_aest`, the basis in `PARAMS_YAML`, so the verdict is `confirmed`."""
+    _validate_meter(root)
+    _run_upstream(root, "validate_timebase")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
     "merge_interval": _merge_interval,
     "validate_meter": _validate_meter,
     "validate_timebase": _validate_timebase,
+    "localise": _localise,
 }
 
 

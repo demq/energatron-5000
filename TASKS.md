@@ -97,50 +97,45 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P2.2.6
+- Last done: P2.2.7
 - Last commit: demq-elektric `P1.5.2: record the pipeline run on the landed legacy files` (unchanged);
-  energatron-5000 `P2.2.6: add the validate_timebase stage and core/timebase`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2328 passed in ~5m;
+  energatron-5000 `P2.2.7: add the localise stage and the end-to-end P2 tests`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2357 passed in ~6m;
   `pre-commit run --files <changed>` passed; privacy guard `--figures` on the changed files and `TASKS.md` 0 violations
 - Review: none
-- Next: P2.2.7
+- Next: P2.3.1
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 3), plan rev 10, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved.
-- P0 and P1 agent work are all done; both repos on `main`, no remote, nothing pushed. P2.2.1-P2.2.6 are done; P2.2.7
-  (`localise`) is the last stage, then P2.3.1 acceptance in the workspace.
+- P0 and P1 agent work are all done; both repos on `main`, no remote, nothing pushed. All of P2.2 (six stages) is
+  done. P2.3.1 (acceptance in the workspace) is next; P2.3.2 is an owner backup step.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
-  P1.5.3.
+  P1.5.3, then P2.3.2.
 
-**Read first** (for P2.2.7, `localise`)
-- The P2 spec: §6, §10, §11, §13.3 (`test_localise`, `test_localise_tzdata`, `test_p2_pipeline`), §15; plan §10.2, §13;
-  D1 §11.4.
-- `core/timebase.py` (`to_local`, `LocalTimes`), `services/stages/validate_timebase.py` (writes `result.json` that the
-  gate reads), `core/models/meter.py` (`TimebaseResult`), `services/stages/tables.py` (`STAGED_SCHEMA`, `load_table`),
-  `services/stages/runner.py` (`StageRun.zone`), `tests/fixtures/pipeline_workspace.py`, `tests/integration/_stage_inputs.py`,
-  `tests/unit/services/stages/test_validate_timebase.py` (a model for building usage exports under a chosen basis).
+**Read first** (for P2.3.1)
+- The P2 spec §14 (the nine acceptance checks, in order), §11, §10; plan §15 (P2); D1 §11.4.
+- `demq-elektric/CLAUDE.md`, and the P1 acceptance note `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`
+  (it may mention data, so nothing from it is copied into the tool repo).
 
 **Facts**
 - Owner decision on the P2 spec (2026-10-30): Q1-Q9 approved as written, except Q6: no waiver of hand-over
   decision #11, so `localise` runs only on a `confirmed` verdict (spec §9.4, §10, §15).
-- Built in P2.2.1-P2.2.5: `Params` v2, `RegionProfile` v2, `StageRun.zone(key)`, window helpers in
-  `core/models/_common.py`; the readers in `core/` (`read_*` results have no identifier field), `precedence_order`; stages
-  `parse_nem12`, `merge_interval`, `validate_meter`; shared schemas and `load_table` in `services/stages/tables.py`
-  (a stage may not import another stage; `meter.py` has kinds, versions and column names only, no pyarrow). Stage
-  modules must not use `ZoneInfo(...)`, string `tz=`, `pytz` or `dateutil.tz` (`test_stage_purity`).
-- Built in P2.2.6: `core/timebase.py` (`Timebase`, `parse_windows`, `to_local`, `local_clock`, `bucket`) and stage
-  `validate_timebase` (registered fifth; `periods.parquet` and `result.json`, kind `timebase_result` v1; five checks;
-  `W_TIMEBASE_UNCONFIRMED`, `W_TIMEBASE_UNEXPLAINED`). `params_v2_text(region=True, basis=…, windows=…,
-  min_fit_periods=…)` fills the zone and windows; `_stage_inputs` uses it. `/done` accepts the recorded deviations:
-  `local_clock`, the two extra checks (`blobs_match_catalog`, `detector_known`) and the result shape.
-- Fixtures: `tests/fixtures/pipeline_workspace.py` (grows with each stage), `tests/integration/_stage_inputs.py`
-  (one builder per stage, running its upstream stages first), `make_nem12`, `make_sources`, `oracle.py`.
-- P2.2.1-P2.2.6 changed every registered stage's code entry.
-- The workspace's acceptance note for P1 is `demq-elektric/agent_docs/2026-10/2026-10-30_p1-acceptance-legacy-landing.md`;
-  it may mention data, so nothing from it is copied here. The hourly JSON in the legacy folder stays unlanded.
+- Built in P2.2: `Params` v2, `RegionProfile` v2, `StageRun.zone(key)` (tzdata, never the system database), readers in
+  `core/`, `precedence_order`, `core/timebase.py`; stages `parse_nem12`, `merge_interval`, `validate_meter`,
+  `validate_timebase`, `localise`, registered in that order after `catalog_index`. Shared schemas and `load_table` in
+  `services/stages/tables.py` (a stage may not import another stage). Stage modules must not use `ZoneInfo(...)`, a
+  string `tz=`, `pytz` or `dateutil.tz` (`test_stage_purity`).
+- `localise` writes `data/interim/elec_interval_local/intervals.parquet`; on a failed gate that directory holds only
+  `_provenance.json` and `dvc repro` stops with `E_CHECK_FAILED` in `localise`. A `contradicted` basis stops earlier,
+  in `validate_timebase`.
+- Fixtures: `tests/fixtures/pipeline_workspace.py` (`build_raw_zone`), `tests/integration/_stage_inputs.py` (one builder
+  per stage), `make_nem12`, `make_sources`, `oracle.py`. Any test that runs every stage needs data that confirms a basis;
+  an empty raw zone no longer reproduces.
+- P2.2.1-P2.2.7 changed every registered stage's code entry.
+- The hourly JSON in the legacy folder stays unlanded.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing, GitHub repo, git
   remote or global installs.
@@ -154,11 +149,13 @@ Then clear the context and type `/next`.
   `fingerprint` after each tool commit before any `dvc repro`, and commit it with `dvc.lock`.
 - `uv run` inside `demq-elektric/` rewrites its `uv.lock` (the tool gained `tzdata`); P2.3.1 must commit that.
   Until then restore it with `git checkout -- uv.lock` if a session ran `uv run` there.
+- If `validate_timebase` is `contradicted` or `localise` fails its gate in the workspace, stop and ask the owner before
+  changing `meter.timebase` (decision #11 allows nothing weaker).
 - `offer_cdr` records `extra.source_ts_from: "content"` (D3 §3.3; §5.7's list omits it).
 - D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone.
 - A new stage that reads a raw source must check every dataset's blob and detector (§3.1), as `validate_meter` does.
 - `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
-- pytest takes ~5 minutes. A safety hook holds any command containing `rm`. Agents never read
+- pytest takes ~6 minutes. A safety hook holds any command containing `rm`. Agents never read
   `demq-elektric/private/`. In zsh pass file lists as an array.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
@@ -604,7 +601,7 @@ verdict, with no waiver of hand-over decision #11.
   - Handover: P2 spec approved with Q1-Q9 as written except Q6; `/done` applied plan rev 10 and D1 rev 3 (spec §16) and rewrote P2.2-P2.3 from
     spec §2. Decision: no waiver of hand-over #11, so `localise` needs a `confirmed` verdict. Watch: this workspace's data must reach `confirmed` (§14 check 6).
 
-#### P2.2 Stages ⬜
+#### P2.2 Stages ✅
 - ✅ **P2.2.1** Foundations: `Params` v2, `RegionProfile` v2, `StageRun.zone()`, `tzdata`, the P2 warnings.
   - `core/models/params.py` v2 (`meter.*`, `validation.meter`, `validation.timebase`, window parsing and the
     partition rule, `Params.defaults(profile)`, the v1 to v2 migration with `null` zone and windows);
@@ -687,7 +684,7 @@ verdict, with no waiver of hand-over decision #11.
     others; the winter-only tie gives `unconfirmed` and passes.
   - Handover: `core/timebase.py` and `validate_timebase` (periods, fit under H1-H3, `confirmed`/`unconfirmed`/`contradicted`, `timebase_periods` and `timebase_result` v1, two warnings), golden `dvc.yaml` (2328 tests). Decision: `local_clock` gives the wall time for `local_wall`, and the stage adds `blobs_match_catalog` and `detector_known`; only `contradicted` fails.
     Watch: `localise` must read `result.json` (`configured`, `verdict`) from the report; `validate_timebase` fails on a `null` zone or windows, so tests need `params_v2_text(region=True)`.
-- ⬜ **P2.2.7** `localise`: meter time to local time, with the DST days, and the end-to-end tests.
+- ✅ **P2.2.7** `localise`: meter time to local time, with the DST days, and the end-to-end tests.
   - The stage with its `timebase_gate` (a `confirmed` verdict naming the configured basis, else no table and
     `E_CHECK_FAILED`), `energy_conserved`, `key_unique`, `local_placeable` and `local_day_lengths`; the golden
     `dvc.yaml` with all five stages; `test_localise_tzdata` (a wrong system zone file changes nothing);
@@ -698,6 +695,8 @@ verdict, with no waiver of hand-over decision #11.
     `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; 23-hour and 25-hour local days appear in the test; on `unconfirmed`,
     `contradicted` or a mismatched basis the gate leaves no table.
+  - Handover: `localise` (gate on a `confirmed` verdict naming the configured basis, else no table; `elec_interval_local` v1 with `utc_start`, `local_start`, `local_date`, `utc_offset_minutes`; four checks), all six stages in the golden `dvc.yaml`, `test_localise_tzdata` and `test_p2_pipeline` (2357 tests). Decision: an unplaceable `local_wall` row stays in the table with null times and fails `local_placeable`; pipeline tests that run every stage now land the fixture raw zone.
+    Watch: the real workspace's gate needs a `confirmed` verdict on its own data; P2.3.1 stops and asks the owner on `contradicted` or a failed gate.
 
 #### P2.3 Acceptance ⬜
 - ⬜ **P2.3.1** P2 acceptance in the workspace.
@@ -723,6 +722,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-02 · P2.2.7 · `localise` stage (gated on a `confirmed` verdict, `elec_interval_local` v1, four checks), golden `dvc.yaml` with six stages, `test_localise_tzdata` and `test_p2_pipeline` (2357 tests); examined by the same agent, no findings; four existing pipeline tests now land the fixture raw zone · energatron-5000 `P2.2.7: add the localise stage and the end-to-end P2 tests`
 - 2026-10-30 · P2.2.6 · `core/timebase.py` and the `validate_timebase` stage (hypotheses H1-H3 against the retailer export, verdict, `timebase_periods`/`timebase_result` v1, `W_TIMEBASE_UNCONFIRMED`/`UNEXPLAINED`), golden `dvc.yaml`, `params_v2_text(region=True)` (2328 tests) · energatron-5000 `P2.2.6: add the validate_timebase stage and core/timebase`
 - 2026-10-30 · P2.2.5 · `validate_meter` stage (monthly totals against SAPN SUMMARY, gaps, quality shares, `meter_report` v1, `W_METER_GAPS`, `W_METER_UNVALIDATED`), `load_table`, shared `params_v2_text`, golden `dvc.yaml` (2254 tests); review nits 1, 2, 4 fixed, nit 3 answered; owner accepted the four recorded deviations · energatron-5000 `P2.2.5: add the validate_meter stage and its reports`
 - 2026-10-30 · P2.2.4 · `merge_interval` stage (newest `update_dt` per day, `intervals`, `conflicts`, `summary`, `W_MERGE_SAME_UPDATE`), shared `services/stages/tables.py`, golden `dvc.yaml` and `merge_summary` v1 (2202 tests); owner accepted the three recorded deviations · energatron-5000 `P2.2.4: add the merge_interval stage and its conflicts report`

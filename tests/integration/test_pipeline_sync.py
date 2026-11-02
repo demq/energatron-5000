@@ -16,6 +16,7 @@ import pytest
 
 from energatron.adapters.cli.app import main
 from energatron.core.models.catalog import SourceType
+from tests.fixtures.pipeline_workspace import build_raw_zone
 from tests.integration._scratch import Scratch, dvc, git, make_scratch
 
 pytestmark = pytest.mark.integration
@@ -76,6 +77,9 @@ def test_sync_writes_the_golden_dvc_yaml_and_dvc_repro_runs_catalog_index(
     assert git(scratch.root, "log", "--oneline", "--all") == ""  # no commit
 
     assert envelope(capsys, "pipeline", "sync", "--check", "--json")[0] == 0
+    build_raw_zone(
+        scratch.root
+    )  # `localise` builds nothing unless the time basis is confirmed, so the pipeline needs data
     assert envelope(capsys, "fingerprint", "--json")[0] == 0
     dvc(scratch.root, "repro", "--quiet")
     assert (scratch.root / "data" / "marts" / "catalog" / "_provenance.json").is_file()

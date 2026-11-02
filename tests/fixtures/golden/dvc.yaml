@@ -61,3 +61,15 @@ stages:
       - stages.validate_timebase.stage_sha256
     outs:
     - data/reports/validation/timebase
+  localise:
+    cmd: energatron stage localise
+    deps:
+    - data/interim/elec_interval_nem
+    - data/reports/validation/timebase
+    params:
+    - meter.local_tz
+    - meter.timebase
+    - .energatron/code_fingerprint.json:
+      - stages.localise.stage_sha256
+    outs:
+    - data/interim/elec_interval_local

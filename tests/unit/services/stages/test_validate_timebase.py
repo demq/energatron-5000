@@ -206,9 +206,10 @@ def test_spec_reads_the_merged_intervals_and_the_usage_source() -> None:
     assert dict(spec.outputs) == {"report": "data/reports/validation/timebase"}
 
 
-def test_it_is_registered_after_validate_meter() -> None:
-    assert list(STAGES)[-1] == "validate_timebase"
-    assert list(STAGES)[-2] == "validate_meter"
+def test_it_is_registered_after_validate_meter_and_before_localise() -> None:
+    names = list(STAGES)
+    assert names[names.index("validate_timebase") - 1] == "validate_meter"
+    assert names[names.index("validate_timebase") + 1] == "localise"
 
 
 # --- the verdict -------------------------------------------------------------------------------------------------

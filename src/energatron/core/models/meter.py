@@ -122,6 +122,27 @@ PERIODS_COLUMNS: Final = (
 `fit_` columns hold the register recomputed under each basis and whether it fits; null unless the period is used."""
 PERIODS_SORT: Final = ("period_end", "label")
 
+LOCAL_KIND: Final = "elec_interval_local"
+LOCAL_VERSION: Final = 1
+LOCAL_COLUMNS: Final = (
+    "suffix",
+    "utc_start",
+    "local_start",
+    "local_date",
+    "utc_offset_minutes",
+    "meter_start",
+    "meter_date",
+    "interval_minutes",
+    "kwh",
+    "quality",
+    "quality_flag",
+    "reason_code",
+    "dataset_id",
+)
+"""`intervals.parquet` of `localise`: the merged intervals placed on the real clock (P2 spec §10). `utc_start` and
+`local_start` (and so `local_date` and `utc_offset_minutes`) are null for a row that can't be placed."""
+LOCAL_SORT: Final = ("suffix", "utc_start")
+
 
 class SkippedDatasets(FrozenModel):
     """The catalogued datasets `merge_interval` did not use, by reason, each list highest precedence first."""
