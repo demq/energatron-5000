@@ -47,6 +47,12 @@
   `validation.timebase`); the time zone and TOU windows live in the region profile and `pipeline sync` copies
   them into `params.yaml`; the meter-file formats P2 reads are core modules, not registry plugins, until a
   second format arrives; `tzdata` as a runtime dependency (§4, §9.1, §9.2, §10.1, §10.2, §14.1).
+  2026-11-03 rev 11 — P3 usage profile spec (`2026-11-03_p3-usage-profile-spec.md`) approved, and its §15
+  edits applied: two stages, `usage_profile` (marts) and `usage_report` (a self-contained HTML built from the
+  marts alone); `params` v3 with the `analysis` block (reference window, coverage threshold, seasons, weekend,
+  band percentiles, base-load window, demand block, date-ranged TOU window sets, the first copied from the
+  region profile by `pipeline sync`); `sensitivity` moves to P6; the metric definitions made concrete
+  (§9.1, §9.2, §10.3, §14.1, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -495,6 +501,9 @@ cost_elec + cost_gas + offer_rules*       + private/config ─► bundles ─►
                                                                              └─► reports/recommendations/
 ```
 
+`usage_profile` is followed by `usage_report`, which reads only `marts/usage_profile` and writes `reports/usage/`
+(P3 spec §9, §10).
+
 `offer_rules*` = the curated rules shipped in the package, plus the workspace's `config/offer_rules.local/`.
 
 ### 9.2 Stages (`dvc.yaml`)
@@ -520,7 +529,8 @@ directories.
 | `validate_timebase` | `interim/elec_interval_nem/`, `raw/retailer_usage`, params `meter.local_tz`, `meter.timebase`, `validation.timebase` | `reports/validation/timebase/` | No other hypothesis fits better than the configured one (fails only then); too little evidence, or a tie, is a warning (`unconfirmed`) |
 | `validate_meter` | `interim/…`, `raw/sapn_summary`, param `validation.meter` | `reports/validation/meter/` | Monthly totals within ±0.01 kWh of SAPN SUMMARY (fails on a mismatch); gap list and a missing SUMMARY are warnings; % of intervals with quality `A` |
 | `localise` | `interim/elec_interval_nem/`, `reports/validation/timebase/`, params `meter.local_tz`, `meter.timebase` | `interim/elec_interval_local/` | Gate: the timebase verdict is `confirmed` for the configured basis; energy conserved; DST days have 23/25 local hours |
-| `usage_profile` | `interim/elec_interval_local/`, params `analysis.*` | `marts/usage_profile/`, `reports/usage/` | Coverage threshold for the reference window |
+| `usage_profile` | `interim/elec_interval_local/`, params `meter.local_tz`, `analysis` | `marts/usage_profile/` | One interval length per register; daily and TOU totals conserve energy and every interval gets one TOU label; `reference_window`: the last `reference_months` covered months at the coverage threshold (P3 spec §8) |
+| `usage_report` | `marts/usage_profile/` (no params) | `reports/usage/` (`index.html`) | A deterministic, self-contained HTML (inline SVG, no script, no network asset) built from the marts alone (P3 spec §9) |
 | `gas_bills` | `raw/gas_bill`, `raw/gas_bill_record` | `interim/gas_bills/` | Each bill's total recomputes within ±$0.05 |
 | `gas_profile` | `interim/gas_bills/` | `marts/gas_profile/` | Periods contiguous; read types flagged |
 | `normalise_offers` | `raw/offer_cdr`, `raw/offer_manual`, `config/offer_rules.local`, `private/config.toml`, params `offers.*` | `marts/offers/` (`tariffs.parquet`, `exclusions.json`) | TOU windows partition the day; unsupported features listed |
@@ -536,13 +546,22 @@ version 1 holds no keys; each block below arrives with its phase's spec as a new
 
 ```yaml
 kind: params
-schema_version: 2
+schema_version: 3
 meter:
   timebase: nem_aest            # confirmed by validate_timebase (see §10.2)
   local_tz: Australia/Adelaide  # copied from the region profile by pipeline sync
-analysis:
+analysis:                       # P3 spec §4.1; the plan's `sensitivity` returns with P6
   reference_months: 12
-  sensitivity: {usage_scale: [0.9, 1.0, 1.1], alt_window: previous_12m}
+  coverage_threshold: 0.95
+  seasons: {DJF: [12, 1, 2], MAM: [3, 4, 5], JJA: [6, 7, 8], SON: [9, 10, 11]}
+  weekend: [saturday, sunday]
+  band_percentiles: [10, 50, 90]
+  base_load: {from: "01:00", to: "05:00", percentile: 10}
+  demand_minutes: 30
+  tou:
+    window_sets:                # ordered by effective_from; the first (null) is copied from the region profile
+      - effective_from: null
+        windows: {Peak: [...], Off Peak: [...], Shoulder: [...]}
 offers:
   brands: [globird, agl, origin, raa, energyaustralia, …]   # AER CDR brand slugs
   distributors: {electricity: "SA Power Networks", gas: "AGN Metro/Barossa/Peterborough"}
@@ -670,6 +689,11 @@ quality type.
 charges count *local* dates.
 
 ### 10.3 Usage profile metrics (`marts/usage_profile`)
+
+*Made concrete in rev 11: the P3 spec (§3, §5–§9) defines the reference window (the last `reference_months` covered
+months), complete days and full hour cells (daylight-saving days are left out of hourly metrics), aligned demand
+blocks, quality classes, the TOU split by date-ranged window sets (the offer-window split is P4), and the HTML
+report. The list below is the intent.*
 
 - Daily kWh series; monthly totals; average daily kWh by month and by season (DJF/MAM/JJA/SON).
 - Average hourly profile: 24 hours × season × weekday/weekend, with percentile bands.
@@ -903,7 +927,7 @@ Everything else waits until it's needed.
 | **Layered package: pure core → services → adapters** | The CLI, agent tools and a web API all become thin wrappers over the same use cases, so no logic is duplicated or trapped in the CLI | Discipline only |
 | **Stage logic independent of DVC** | Stages are plain functions (`run_stage(spec, inputs, params, outputs, *, code, recorded_code)`; every output is a directory with `_provenance.json`); `dvc.yaml` just calls `energatron stage <name>`. A web app can run the same functions from a job queue, and DVC stays replaceable | None |
 | **Storage behind two small interfaces** | `Catalog` (v1: JSONL files) and `BlobStore` (v1: local files under DVC). A hosted version can swap in Postgres and S3 without touching the core | A few lines |
-| **No region-specific values in code** | Distributor names, the time zone and TOU windows (which `pipeline sync` copies into `params.yaml`), network-tariff mapping and CDR brand list live in region profiles; the registry decides which parser recognises a file. The meter-file formats P2 reads are core modules, not registry plugins, until a second format arrives. SA is just the first profile | None |
+| **No region-specific values in code** | Distributor names, the time zone and TOU windows (which `pipeline sync` copies into `params.yaml`), network-tariff mapping and CDR brand list live in region profiles; the registry decides which parser recognises a file. The meter-file formats P2 reads are core modules, not registry plugins, until a second format arrives. The first TOU window set of `analysis` is copied from the profile the same way (P3). SA is just the first profile | None |
 | **`kind` and `schema_version` on every persisted artifact** (Parquet carries both as metadata) | Other people's workspaces will lag behind the latest package; `energatron migrate` upgrades them | Two fields per schema |
 | **Machine-readable CLI** | Every command supports `--json`, has stable exit codes and never prompts when not attached to a terminal. Agents can drive it today, and the web API reuses the same response models | Small |
 | **Per-user privacy defaults** | `energatron init` creates `private/config.toml`, derives the denylist from it and installs the hooks, so others get the guardrails automatically | Part of P0/P8 |
@@ -1038,7 +1062,7 @@ added without refactoring the core.
 | **P0 Bootstrap & guardrails** | *Done 2026-10-23:* folders reorganised into `energatron-5000/` and `demq-elektric/` (§7). **Tool repo** (`energatron-5000/`): `git init`; layered package skeleton (core/services/ports/adapters); Apache-2.0 `LICENSE` + `NOTICE`; `CLAUDE.md` + `AGENTS.md` symlink (privacy rules, doc naming, layering); `new-doc` skill + `.agents/skills` link; pre-commit (privacy guard, agent-link check); CI with the no-data check. **Workspace** (`demq-elektric/`, set up by hand; it becomes the `energatron init` template in P8): `git init`; uv project pinning Python, with the tool as an editable `../energatron-5000` dependency; DVC as dev dep; `dvc init`; iCloud remote via `--local`; `.gitignore`; `CLAUDE.md` + `AGENTS.md` symlink; `.claude/settings.json` deny rules; pre-commit (nbstripout, privacy guard, a local DVC `post-checkout` hook); `private/config.toml` + `energatron denylist`; `dvc add legacy private`; `energatron backup` (dvc push and a verified bundle), run by the owner through `scripts/icloud_backup.py`. **Parent folder:** `CLAUDE.md`, `AGENTS.md` and `.claude/settings.json`, symlinks made by `link_parent.py` | Tool repo contains no data, `*.dvc` or `dvc.lock` (CI-enforced); the guard blocks a test commit containing the NMI; Claude Code and Codex both load the same instructions and the `new-doc` skill; the restore drill passes |
 | **P1 Landing & catalog** | `energatron land` with detectors for `sapn_interval`, `sapn_summary`, `retailer_usage`, `retailer_txn`, PDFs and offers; IDs; catalogs; idempotency; `dvc add`; `catalog_index`; `energatron pipeline sync`, `stage`, `fingerprint` (P1 spec) | Both current SAPN files and all legacy SAPN/retailer files are landed (one dataset per distinct file); the legacy duplicate is detected by hash; re-landing is a no-op |
 | **P2 Meter pipeline** | `parse_nem12`, `merge_interval`, `validate_meter`, `validate_timebase`, `localise` | Interval counts correct; monthly totals match SAPN SUMMARY; merge conflicts reported; time-basis hypothesis chosen with evidence; DST tests pass |
-| **P3 Usage profile** | Metrics + HTML usage report | Report builds from marts; TOU daily averages reconcile with the legacy notebook for the same window, with differences explained by the time-basis and merge fixes |
+| **P3 Usage profile** | Metrics + HTML usage report | Report builds from marts; TOU daily averages reconcile with the legacy notebook for the same window, with differences explained by the time-basis and merge fixes (made concrete as R1–R4 in the P3 spec §12) |
 | **P4 Offers + electricity engine** | CDR client, `fetch-offers`, `offer_manual` schema, normaliser, offer rules, engine, `backtest`, offer diff | Every current SAPN residential plan from configured brands either normalises or is excluded with a reason; GST convention verified against a BPID; backtest within ±1% (or deviations explained) |
 | **P5 Gas** | Gas bill landing + YAML scaffold, `gas_bills`, `gas_profile`, gas offer normalisation, gas engine | Every bill recomputes within ±$0.05 from its own line items; engine reproduces bills on the plan in force at the time within ±1% |
 | **P6 Bundles, recommendation, decisions** | Bundle rules, ranking, sensitivity, REC JSON + HTML, `energatron run`, `energatron decide`, outcomes report | The recommendation cites offer snapshot IDs, dataset IDs, run ID and commit; a clean-checkout re-run reproduces the same recommendation ID; decision entries link back |

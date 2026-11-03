@@ -97,20 +97,21 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: M.1
-- Last commit: energatron-5000 `M.1: run the tests in parallel and copy a template scratch repo`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2372
-  passed in ~52 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
+- Last done: P3.1.1
+- Last commit: energatron-5000 `P3.1.1: approve the P3 usage profile spec and apply plan rev 11 and D1 rev 4`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` kept; `TZ=UTC pytest -q` 2372
+  passed in ~56 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
 - Review: none
-- Next: no ⬜ sub-task left; P0, P1 and P2 are done. The P3 spec sub-task is to be added (plan §15)
+- Next: P3.2.1 (`Params` v3, `pipeline sync` for the first window set, `local_day_minutes`, the P3 warnings)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 3), plan rev 10, D4 = the P0-P2
-  list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved.
-- P0, P1 and P2 are all done and accepted in the workspace (P0.5.2: Codex half waived). No ⬜ sub-task is left. The next phase is P3 (usage
-  profile, plan §15), which starts with its own spec sub-task; the owner asks for it, or it is added first.
+- Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2
+  list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
+  (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`) are approved.
+- P0, P1 and P2 are all done and accepted in the workspace (P0.5.2: Codex half waived). P3 is specified and its
+  sub-tasks P3.2.1-P3.2.5, P3.3.1 and P3.3.2 are written from the spec's §2; P3.2.1 is the next ⬜.
 - P0 is complete (archived in `agent_docs/2026-11/2026-11-03_tasks-archive-p0.md`). The tool repo is on GitHub
   (private, `origin`); P0.4.2 pushed the fix for CI's 2 Linux/UTC-only test failures.
 - The owner's iCloud backup folder is not `iCloud Drive/Backups`. It is set in two git-ignored workspace files:
@@ -118,14 +119,23 @@ Then clear the context and type `/next`.
   `icloud_backup.py` follows `local.toml` (P0.4.4), so `backup`, `check`, `step0` and `drill` need no
   `--backups-dir`. A new machine needs both entries set again.
 
-**Read first** (for the P3 spec)
-- Plan §15 (P3), D1, the P2 spec §10-§11 (the `elec_interval_local` table) and §15 (deferred items).
-- The P2 acceptance note `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md` (it mentions
-  data, so nothing from it is copied into the tool repo).
+**Read first** (for P3.2.1)
+- The P3 spec §3-§4, §11 and §13.1, the P2 spec §5 (`Params` v2 and `pipeline sync`), and `core/models/params.py`.
+- Later P3 sub-tasks read the spec sections their Refs name. P3.3.1 also reads the P2 acceptance note
+  `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md` (it mentions data, so nothing from it
+  is copied into the tool repo).
 
 **Facts**
 - Owner decision on the P2 spec (2026-10-30): Q1-Q9 approved as written, except Q6: no waiver of hand-over
   decision #11, so `localise` runs only on a `confirmed` verdict (spec §9.4, §10, §15).
+- Owner decisions on the P3 spec (2026-11-03): Q1-Q11 as recommended. Two stages (`usage_profile`, `usage_report`);
+  `params` v3 with `analysis` and date-ranged TOU window sets in `params.yaml`; `usage_profile` fails below
+  `reference_months` covered months or the coverage threshold; daylight-saving days are left out of hourly metrics;
+  hand-written SVG; `validate_timebase` untouched. Retailer plan details (TOU windows, dates, rates) are not private;
+  only the household's usage and identifiers are.
+- Planned in P3: `core/usage.py`, `core/charts.py`, `core/usage_report.py`, `core/models/usage.py`, and
+  `local_day_minutes` in `core/timebase.py`; stages `usage_profile` and `usage_report` registered after `localise`
+  (eight stages); marts in `data/marts/usage_profile/`, report in `data/reports/usage/index.html`.
 - Built in P2.2: `Params` v2, `RegionProfile` v2, `StageRun.zone(key)` (tzdata, never the system database), readers in
   `core/`, `precedence_order`, `core/timebase.py`; stages `parse_nem12`, `merge_interval`, `validate_meter`,
   `validate_timebase`, `localise`, registered in that order after `catalog_index`. Shared schemas and `load_table` in
@@ -156,12 +166,13 @@ Then clear the context and type `/next`.
 - P0.4.2 changed `src/energatron/`, so the workspace `fingerprint --check` is stale: re-run `fingerprint` (and commit
   it) before the next `dvc repro`.
 - CI runs on Linux under UTC; tests that depend on the stack depth or the local zone can pass on macOS and fail there.
-- The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). After a tool
-  commit that changes `src/energatron/`, `fingerprint --check` reports stale (spec §2): re-run `fingerprint` before any
+- The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). P3.2.1 moves it
+  to params v3 in the tool; the workspace follows in P3.3.1 (`pipeline sync`). After a tool commit that changes `src/energatron/`, `fingerprint --check` reports stale (spec §2): re-run `fingerprint` before any
   `dvc repro`, and commit it with `dvc.lock`.
 - The workspace time basis is `confirmed` as `nem_aest`. The retailer's tariff windows changed on or about early
-  July 2025 (probe in the workspace note); `params` keeps one window set (spec §17 Q5), so tariff-time costing for
-  later dates needs window history before P4 relies on it.
+  July 2025 (probe in the workspace note); `validate_timebase` keeps one window set (P2 spec §17 Q5). P3 adds
+  date-ranged sets in `analysis.tou.window_sets`; P3.3.1 asks the owner to confirm the second set before editing
+  `params.yaml`.
 - If `validate_timebase` is `contradicted` or `localise` fails its gate in the workspace, stop and ask the owner before
   changing `meter.timebase` (decision #11 allows nothing weaker).
 - `offer_cdr` records `extra.source_ts_from: "content"` (D3 §3.3; §5.7's list omits it).
@@ -534,12 +545,122 @@ verdict, with no waiver of hand-over decision #11.
   - Handover: `pytest -q` runs in parallel via pytest-xdist (`-n auto --dist worksteal`), ~5 min → ~55 s; `make_scratch` copies a once-per-process template repo and writes `.dvc/config.local` itself. Decision: worksteal over the default `load` (60 s against 118 s).
     Watch: `-n0` runs serially (`-p no:xdist` fails while `-n` is in `addopts`); the run is now bound by its slowest tests (~13 s each).
 
+### P3: Usage profile ⬜
+
+Built from the P3 spec (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`, "the P3 spec") in its §2 order;
+D1 rev 4 binds all code. The spec's decisions (owner-approved 2026-11-03): two stages, `usage_profile` (marts) and
+`usage_report` (HTML built from the marts alone); `params` v3 with an `analysis` block and date-ranged TOU window sets
+(the first copied from the region profile by `pipeline sync`); the report is hand-written inline SVG with no new
+dependency; `usage_profile` fails when fewer than `reference_months` covered months exist or coverage is below the
+threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` is untouched.
+- P3.2.1 changes every stage's code entry (spec §2); re-run `fingerprint` in a workspace before any `dvc repro`.
+- Each stage sub-task adds its stage to `STAGES`, the golden `tests/fixtures/golden/dvc.yaml` and the fixture
+  workspace (spec §13.2), so `test_determinism` and `test_stage_loads` cover it from the start.
+- Workspace sub-task P3.3.1 runs with the tool's `src/energatron/` committed; otherwise `fingerprint` records
+  `tool_dirty: true`.
+- Retailer plan details (TOU windows, dates, rates) are not private; only the household's usage and identifiers are.
+
+#### P3.1 P3 spec ✅
+- ✅ **P3.1.1** Draft the P3 usage profile spec, `agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`.
+  - Covers the `usage_profile` stage and its outputs `marts/usage_profile/` and `reports/usage/` (plan §9.2, §10.3):
+    - metrics: daily kWh, monthly totals, average daily kWh by month and by season (DJF/MAM/JJA/SON), average hourly
+      profile (24 hours x season x weekday/weekend, percentile bands), day x hour heatmap, year-on-year by month,
+      TOU split per month, base load, peak 30-min demand, load factor, and data quality (coverage, actual vs
+      substituted or estimated shares per month)
+    - table schemas and keys, and `params` `analysis.*` (reference window, coverage threshold, percentiles, seasons,
+      weekday/weekend rule, holidays if any); whether `Params` bumps to v3 and how it migrates
+    - which windows the TOU split uses before P4 brings offers, and how the retailer's tariff-window change in
+      early July 2025 is handled while `params` holds one window set (P2 spec §17 Q5)
+    - how an interval length that changes mid-history is treated (resampling is deferred in P2 spec §15)
+    - the HTML report: how it is built from the marts alone, charts without network assets or new heavy
+      dependencies, deterministic output (no wall clock), privacy of `reports/usage/` (private, never in the tool repo)
+    - how "TOU daily averages reconcile with the legacy notebook" is checked without copying legacy figures into
+      the tool repo: the comparison runs in the workspace and its result goes in a workspace note; the tool repo gets
+      counts and pass/fail only
+    - the tests (plan §13), plan §15's P3 acceptance made concrete, and an order of work that the provisional
+      sub-tasks follow or are replaced by
+  - Facts about the workspace files by structure only, as D3 and the P2 spec did.
+  - Refs: plan §3.3 (legacy logic to port and fix), §9.1–9.2, §10.2–10.3, §13, §15; D1 rev 3 §4.8, §9–§11, §14;
+    the P2 spec §10–§11 (the `elec_interval_local` table), §15 (deferred) and §17 Q5; the P2 acceptance note in
+    `demq-elektric/agent_docs/2026-11/` (it mentions data: read it, never copy from it).
+  - Files: the new spec.
+  - Done when: the owner approves it.
+  - On /done: add the plan revision the spec lists, and rewrite P3's sub-tasks from its order of work.
+  - Handover: P3 spec approved 2026-11-03 with Q1-Q11 as recommended; `/done` applied plan rev 11 and D1 rev 4 (spec §15) and rewrote P3.2-P3.3 from spec §2. Decision: two stages (`usage_profile` marts, `usage_report` HTML from the marts alone) and date-ranged TOU window sets in `params.yaml` (retailer plan details are not private).
+    Watch: P3.2.1 changes every stage's code entry (`Params` v3, `local_day_minutes`); P3.3.1 must ask the owner to confirm the second window set before editing `params.yaml`.
+
+#### P3.2 Build ⬜
+- ⬜ **P3.2.1** Foundations: `Params` v3, `pipeline sync` for the first window set, `local_day_minutes`, the P3 warnings.
+  - `core/models/params.py` v3 (the `analysis` block, season partition, window sets with strictly increasing
+    `effective_from`, same labels, each a day partition, `null` first-set windows after migration, the v2 to v3
+    migration, `Params.defaults(profile)`); `pipeline sync` fills and checks the first set (`params_rewritten` as in P2);
+    `local_day_minutes` moved from `localise.py` into `core/timebase.py` (`localise` calls it; its tests unchanged); the
+    two P3 warnings in `core/errors.py`; golden schemas for `params` v3; `params_v3_text` in
+    `tests/fixtures/params_text.py`.
+  - Refs: the P3 spec §4, §11, §13.1; D1 rev 4 §5, §7; the P2 spec §5.
+  - Files: `src/energatron/core/{errors.py,timebase.py,models/params.py}`, `src/energatron/services/{pipeline_sync.py,stages/localise.py}`,
+    `tests/unit/core/test_{params,timebase}.py`, `tests/architecture/test_no_region_values.py`,
+    `tests/unit/services/test_pipeline_sync.py`, `tests/fixtures/{params_text.py,schemas/}`.
+  - Done when: the standard checks pass; the golden v2 `params` document upgrades and validates; a stage reading a
+    `null` first-set window fails with `E_INVALID_INPUT`; `localise`'s tests pass unchanged.
+- ⬜ **P3.2.2** Metric functions and their test oracle.
+  - `core/usage.py` (daily, monthly, reference window, seasonal, year on year, hourly profile, heatmap, `tou_split`,
+    base load, peak demand, load factor, quality classes) and `core/models/usage.py` (kinds, column lists,
+    `UsageSummary`); the oracle and fixture additions of spec §13.2.
+  - Refs: the P3 spec §3, §5, §6, §7, §13.1, §13.2.
+  - Files: `src/energatron/core/{usage.py,models/usage.py}`, `tests/unit/core/test_usage{,_properties}.py`,
+    `tests/fixtures/{oracle.py,usage_marts.py,pipeline_workspace.py,params_text.py}`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; every §5 function equals the independent oracle on the fixtures; the
+    properties of spec §13.1 hold.
+- ⬜ **P3.2.3** `usage_profile`.
+  - The stage, its nine tables and `summary.json`, its checks and warnings, the golden `dvc.yaml` and the fixture
+    workspace.
+  - Refs: the P3 spec §8, §10, §13.3 (`test_usage_profile`).
+  - Files: `src/energatron/services/stages/{usage_profile,registry}.py`, `tests/unit/services/stages/test_usage_profile.py`,
+    `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; every check passes and fails in its test; no identifier column in any table.
+- ⬜ **P3.2.4** Charts and the report page.
+  - `core/charts.py` (SVG primitives, number formatter), `core/usage_report.py` (`render(marts)`), and the golden
+    `tests/fixtures/golden/usage_report.html`. Read the `dataviz` guidance before writing chart code.
+  - Refs: the P3 spec §9, §13.1 (`test_charts`, `test_usage_report`).
+  - Files: `src/energatron/core/{charts.py,usage_report.py}`, `tests/unit/core/test_{charts,usage_report}.py`,
+    `tests/fixtures/{usage_marts.py,golden/usage_report.html}`.
+  - Done when: the standard checks pass; no network reference, script or unescaped label in the page; two renders are
+    byte-identical; the size budget holds.
+- ⬜ **P3.2.5** `usage_report` and the end-to-end P3 test.
+  - The stage (empty `params`, spec §10), its registry entry, the golden `dvc.yaml` with all eight stages, and
+    `test_p3_pipeline` in a scratch workspace ending with `verify`. If the runner, `prepare_stage` or the emitter
+    refuses an empty `params`, stop and ask.
+  - Refs: the P3 spec §9, §10, §13.3.
+  - Files: `src/energatron/services/stages/{usage_report,registry}.py`, `tests/unit/services/stages/test_usage_report.py`,
+    `tests/integration/test_p3_pipeline.py`, `tests/fixtures/golden/dvc.yaml`.
+  - Done when: the standard checks pass; the report builds from the marts alone and `verify` passes.
+
+#### P3.3 Acceptance ⬜
+- ⬜ **P3.3.1** P3 acceptance in the workspace.
+  - The spec's §12 checks 1-8 in order: `pipeline sync` (params v3), the window history (**ask the owner to confirm a
+    second window set before editing `params.yaml`**), `fingerprint`, `dvc repro`, the reference window, the report
+    (the owner opens it in a browser), the legacy reconciliation R1-R4 by a throwaway script outside both repos, then
+    `verify`, a clean state and the pending backup. If a check cannot pass, stop and ask the owner; don't change a param
+    to make it pass.
+  - Refs: the P3 spec §12; plan §15 (P3); the P2 acceptance note (read, never copied).
+  - Files (`demq-elektric/`): `dvc.yaml`, `dvc.lock`, `params.yaml`, `uv.lock` if it moves, `.energatron/code_fingerprint.json`,
+    `data/marts/.gitignore` and `data/reports/.gitignore` if they change; a dated note in `agent_docs/` for results that
+    mention data.
+  - Done when: every §12 check passes; `TASKS.md` gets counts and pass/fail only.
+  - On /done: commit those files as one workspace commit.
+- ⬜ **P3.3.2** Owner: back up after P3.
+  - Why: owner step (iCloud).
+  - Refs: the runbook. Files: none.
+  - Done when: `icloud_backup.py backup` exits 0, and `backup --status` then shows `refs_backed_up: true`.
+
 ### Later (plan §15)
-P3 usage profile · P4 offers + electricity engine · P5 gas · P6 bundles, recommendation, decisions · P7
-operations. Each starts with its own spec sub-task.
+P4 offers + electricity engine · P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts with
+its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-03 · P3.1.1 · P3 usage profile spec approved (owner: Q1-Q11 as recommended; retailer plan details are not private); plan rev 11 and D1 rev 4 applied from its §15; P3.2-P3.3 rewritten from its order of work (P3.2.1-P3.2.5, P3.3.1, P3.3.2) · energatron-5000 `P3.1.1: approve the P3 usage profile spec and apply plan rev 11 and D1 rev 4`
 - 2026-11-03 · M.1 · Test suite in parallel (pytest-xdist, worksteal) and a template scratch repo: `pytest -q` ~5 min → ~55 s, 2372 passed · energatron-5000 `M.1: run the tests in parallel and copy a template scratch repo`
 - 2026-11-03 · P0.4.2 · CI fixes for 2 Linux/UTC-only test failures (`cdr_plan.py` maps an uncaught `RecursionError` to `bad_json`; tag test pinned off `+0000`), pushed to `origin`; P0.4 and P0 ticked, P0 archived · energatron-5000 `P0.4.2: fix the two Linux-only CI failures`
 - 2026-11-03 · P0.5.2 · Fresh-session checks: Claude Code named `new-doc`, quoted the loaded `CLAUDE.md` and was denied `private/` reads in all three folders; Codex half waived (not installed); P0.5 ticked · energatron-5000 `P0.5.2: record the fresh-session checks`

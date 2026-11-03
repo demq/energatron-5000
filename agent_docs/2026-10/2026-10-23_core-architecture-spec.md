@@ -1,13 +1,16 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
   2026-10-30 rev 3 (P2.1.1): the changes the P2 spec (`2026-10-30_p2-meter-pipeline-spec.md`) §16 lists:
   the format readers in core, no `SourceParser.parse`, `ServiceContext.region`, `StageRun.zone()` and the
   `tzdata` dependency, the five P2 warnings, edited in place (listed in §1)
+  2026-11-03 rev 4 (P3.1.1): the additive changes the P3 spec (`2026-11-03_p3-usage-profile-spec.md`) §15 lists:
+  the usage core modules, `local_day_minutes`, the two P3 warnings and a stage with no params, edited in place
+  (listed in §1)
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -82,6 +85,13 @@ with it:
 - §13: the `test_stage_purity` additions.
 - §14: the two P2 items are settled.
 
+**Rev 4 (2026-11-03), edited in place.** The P3 spec (§15 there) adds to this spec; nothing is redefined:
+- §2: `core/` gains `usage.py` (the metric functions; it replaces the `usage.py` placeholder under P3+),
+  `charts.py`, `usage_report.py` and `models/usage.py`; `core/timebase.py` gains `local_day_minutes`.
+- §7: the two P3 warnings.
+- §9.1: a stage may declare no params (`params=()`); the P3 integration test confirms the runner, `prepare_stage`
+  and the emitter accept it.
+
 ---
 
 ## 2. Package layout
@@ -110,7 +120,8 @@ src/energatron/
 │   │   └── offers.py        Fetched (§4.6)                                                        P0*
 │   ├── text.py          decode, lines, csv_rows, is_decimal, parse_datetime, fail (from _common.py) P2
 │   ├── nem12.py  sapn_summary.py  retailer_usage.py  timebase.py  models/meter.py                 P2
-│   └── usage.py  tariff.py  engine.py  ranking.py                                                 P3+
+│   ├── usage.py  charts.py  usage_report.py  models/usage.py                                      P3
+│   └── tariff.py  engine.py  ranking.py                                                           P4+
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
 ├── services/                use cases; local file I/O only at paths passed in
@@ -692,6 +703,7 @@ class EnergatronError(Exception):
     `W_BACKUP_PENDING` (§4.4), `W_PREMISES_UNCHECKED`, `W_UNKNOWN_IDENTIFIER` (D3 §11).
   - Warnings added in P2: `W_MERGE_SAME_UPDATE`, `W_METER_GAPS`, `W_METER_UNVALIDATED`,
     `W_TIMEBASE_UNCONFIRMED`, `W_TIMEBASE_UNEXPLAINED` (P2 spec §12).
+  - Warnings added in P3: `W_USAGE_MIXED_WINDOWS`, `W_USAGE_PARTIAL_DAYS` (P3 spec §11).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
@@ -847,6 +859,8 @@ def run_stage(
 
 `run_stage` takes the spec, not a name, so `runner.py` never imports the registry, and with it every other
 stage's code (§11).
+
+A stage may declare no params (`params=()`; rev 4): then `params` is empty and the dvc entry lists only the code entry.
 
 ```python
 def prepare_stage(
