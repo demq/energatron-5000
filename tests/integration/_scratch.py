@@ -5,11 +5,18 @@ Layout under the test's `tmp_path`:
     ws/                 git repo (main) with DVC initialised; `.energatron/` holds the marker and scratch space
     Backups/            stands in for `iCloud Drive/Backups/`
     Backups/git/        the bundle folder (`local.toml`'s `backup.bundle_dir`)
-    Backups/dvc/        the DVC remote, set with `dvc remote add --local -d`
+    Backups/dvc/        the DVC remote, the default in `.dvc/config.local`
+
+`git init` and `dvc init` run once per test process, into a template repo that each scratch copies: a `dvc` call
+starts Python and imports DVC, which made set-up the slowest part of these tests. Neither tool writes the repo's own
+path anywhere, so a copy is the same repo. The remote is written into `.dvc/config.local` as
+`dvc remote add --local -d` writes it, since its folder differs per test.
 """
 
+import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -97,12 +104,32 @@ def make_scratch(tmp_path: Path, *, with_dvc: bool = True, remote: bool = True, 
     if create_dirs:
         scratch.bundle_dir.mkdir()
         scratch.remote_dir.mkdir()
-    git(root, "init", "-q", "-b", "main")
+    shutil.copytree(_template(with_dvc=with_dvc), root, symlinks=True, dirs_exist_ok=True)
     (root / ".energatron").mkdir()
     scratch.write(".gitignore", GITIGNORE)
     scratch.write(".energatron/workspace.toml", 'kind = "workspace_config"\nschema_version = 1\nregion = "sa"\n')
-    if with_dvc:
-        dvc(root, "init", "-q")
-        if remote:
-            dvc(root, "remote", "add", "--local", "-d", "backup", str(scratch.remote_dir))
+    if with_dvc and remote:
+        scratch.write(".dvc/config.local", _REMOTE_CONFIG.format(url=scratch.remote_dir))
     return scratch
+
+
+_REMOTE_CONFIG = "[core]\n    remote = backup\n['remote \"backup\"']\n    url = {url}\n"
+_templates: dict[bool, Path] = {}
+_template_root: tempfile.TemporaryDirectory[str] | None = None
+
+
+def _template(*, with_dvc: bool) -> Path:
+    """A fresh repo after `git init -b main` (and `dvc init`), made once per test process and copied by each scratch.
+
+    It is made under the first caller's isolated git and DVC configuration (the integration `conftest.py`)."""
+    global _template_root
+    if with_dvc not in _templates:
+        if _template_root is None:
+            _template_root = tempfile.TemporaryDirectory(prefix="energatron-scratch-template-")
+        root = Path(_template_root.name) / ("dvc" if with_dvc else "git")
+        root.mkdir()
+        git(root, "init", "-q", "-b", "main")
+        if with_dvc:
+            dvc(root, "init", "-q")
+        _templates[with_dvc] = root
+    return _templates[with_dvc]

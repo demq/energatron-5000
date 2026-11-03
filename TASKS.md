@@ -97,11 +97,10 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P0.4.2
-- Last commit: energatron-5000 `P0.4.2: fix the two Linux-only CI failures`
+- Last done: M.1
+- Last commit: energatron-5000 `M.1: run the tests in parallel and copy a template scratch repo`
 - Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2372
-  passed; `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations, `--tracked --no-denylist` and
-  `--history` 0 violations; CI on GitHub: see the Log line
+  passed in ~52 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
 - Review: none
 - Next: no ⬜ sub-task left; P0, P1 and P2 are done. The P3 spec sub-task is to be added (plan §15)
 
@@ -135,6 +134,8 @@ Then clear the context and type `/next`.
 - `localise` writes `data/interim/elec_interval_local/intervals.parquet`; on a failed gate that directory holds only
   `_provenance.json` and `dvc repro` stops with `E_CHECK_FAILED` in `localise`. A `contradicted` basis stops earlier,
   in `validate_timebase`.
+- `tests/integration/_scratch.make_scratch` copies a template repo made once per test process; a scratch helper
+  that needs a fresh git or DVC repo should go through it rather than run `git init` or `dvc init` per test.
 - Fixtures: `tests/fixtures/pipeline_workspace.py` (`build_raw_zone`), `tests/integration/_stage_inputs.py` (one builder
   per stage), `make_nem12`, `make_sources`, `oracle.py`. Any test that runs every stage needs data that confirms a basis;
   an empty raw zone no longer reproduces.
@@ -167,8 +168,8 @@ Then clear the context and type `/next`.
 - D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone.
 - A new stage that reads a raw source must check every dataset's blob and detector (§3.1), as `validate_meter` does.
 - `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
-- pytest takes ~6 minutes. A safety hook holds any command containing `rm`. Agents never read
-  `demq-elektric/private/`. In zsh pass file lists as an array.
+- pytest takes ~1 minute in parallel (pytest-xdist, `-n auto`; `-n0` runs it serially). A safety hook holds any
+  command containing `rm`. Agents never read `demq-elektric/private/`. In zsh pass file lists as an array.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -523,12 +524,23 @@ verdict, with no waiver of hand-over decision #11.
   - Handover: the 2026-11-03 backup holds the P2 workspace commit (`refs_backed_up: true`, 0 commits pending); recorded in one batch with P0.4.3, P0.5.3 and P1.5.3.
     Watch: back up again after any new workspace commit (`/done` reports it pending).
 
+### M: Maintenance (owner requests outside the phases) ✅
+
+- ✅ **M.1** Speed up the test suite.
+  - Run the tests in parallel and cut the per-test git and DVC set-up of the scratch repos.
+  - Refs: owner request (2026-11-03); D1 (git and DVC stay subprocesses).
+  - Files: `pyproject.toml`, `uv.lock`, `tests/integration/_scratch.py`, `TASKS.md`.
+  - Done when: the standard checks pass and `uv run pytest -q` finishes in about a minute.
+  - Handover: `pytest -q` runs in parallel via pytest-xdist (`-n auto --dist worksteal`), ~5 min → ~55 s; `make_scratch` copies a once-per-process template repo and writes `.dvc/config.local` itself. Decision: worksteal over the default `load` (60 s against 118 s).
+    Watch: `-n0` runs serially (`-p no:xdist` fails while `-n` is in `addopts`); the run is now bound by its slowest tests (~13 s each).
+
 ### Later (plan §15)
 P3 usage profile · P4 offers + electricity engine · P5 gas · P6 bundles, recommendation, decisions · P7
 operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-03 · M.1 · Test suite in parallel (pytest-xdist, worksteal) and a template scratch repo: `pytest -q` ~5 min → ~55 s, 2372 passed · energatron-5000 `M.1: run the tests in parallel and copy a template scratch repo`
 - 2026-11-03 · P0.4.2 · CI fixes for 2 Linux/UTC-only test failures (`cdr_plan.py` maps an uncaught `RecursionError` to `bad_json`; tag test pinned off `+0000`), pushed to `origin`; P0.4 and P0 ticked, P0 archived · energatron-5000 `P0.4.2: fix the two Linux-only CI failures`
 - 2026-11-03 · P0.5.2 · Fresh-session checks: Claude Code named `new-doc`, quoted the loaded `CLAUDE.md` and was denied `private/` reads in all three folders; Codex half waived (not installed); P0.5 ticked · energatron-5000 `P0.5.2: record the fresh-session checks`
 - 2026-11-03 · P0.3.2 · Owner added the postcode and an electricity account to the private config and left the street out (Done when relaxed to allow it); `denylist` re-generated (7 entries) and `private/` re-tracked; `--check` ok · demq-elektric `P0.3.2: re-track private/ after adding the postcode and an account`; energatron-5000 `P0.3.2: record the private values step`

@@ -30,6 +30,7 @@ dev = [
     "pre-commit>=4.7",
     "pandas-stubs",
     "dvc>=3.67.1",
+    "pytest-xdist>=3.8.0",
 ]
 
 [build-system]
@@ -63,6 +64,6 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = ["--strict-markers", "--strict-config"]
+addopts = ["--strict-markers", "--strict-config", "-n", "auto", "--dist", "worksteal"]
 xfail_strict = true
 markers = ["integration: runs git or DVC as subprocesses in scratch repos"]
