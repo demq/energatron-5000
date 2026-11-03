@@ -1,0 +1,78 @@
+{
+  "band_percentiles": [
+    10,
+    50,
+    90
+  ],
+  "checks": {
+    "daily_conserved": true,
+    "keys_unique": true,
+    "one_interval_length": true,
+    "profile_cells": true,
+    "reference_window": true,
+    "tou_conserved": true,
+    "windows_resolved": true
+  },
+  "dst_days": {
+    "long": 1,
+    "short": 1
+  },
+  "excluded_suffixes": [
+    "B1"
+  ],
+  "kind": "usage_summary",
+  "schema_version": 1,
+  "suffixes": {
+    "E1": {
+      "avg_daily_kwh": 1.5,
+      "base_load_kw": 0.25,
+      "covered_months": 13,
+      "first_date": "2024-12-15",
+      "last_date": "2026-01-20",
+      "load_factor": 0.125,
+      "peak_demand_kw": 2.0,
+      "tou_shares": {
+        "Off Peak": 0.25,
+        "Peak": 0.25,
+        "Shoulder": 0.5
+      },
+      "window_complete_days": 364,
+      "window_coverage": 0.5,
+      "window_days": 365,
+      "window_end": "2025-12",
+      "window_start": "2025-01"
+    }
+  },
+  "window_sets_used": [
+    {
+      "effective_from": null,
+      "windows": {
+        "Off Peak": [
+          "00:00-07:00",
+          "22:00-00:00"
+        ],
+        "Peak": [
+          "17:00-22:00"
+        ],
+        "Shoulder": [
+          "07:00-17:00"
+        ]
+      }
+    },
+    {
+      "effective_from": "2025-07-01",
+      "windows": {
+        "Off Peak": [
+          "00:00-06:00",
+          "23:00-00:00"
+        ],
+        "Peak": [
+          "18:00-23:00"
+        ],
+        "Shoulder": [
+          "06:00-18:00"
+        ]
+      }
+    }
+  ]
+}

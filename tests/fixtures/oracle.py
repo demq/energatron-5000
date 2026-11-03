@@ -4,6 +4,10 @@ It imports nothing from `energatron`, so a test that compares code against it is
 itself. It reads a NEM12 text with plain `split`, converts meter times to local times from fixed offsets and the
 daylight-saving dates of `sa_dst_dates`, and sums energy by time-of-use window. The zone is South Australia's: UTC+9:30
 in standard time and UTC+10:30 in daylight time.
+
+The P3 half (P3 spec §13.2) works on a *local table spec*: a list of `LocalInterval`, each already on the local wall
+clock. It sums by local day, time-of-use label and clock hour, finds the aligned-block peak, takes a percentile by the
+linear rule written out, and repeats the TOU sums on the meter clock (`meter_tou_by_day`) for the §12 reconciliation.
 """
 
 import math
@@ -135,3 +139,141 @@ def tou_sums(items: Sequence[OracleInterval], windows: Mapping[str, Sequence[str
         local = local_time(item.meter_start, basis)
         parts[window_label(local.hour * 60 + local.minute, windows)].append(item.kwh)
     return {label: math.fsum(values) for label, values in parts.items()}
+
+
+# P3: sums over a local table spec
+
+
+@dataclass(frozen=True)
+class LocalInterval:
+    """One interval of a local table spec. `utc_offset` tells the two passes through a repeated hour apart."""
+
+    suffix: str
+    local_start: datetime
+    minutes: int
+    kwh: float
+    utc_offset: int = 570  # minutes; 9:30 is South Australia's standard time
+    flag: str = "A"
+
+
+WindowSets = Sequence[tuple[date | None, Mapping[str, Sequence[str]]]]
+"""`(effective_from, windows)` pairs: the first has no start date, the others increase."""
+
+
+def local_offset_minutes(meter_start: datetime) -> int:
+    """The zone's UTC offset, in minutes, at a meter time read as UTC+10 (the `nem_aest` basis)."""
+    return int((local_time(meter_start, "nem_aest") - utc_time(meter_start, "nem_aest")).total_seconds() // 60)
+
+
+def local_day_sums(rows: Sequence[LocalInterval]) -> dict[tuple[str, date], float]:
+    """The sum of each local day, by `(suffix, local date)`."""
+    parts: dict[tuple[str, date], list[float]] = defaultdict(list)
+    for row in rows:
+        parts[row.suffix, row.local_start.date()].append(row.kwh)
+    return {key: math.fsum(values) for key, values in parts.items()}
+
+
+def window_set_index(day: date, sets: WindowSets) -> int:
+    """The index of the window set in force on a local date: the latest one whose start is on or before it."""
+    found = 0
+    for index, (start, _) in enumerate(sets):
+        if start is None or start <= day:
+            found = index
+    return found
+
+
+def local_tou_sums(rows: Sequence[LocalInterval], sets: WindowSets) -> dict[tuple[str, date, str], float]:
+    """The sum by `(suffix, local date, label)`, each interval labelled by the window set in force on its date."""
+    parts: dict[tuple[str, date, str], list[float]] = defaultdict(list)
+    for row in rows:
+        day = row.local_start.date()
+        windows = sets[window_set_index(day, sets)][1]
+        label = window_label(row.local_start.hour * 60 + row.local_start.minute, windows)
+        parts[row.suffix, day, label].append(row.kwh)
+    return {key: math.fsum(values) for key, values in parts.items()}
+
+
+def complete_dates(rows: Sequence[LocalInterval], day_minutes: Mapping[date, int]) -> set[tuple[str, date]]:
+    """The `(suffix, local date)` pairs whose row count equals the day's length over the interval length."""
+    counts: dict[tuple[str, date], int] = defaultdict(int)
+    length: dict[str, int] = {}
+    for row in rows:
+        counts[row.suffix, row.local_start.date()] += 1
+        length[row.suffix] = row.minutes
+    return {(suffix, day) for (suffix, day), count in counts.items() if count == day_minutes[day] // length[suffix]}
+
+
+def hour_cells(rows: Sequence[LocalInterval]) -> dict[tuple[str, date, int], tuple[float, int]]:
+    """`(sum, row count)` by `(suffix, local date, wall-clock hour)`."""
+    parts: dict[tuple[str, date, int], list[float]] = defaultdict(list)
+    for row in rows:
+        parts[row.suffix, row.local_start.date(), row.local_start.hour].append(row.kwh)
+    return {key: (math.fsum(values), len(values)) for key, values in parts.items()}
+
+
+def full_hour_cells(rows: Sequence[LocalInterval]) -> dict[tuple[str, date, int], float]:
+    """The sums of the hour cells that hold exactly `60 / minutes` rows."""
+    length = {row.suffix: row.minutes for row in rows}
+    return {key: total for key, (total, count) in hour_cells(rows).items() if count == 60 // length[key[0]]}
+
+
+def percentile(values: Sequence[float], q: float) -> float:
+    """The q-th percentile (0-100) by linear interpolation between the closest ranks, written out."""
+    ordered = sorted(values)
+    position = (len(ordered) - 1) * q / 100
+    low = math.floor(position)
+    high = min(low + 1, len(ordered) - 1)
+    return ordered[low] + (ordered[high] - ordered[low]) * (position - low)
+
+
+def minute_in(minute: int, start: int, end: int) -> bool:
+    """Whether a minute of the day is in `[start, end)`, the window wrapping past midnight when `end <= start`."""
+    return start <= minute < end if start < end else minute >= start or minute < end
+
+
+def aligned_blocks(rows: Sequence[LocalInterval], block_minutes: int) -> dict[tuple[str, datetime, int], float]:
+    """The kW of each full block, by `(suffix, block start, utc offset)`.
+
+    A block is `block_minutes` aligned to the local clock; the offset keeps the passes through a repeated hour apart.
+    It is full when it holds `block_minutes / minutes` rows.
+    """
+    parts: dict[tuple[str, datetime, int], list[float]] = defaultdict(list)
+    length: dict[str, int] = {}
+    for row in rows:
+        start = row.local_start.replace(minute=row.local_start.minute // block_minutes * block_minutes)
+        if block_minutes >= 60:
+            start = start.replace(minute=0)
+        parts[row.suffix, start, row.utc_offset].append(row.kwh)
+        length[row.suffix] = row.minutes
+    return {
+        key: math.fsum(values) * 60 / block_minutes
+        for key, values in parts.items()
+        if len(values) == block_minutes // length[key[0]]
+    }
+
+
+def monthly_peak(
+    rows: Sequence[LocalInterval], block_minutes: int
+) -> dict[tuple[str, str], tuple[float, datetime, float | None]]:
+    """`(peak kW, the block's start, load factor)` by `(suffix, "YYYY-MM")`; the earliest block wins a tie."""
+    found: dict[tuple[str, str], list[tuple[float, datetime]]] = defaultdict(list)
+    for (suffix, start, _), kw in aligned_blocks(rows, block_minutes).items():
+        found[suffix, f"{start.year:04d}-{start.month:02d}"].append((kw, start))
+    result: dict[tuple[str, str], tuple[float, datetime, float | None]] = {}
+    for key, blocks in found.items():
+        peak = max(kw for kw, _ in blocks)
+        at = min(start for kw, start in blocks if kw == peak)
+        mean = math.fsum(kw for kw, _ in blocks) / len(blocks)
+        result[key] = (peak, at, mean / peak if peak > 0 else None)
+    return result
+
+
+def meter_tou_by_day(
+    items: Sequence[OracleInterval], windows: Mapping[str, Sequence[str]]
+) -> dict[tuple[str, date, str], float]:
+    """The sum by `(suffix, meter date, label)`, labelled by the meter clock itself (no conversion): the §12 view."""
+    parts: dict[tuple[str, date, str], list[float]] = defaultdict(list)
+    for item in items:
+        label = window_label(item.meter_start.hour * 60 + item.meter_start.minute, windows)
+        parts[item.suffix, item.meter_start.date(), label].append(item.kwh)
+    return {key: math.fsum(values) for key, values in parts.items()}
