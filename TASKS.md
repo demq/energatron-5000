@@ -97,27 +97,27 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P0.3.2
-- Last commit: demq-elektric `P0.3.2: re-track private/ after adding the postcode and an account`; energatron-5000
-  `P0.3.2: record the private values step`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2369 passed;
-  `denylist --check` ok (7 entries; only `premises.street` warned, accepted); workspace pre-commit passed; privacy guard
-  `--figures` on `TASKS.md` and the commit messages 0 violations
+- Last done: P0.5.2
+- Last commit: energatron-5000 `P0.5.2: record the fresh-session checks`; demq-elektric `P0.3.2: re-track private/
+  after adding the postcode and an account`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2372 passed
+  (working tree, including P0.4.2's uncommitted fixes); `pre-commit` on `TASKS.md` passed; privacy guard `--figures` on
+  `TASKS.md` and the commit message 0 violations
 - Review: none
-- Next: no ⬜ sub-task left; owner steps open (P0.4.2, P0.5.2), then the P3 spec sub-task (to be added)
+- Next: no ⬜ sub-task left; P0.4.2 (⛔, its CI fixes are ready and uncommitted), then the P3 spec sub-task (to be added)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 3), plan rev 10, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) is approved.
-- P0, P1 and P2 agent work are all done and accepted in the workspace; both repos on `main`, no remote, nothing
-  pushed. No ⬜ sub-task is left. The next phase is P3 (usage profile, plan §15), which starts with its own spec
-  sub-task; the owner asks for it, or it is added to this file first.
-- Owner steps open: P0.4.2 (GitHub repo + push, needs the owner's go-ahead), P0.5.2 (fresh-session checks; Codex
-  not installed, so its half is installed or waived). P0.3.2 is done: the private config has the postcode and an
-  electricity account, not the street (owner's choice). The restore drill is done; the P0.3.2 workspace commit
-  awaits the owner's backup.
+- P0, P1 and P2 agent work are all done and accepted in the workspace; P0.5 acceptance is complete (P0.5.2: Claude
+  Code checks passed in all three folders, Codex half waived). No ⬜ sub-task is left. The next phase is P3 (usage
+  profile, plan §15), which starts with its own spec sub-task; the owner asks for it, or it is added first.
+- P0.4.2 is the one open P0 step. The owner created the private GitHub repo and pushed `main` (the tool repo has
+  `origin`); the first CI run failed on 2 Linux/UTC-only tests. The fixes sit uncommitted in the working tree
+  (`cdr_plan.py`, `test_cdr_plan.py`, `test_privacy_guard.py`; see P0.4.2's Partial record). Resume with
+  `/next P0.4.2`, then `/done push` once the owner gives the go-ahead; CI must go green.
 - The owner's iCloud backup folder is not `iCloud Drive/Backups`. It is set in two git-ignored workspace files:
   `backup.bundle_dir` in `.energatron/local.toml` and the `icloud` remote URL in `.dvc/config.local`.
   `icloud_backup.py` follows `local.toml` (P0.4.4), so `backup`, `check`, `step0` and `drill` need no
@@ -145,8 +145,8 @@ Then clear the context and type `/next`.
 - P2.2.1-P2.2.7 changed every registered stage's code entry.
 - The hourly JSON in the legacy folder stays unlanded.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
-- Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing, GitHub repo, git
-  remote or global installs.
+- Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing except the tool
+  repo on `/done push`; no global installs.
 
 **Open questions for the owner**
 - none
@@ -155,7 +155,8 @@ Then clear the context and type `/next`.
 - `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice,
   2026-11-03). TOML has no null and a blank street is refused, so leaving the key out is the only opt-out.
 - The Step 0 copy sits outside the configured backup folder, so `check` doesn't list it. Agents never move or delete it.
-- After P0.4.2 the restore drill no longer needs `--tool-source local`.
+- After P0.4.2's CI is green, the restore drill no longer needs `--tool-source local`.
+- P0.4.2's fix changes `src/energatron/`: after it is committed, re-run the workspace `fingerprint`.
 - The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). After a tool
   commit that changes `src/energatron/`, `fingerprint --check` reports stale (spec §2): re-run `fingerprint` before any
   `dvc repro`, and commit it with `dvc.lock`.
@@ -361,6 +362,35 @@ and 6) are one sub-task, P0.3.1.
   - Files: none.
   - Done when: CI is green on GitHub, including `privacy_guard.py --tracked --no-denylist` (D2 §13 check 1,
     its CI half).
+  - Partial (2026-11-03, parked for P0.5.2; code changes uncommitted in the tree):
+    - **Summary:** The owner had already created the private GitHub repo (`origin`, private, `main` tracking
+      `origin/main` at the P0.3.2 commit) and pushed. The first CI run failed at `pytest -q`: 2 failed, 2367 passed; the
+      later steps (`privacy_guard --tracked --no-denylist`, `check_agent_links.py`) didn't run. Both failures were
+      Linux/UTC-only:
+      1. `test_history_with_clean_refs_and_tags_passes`: the guard searches the whole annotated tag object, tagger line
+         included. Under UTC that line ends in `+0000`, which is the synthetic postcode as a word. The guard is right;
+         the test now pins `GIT_COMMITTER_DATE` with a `+1030` offset (D2 §5.6: tests that commit set `GIT_COMMITTER_*`).
+      2. `test_deeply_nested_json_is_bad_json`: Linux's stack parsed 100,000 levels, so a bad `lastUpdated` failed first.
+         Probing showed a real bug: Python parses deeper than it encodes, so a valid plan nested ~50,000 deep parsed and
+         then crashed `inspect` with an uncaught `RecursionError` in `offer_snapshot_id`. `cdr_plan.py` now maps that to
+         `bad_json` too. Tests: a valid plan nested 1,000,000 deep is `bad_json` on any stack; two deterministic tests
+         force `RecursionError` in the parse and in the hash; nesting 100 deep is accepted.
+    - **Files:** energatron-5000: `src/energatron/adapters/sources/cdr_plan.py`, `tests/unit/adapters/sources/test_cdr_plan.py`,
+      `tests/unit/scripts/test_privacy_guard.py`, `TASKS.md` (P0.4.2 claimed; P0.5.2 parked ⛔ with its partial record moved
+      into its entry). demq-elektric: none.
+    - **Checks:** `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2372 passed,
+      and 2372 passed again under `TZ=UTC` (the CI condition; both failures reproduced red under UTC first); `pre-commit run
+      --files` on the 4 changed files passed; CI's other steps run locally: `privacy_guard --tracked --no-denylist` 0
+      violations in 260 paths, `check_agent_links.py` exit 0; D2 §5.8's `privacy_guard --mode tool --history` 0 violations
+      in 26 commits and 2 refs; privacy guard `--figures` on the changed files and `TASKS.md` 0 violations (energy and
+      money counts only in the synthetic guard tests). CI on GitHub is not green yet: it needs the push.
+      Watch: this changes `src/energatron/`, so the workspace's `fingerprint --check` goes stale until re-run.
+    - **Different from the spec:** nothing. `CdrPlanParser.version` stays 1: only inputs that used to crash change, and no
+      landed result does.
+    - **Open questions:** (1) Go-ahead to push the fix after `/done` (`/done push`), so CI re-runs? (2) After the push, P0.5.3's
+      drill can run without `--tool-source local` (owner step).
+    - **Review:** recommended: it touches a source parser (persisted landing results) and the privacy-guard tests.
+    - **Review result:** not run.
 - ✅ **P0.4.3** Owner: the first workspace backup.
   - Why: owner step (iCloud, D2 §4). Needs P0.1.1's terminal access.
   - Refs: D2 §8, §13 check 5; the runbook, "After every workspace commit".
@@ -388,7 +418,7 @@ and 6) are one sub-task, P0.3.1.
   - Handover: `default_backups_dir`/`configured_backups_dir` in `icloud_backup.py` (option > `bundle_dir`'s parent > iCloud `Backups`), 12 new tests, D2 §4 and the runbook updated (2369 tests). Decision: no owner path in this repo; the owner's destination lives only in the git-ignored `local.toml` and `.dvc/config.local`.
     Watch: the owner's Step 0 copy is not inside the configured folder, so `check` won't list it there until the owner moves it.
 
-#### P0.5 Acceptance ⬜
+#### P0.5 Acceptance ✅
 - ✅ **P0.5.1** P0 acceptance: guard test commits, links and history.
   - In each repo, stage a scratch file holding the NMI (copied by a snippet that never prints it) and try to
     commit: `privacy-guard` rejects it and prints the label, not the value. Again with the NMI only in the
@@ -400,7 +430,7 @@ and 6) are one sub-task, P0.3.1.
     `link_parent.py --check` and `check_agent_links.py --parent` exit 0 in both repos.
   - Handover: 4/4 test commits rejected (NMI in file → `privacy-guard`, in message → `privacy-guard-msg`, labels
     only); history 0 violations; links exit 0. Owner verified one commit per repo, no scratch left. Watch: none.
-- ⛔ **P0.5.2** Owner: fresh-session checks of instructions, skills and deny rules.
+- ✅ **P0.5.2** Owner: fresh-session checks of instructions, skills and deny rules.
   - Why: owner step (fresh Claude Code and Codex sessions). Codex isn't installed, and there's no global install
     for now (owner, 2026-10-24): the owner installs it or waives its half when doing this step.
   - Refs: D2 §10.3, §13 checks 3 and 4.
@@ -409,6 +439,8 @@ and 6) are one sub-task, P0.3.1.
     each name the `new-doc` skill and quote the first rule of the loaded `CLAUDE.md`/`AGENTS.md`, and Codex
     lists `new-doc` (check 3); in Claude Code sessions started in each of the three folders, reading
     `demq-elektric/private/config.toml` with the file-read tool is denied (check 4). The agent records results.
+  - Handover: Claude Code checks 3 and 4 passed in the parent folder, `energatron-5000/` and `demq-elektric/` (owner, 2026-11-03).
+    Decision: Codex half waived by the owner (not installed). Watch: re-run check 3 in Codex if it is installed later.
 - ✅ **P0.5.3** Owner: the restore drill.
   - Why: owner step (reads iCloud, D2 §12). Needs P0.4.3.
   - Refs: D2 §12, §13 check 6; the runbook, "At P0 acceptance".
@@ -763,6 +795,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-03 · P0.5.2 · Fresh-session checks: Claude Code named `new-doc`, quoted the loaded `CLAUDE.md` and was denied `private/` reads in all three folders; Codex half waived (not installed); P0.5 ticked · energatron-5000 `P0.5.2: record the fresh-session checks`
 - 2026-11-03 · P0.3.2 · Owner added the postcode and an electricity account to the private config and left the street out (Done when relaxed to allow it); `denylist` re-generated (7 entries) and `private/` re-tracked; `--check` ok · demq-elektric `P0.3.2: re-track private/ after adding the postcode and an account`; energatron-5000 `P0.3.2: record the private values step`
 - 2026-11-03 · P0.4.3, P0.5.3, P1.5.3, P2.3.2 · Owner-run backup and drill steps recorded in one batch: first backup pushed 57 DVC files and wrote 1 bundle, repeats were no-ops, the agent-hosting app gets `E_STORAGE`; restore drill 12 of 12 steps, exit 0 (step 9 `verify` passed); `refs_backed_up: true`; P1 and P2 phases ticked · energatron-5000 `P0.4.3: record the first backup, the restore drill and the P1 and P2 backups`
 - 2026-11-03 · P0.4.4 · `icloud_backup.py` defaults its backups folder to the parent of `backup.bundle_dir` in the workspace's `.energatron/local.toml` (else iCloud `Backups`; `--backups-dir` still wins); 12 new tests (2369 tests), D2 §4 and the runbook updated; owner moved the backup destinations through the git-ignored local config · energatron-5000 `P0.4.4: default the backups folder from the workspace's local.toml`
