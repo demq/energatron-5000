@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P2.3.1
-- Last commit: demq-elektric `P2.3.1: record the P2 pipeline run and acceptance in the workspace`;
-  energatron-5000 `P2.3.1: record P2 acceptance in the workspace`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2357 passed in ~6m;
-  workspace `verify`, `dvc status`, `pipeline sync --check`, `fingerprint --check` clean; privacy guard `--figures` on
-  the committed files, the commit messages and `TASKS.md` 0 violations
+- Last done: P0.4.4
+- Last commit: energatron-5000 `P0.4.4: default the backups folder from the workspace's local.toml` (no demq-elektric
+  commit; its `local.toml` and `.dvc/config.local` are git-ignored)
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2369 passed in ~6m;
+  `pre-commit run --files` on the changed files passed; privacy guard `--figures` on the committed files, the commit
+  message and `TASKS.md` 0 violations
 - Review: none
 - Next: no ⬜ sub-task left; owner steps open, then the P3 spec sub-task (to be added)
 
@@ -115,7 +115,12 @@ Then clear the context and type `/next`.
   pushed. No ⬜ sub-task is left. The next phase is P3 (usage profile, plan §15), which starts with its own spec
   sub-task; the owner asks for it, or it is added to this file first.
 - Owner steps open: P0.3.2, P0.4.2 (GitHub repo + push), P0.4.3 (first workspace backup), P0.5.2, P0.5.3,
-  P1.5.3, P2.3.2. The workspace backup is pending (nothing is backed up yet).
+  P1.5.3, P2.3.2. The workspace backup is pending (nothing is backed up yet). One `backup` run should satisfy
+  P0.4.3, P1.5.3 and P2.3.2 (the drill is P0.5.3).
+- The owner's iCloud destination is not `iCloud Drive/Backups`. It was set on 2026-11-03 in two git-ignored files
+  in the workspace: `backup.bundle_dir` in `.energatron/local.toml` and the `icloud` remote URL in
+  `.dvc/config.local`. `icloud_backup.py` now follows `local.toml` (P0.4.4), so `backup`, `check` and `step0` need
+  no `--backups-dir`. A new machine needs both entries set again.
 
 **Read first** (for the P3 spec)
 - Plan §15 (P3), D1, the P2 spec §10-§11 (the `elec_interval_local` table) and §15 (deferred items).
@@ -146,6 +151,9 @@ Then clear the context and type `/next`.
 - none
 
 **Watch out**
+- Before the first `backup`, the owner must create the configured Backups folder by hand (the tool makes only the
+  `demq-elektric-git` and `demq-elektric-dvc` folders inside it, one level deep) and set Keep Downloaded on it.
+  The Step 0 copy sits outside that folder, so `check` won't list it unless the owner moves it (agents never move it).
 - The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). After a tool
   commit that changes `src/energatron/`, `fingerprint --check` reports stale (spec §2): re-run `fingerprint` before any
   `dvc repro`, and commit it with `dvc.lock`.
@@ -357,6 +365,21 @@ and 6) are one sub-task, P0.3.1.
     `uv run energatron backup --json` and gets `E_STORAGE` with nothing pushed (agents never run it, D2 §4);
     an agent's `uv run energatron backup --status --json` then shows `refs_backed_up: true`. The agent records
     counts only.
+- ✅ **P0.4.4** `icloud_backup.py` takes its default backups folder from the workspace's `.energatron/local.toml`.
+  - Why: added 2026-11-03 at the owner's request. The owner's iCloud folder is not `iCloud Drive/Backups`, and
+    the script's hard-coded default made `check` and `step0` look in the wrong place. The owner moved the
+    destinations by editing `backup.bundle_dir` in `.energatron/local.toml` and the DVC remote URL (both local,
+    git-ignored); the script now follows them, so nothing owner-specific is written into this repo.
+  - Default order for the Backups folder: `--backups-dir` if given; else the parent of `backup.bundle_dir` in
+    `<workspace>/.energatron/local.toml` (`~` expanded; must be absolute); else `iCloud Drive/Backups` (the old
+    default, for `step0` before a workspace is set up). A `local.toml` that isn't valid TOML, or a `bundle_dir`
+    that isn't an absolute path string, is exit 2 and the message never echoes a value.
+  - Refs: D2 §4 (the script's options), §6.2 (`local.toml`), §8; the iCloud runbook.
+  - Files: `scripts/icloud_backup.py`, `tests/unit/scripts/test_icloud_backup.py`, D2 §4 (one bullet, edited in
+    place), the runbook (default folder).
+  - Done when: the standard checks pass; the new tests cover each branch of the default order.
+  - Handover: `default_backups_dir`/`configured_backups_dir` in `icloud_backup.py` (option > `bundle_dir`'s parent > iCloud `Backups`), 12 new tests, D2 §4 and the runbook updated (2369 tests). Decision: no owner path in this repo; the owner's destination lives only in the git-ignored `local.toml` and `.dvc/config.local`.
+    Watch: the owner's Step 0 copy is not inside the configured folder, so `check` won't list it there until the owner moves it.
 
 #### P0.5 Acceptance ⬜
 - ✅ **P0.5.1** P0 acceptance: guard test commits, links and history.
@@ -727,6 +750,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-03 · P0.4.4 · `icloud_backup.py` defaults its backups folder to the parent of `backup.bundle_dir` in the workspace's `.energatron/local.toml` (else iCloud `Backups`; `--backups-dir` still wins); 12 new tests (2369 tests), D2 §4 and the runbook updated; owner moved the backup destinations through the git-ignored local config · energatron-5000 `P0.4.4: default the backups folder from the workspace's local.toml`
 - 2026-11-02 · P2.3.1 · P2 acceptance in the workspace: `pipeline sync` (params v2), `fingerprint`, `dvc repro` (5 stages, 24 checks), time basis `confirmed`, 22 of 22 SUMMARY rows match, 0 merge conflicts, 3 short and 3 long DST days, `verify` ok; backup pending · demq-elektric `P2.3.1: record the P2 pipeline run and acceptance in the workspace`; energatron-5000 `P2.3.1: record P2 acceptance in the workspace`
 - 2026-11-02 · P2.2.7 · `localise` stage (gated on a `confirmed` verdict, `elec_interval_local` v1, four checks), golden `dvc.yaml` with six stages, `test_localise_tzdata` and `test_p2_pipeline` (2357 tests); examined by the same agent, no findings; four existing pipeline tests now land the fixture raw zone · energatron-5000 `P2.2.7: add the localise stage and the end-to-end P2 tests`
 - 2026-10-30 · P2.2.6 · `core/timebase.py` and the `validate_timebase` stage (hypotheses H1-H3 against the retailer export, verdict, `timebase_periods`/`timebase_result` v1, `W_TIMEBASE_UNCONFIRMED`/`UNEXPLAINED`), golden `dvc.yaml`, `params_v2_text(region=True)` (2328 tests) · energatron-5000 `P2.2.6: add the validate_timebase stage and core/timebase`

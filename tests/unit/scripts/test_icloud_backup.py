@@ -152,6 +152,100 @@ def test_check_with_an_unreadable_parent_exits_2(folders: Folders) -> None:
     assert str(folders.root) not in ran.out
 
 
+# ----------------------------------------------------------------------------------- default backups folder (P0.4.4)
+
+CONFIG_MARKER = "synthcfg"  # a folder name no output line may hold: the configured path is never echoed
+
+
+def write_local_toml(folders: Folders, text: str) -> None:
+    (folders.workspace / ".energatron").mkdir(exist_ok=True)
+    (folders.workspace / ".energatron" / "local.toml").write_text(text, encoding="utf-8")
+
+
+def configure_bundle_dir(folders: Folders, bundle_dir: str) -> None:
+    write_local_toml(folders, f'kind = "local_config"\nschema_version = 1\n\n[backup]\nbundle_dir = "{bundle_dir}"\n')
+
+
+def workspace_args(folders: Folders, *command: str) -> list[str]:
+    """No `--backups-dir`: the default has to come from the workspace."""
+    return ["--workspace", str(folders.workspace), *command]
+
+
+def test_default_backups_folder_is_the_parent_of_the_configured_bundle_dir(folders: Folders) -> None:
+    configured = folders.root / CONFIG_MARKER / "Backups"
+    folder = configured / "demq-elektric-step0-2026-01-01"
+    folder.mkdir(parents=True)
+    (folder / "a.bin").write_bytes(b"x")
+    configure_bundle_dir(folders, str(configured / "demq-elektric-git"))
+    ran = run(SCRIPT, *workspace_args(folders, "check"))
+    assert ran.code == 0, ran.out
+    assert "OK    demq-elektric-step0-2026-01-01: 1 files, all downloaded" in ran.lines
+    assert CONFIG_MARKER not in ran.out
+
+
+def test_default_backups_folder_expands_a_tilde(folders: Folders) -> None:
+    configured = folders.root / CONFIG_MARKER / "Backups"
+    (configured / "demq-elektric-dvc").mkdir(parents=True)
+    (configured / "demq-elektric-dvc" / "object").write_bytes(b"x")
+    configure_bundle_dir(folders, f"~/{CONFIG_MARKER}/Backups/demq-elektric-git")
+    env = {**os.environ, "HOME": str(folders.root)}
+    ran = run(SCRIPT, *workspace_args(folders, "check"), env=env)
+    assert ran.code == 0, ran.out
+    assert "OK    demq-elektric-dvc: 1 files, all downloaded" in ran.lines
+
+
+def test_step0_writes_into_the_configured_folder(folders: Folders) -> None:
+    configured = folders.root / CONFIG_MARKER / "Backups"
+    configured.mkdir(parents=True)
+    configure_bundle_dir(folders, str(configured / "demq-elektric-git"))
+    ran = run(SCRIPT, *workspace_args(folders, "step0"))
+    assert ran.code == 0, ran.out
+    assert (configured / STEP0 / "SHA256SUMS").is_file()
+    assert not folders.backups.exists()
+
+
+def test_backups_dir_option_wins_over_the_configured_folder(folders: Folders) -> None:
+    configured = folders.root / CONFIG_MARKER / "Backups"
+    (configured / "demq-elektric-git").mkdir(parents=True)
+    configure_bundle_dir(folders, str(configured / "demq-elektric-git"))
+    explicit = folders.backups / "demq-elektric-step0-2026-02-02"
+    explicit.mkdir(parents=True)
+    (explicit / "a.bin").write_bytes(b"x")
+    ran = run(SCRIPT, *folders.args("check"))
+    assert ran.code == 0, ran.out
+    assert "OK    demq-elektric-step0-2026-02-02: 1 files, all downloaded" in ran.lines
+    assert not any("demq-elektric-git" in line for line in ran.lines)
+
+
+@pytest.mark.parametrize("text", [None, 'kind = "local_config"\nschema_version = 1\n', "[backup]\n"])
+def test_default_falls_back_to_icloud_backups_without_a_configured_bundle_dir(
+    folders: Folders, text: str | None
+) -> None:
+    if text is not None:
+        write_local_toml(folders, text)
+    module = load_module()
+    assert module.default_backups_dir(folders.workspace) == module.ICLOUD / "Backups"
+
+
+@pytest.mark.parametrize(
+    ("text", "message"),
+    [
+        ("this is [not toml", "isn't valid TOML"),
+        (f'[backup]\nbundle_dir = "relative/{CONFIG_MARKER}/demq-elektric-git"\n', "must be an absolute path"),
+        ("[backup]\nbundle_dir = 7\n", "must be a path"),
+        ('[backup]\nbundle_dir = ""\n', "must be a path"),
+        ('backup = "text"\n', "must be a table"),
+    ],
+)
+def test_a_bad_local_toml_exits_2_and_echoes_nothing(folders: Folders, text: str, message: str) -> None:
+    write_local_toml(folders, text)
+    ran = run(SCRIPT, *workspace_args(folders, "check"))
+    assert ran.code == 2
+    assert ran.lines[-1].startswith("FAIL")
+    assert message in ran.out
+    assert CONFIG_MARKER not in ran.out
+
+
 class FakeStat:
     """An `os.lstat` result with `st_flags` replaced, or removed as on Linux."""
 

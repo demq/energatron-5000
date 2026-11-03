@@ -27,6 +27,10 @@ uv run energatron-5000/scripts/icloud_backup.py <command>
 | `backup --drill` | the backup, then the restore drill | at P0 acceptance, then quarterly |
 | `drill` | the restore drill alone (`scripts/restore_drill.py`) | as above |
 
+The Backups folder is the one that holds `backup.bundle_dir` in the workspace's `.energatron/local.toml`
+(the DVC remote sits beside it). `iCloud Drive/Backups` is used only when that isn't set; `--backups-dir DIR`
+(before the command) overrides both.
+
 Each prints one `OK`, `WARN` or `FAIL` line per check. Exit code 0 means done, 1 a check or the backup failed,
 2 not set up, no access, or the workspace busy. Nothing is ever deleted; bundle retention happens inside
 `energatron backup` and only touches bundle files.

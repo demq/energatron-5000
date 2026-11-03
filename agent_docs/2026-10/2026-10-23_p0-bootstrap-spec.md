@@ -159,8 +159,10 @@ by hand, in a terminal app that has iCloud Drive access and doesn't host agents.
 
 **`scripts/icloud_backup.py`** (written with this spec, stdlib only, PEP 723 header so `uv run` gives it a
 managed Python 3.14):
-- options `--backups-dir` (default `iCloud Drive/Backups`) and `--workspace` (default the sibling
-  `demq-elektric/`), so tests can point it at scratch folders
+- options `--backups-dir` and `--workspace` (default the sibling `demq-elektric/`), so tests can point it at
+  scratch folders. Without `--backups-dir`, the Backups folder is the parent of `backup.bundle_dir` in the
+  workspace's `.energatron/local.toml` (§6.2), else `iCloud Drive/Backups` (P0.4.4, 2026-11-03: the owner's
+  iCloud folder isn't `Backups/`, and nothing owner-specific belongs in this repo)
 - every command first checks that `Backups/` (or its parent) can be listed and written: a temp file is created
   and removed. `PermissionError` → exit 2 with the System Settings path to fix it
 - `backup` and `drill` exit 2 with "not set up yet" until `.energatron/workspace.toml` exists, and `drill` also

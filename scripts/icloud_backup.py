@@ -17,7 +17,8 @@ Usage:  uv run energatron-5000/scripts/icloud_backup.py [options] <command>
   drill   the restore drill (scripts/restore_drill.py); options after `--` are passed on to it
 
 Options (before the command):
-  --backups-dir DIR  the Backups folder (default: iCloud Drive/Backups); tests point it at a scratch folder
+  --backups-dir DIR  the Backups folder. Default: the folder that holds `backup.bundle_dir` in the workspace's
+                     .energatron/local.toml; failing that, iCloud Drive/Backups. Tests point it at a scratch folder
   --workspace DIR    the workspace (default: demq-elektric next to energatron-5000)
 
 Output is counts only, never file names: the names of the landed files start with the NMI.
@@ -38,6 +39,7 @@ import stat
 import subprocess
 import sys
 import tempfile
+import tomllib
 from datetime import date
 from pathlib import Path
 
@@ -54,6 +56,43 @@ ACCESS_HINT = (
 
 class SetupError(Exception):
     """Not set up, or no access: exit 2."""
+
+
+def configured_backups_dir(workspace: Path) -> Path | None:
+    """The folder that holds `backup.bundle_dir` in `<workspace>/.energatron/local.toml`, or None if it isn't set.
+
+    `energatron backup` writes its bundles and the DVC remote beside each other in that folder (D2 §8), so it is
+    the Backups folder. Errors never repeat what the file holds.
+    """
+    path = workspace / ".energatron" / "local.toml"
+    try:
+        with path.open("rb") as handle:
+            config = tomllib.load(handle)
+    except FileNotFoundError:
+        return None
+    except tomllib.TOMLDecodeError:
+        raise SetupError(".energatron/local.toml isn't valid TOML") from None
+    except OSError as exc:
+        raise SetupError(f".energatron/local.toml can't be read ({oserror(exc)})") from None
+    section = config.get("backup")
+    if section is None:
+        return None
+    if not isinstance(section, dict):
+        raise SetupError("backup in .energatron/local.toml must be a table")
+    value = section.get("bundle_dir")
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise SetupError("backup.bundle_dir in .energatron/local.toml must be a path")
+    bundle_dir = Path(value).expanduser()
+    if not bundle_dir.is_absolute():
+        raise SetupError("backup.bundle_dir in .energatron/local.toml must be an absolute path")
+    return Path(os.path.normpath(bundle_dir)).parent
+
+
+def default_backups_dir(workspace: Path) -> Path:
+    """Without `--backups-dir`: the configured folder, else `iCloud Drive/Backups` (e.g. `step0` before set-up)."""
+    return configured_backups_dir(workspace) or ICLOUD / "Backups"
 
 
 def say(status: str, message: str) -> None:
@@ -236,7 +275,7 @@ def cmd_drill(backups: Path, workspace: Path, args: list[str]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--backups-dir", type=Path, default=ICLOUD / "Backups")
+    parser.add_argument("--backups-dir", type=Path, default=None)
     parser.add_argument("--workspace", type=Path, default=PARENT / WORKSPACE_NAME)
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("check")
@@ -244,8 +283,9 @@ def main(argv: list[str] | None = None) -> int:
     commands.add_parser("backup").add_argument("--drill", action="store_true")
     commands.add_parser("drill").add_argument("drill_args", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
-    backups, workspace = args.backups_dir.expanduser(), args.workspace.expanduser().resolve()
+    workspace = args.workspace.expanduser().resolve()
     try:
+        backups = args.backups_dir.expanduser() if args.backups_dir else default_backups_dir(workspace)
         if args.command == "check":
             return cmd_check(backups, workspace)
         if args.command == "step0":
