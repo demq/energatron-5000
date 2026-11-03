@@ -1,5 +1,5 @@
-"""`params` v2 (P2 spec §5.1): the `meter` and `validation` sections, window parsing and the partition rule,
-`Params.defaults(profile)` and the v1 to v2 migration. Synthetic zone keys and labels."""
+"""`params` v3 (P2 spec §5.1, P3 spec §4.1): the `meter`, `validation` and `analysis` sections, window parsing and the
+partition rule, `Params.defaults(profile)` and the migrations. Synthetic zone keys and labels."""
 
 import copy
 from typing import Any
@@ -14,9 +14,10 @@ from energatron.core.models._common import window_minutes
 from energatron.core.models.catalog import SourceType
 from energatron.core.models.params import REGION_FIELDS, Params
 from energatron.core.models.region import RegionProfile
-from energatron.core.persisted import upgrade
+from energatron.core.persisted import registered_migrations
 
 WINDOWS_FIELD = "validation.timebase.windows"
+FIRST_SET_FIELD = "analysis.tou.window_sets[0].windows"
 TEST_WINDOWS: dict[str, tuple[str, ...]] = {"Alpha": ("08:00-20:00",), "Beta": ("20:00-02:00", "02:00-08:00")}
 
 
@@ -69,7 +70,7 @@ def test_a_valid_v2_document_validates() -> None:
 
 def test_the_dump_keeps_the_specs_key_order() -> None:
     dumped = Params.from_document(doc_v2()).model_dump(mode="json")
-    assert list(dumped) == ["kind", "schema_version", "meter", "validation"]
+    assert list(dumped) == ["kind", "schema_version", "meter", "validation", "analysis"]
     assert list(dumped["meter"]) == ["timebase", "local_tz"]
     assert list(dumped["validation"]) == ["meter", "timebase"]
     assert list(dumped["validation"]["timebase"]) == [
@@ -89,8 +90,8 @@ def test_the_zone_and_windows_allow_null() -> None:
     assert params.validation.timebase.windows is None
 
 
-def test_the_region_fields_are_the_zone_and_the_windows() -> None:
-    assert REGION_FIELDS == ("meter.local_tz", WINDOWS_FIELD)
+def test_the_region_fields_are_the_zone_and_the_two_window_fields() -> None:
+    assert REGION_FIELDS == ("meter.local_tz", WINDOWS_FIELD, FIRST_SET_FIELD)
 
 
 @pytest.mark.parametrize(
@@ -235,7 +236,9 @@ def test_defaults_take_the_zone_and_windows_from_the_profile_they_are_given() ->
     assert params.validation.timebase.register_tolerance_pct == 0.1
     assert params.validation.timebase.total_tolerance_kwh == 0.05
     assert params.validation.timebase.min_fit_periods == 3
-    assert params.schema_version == 2
+    assert params.schema_version == 3
+    assert params.analysis.tou.window_sets[0].windows == TEST_WINDOWS
+    assert params.analysis.tou.window_sets[0].effective_from is None
 
 
 def test_defaults_carry_a_null_profile_value_through() -> None:
@@ -243,6 +246,7 @@ def test_defaults_carry_a_null_profile_value_through() -> None:
     params = Params.defaults(other)
     assert params.meter.local_tz is None
     assert params.validation.timebase.windows is None
+    assert params.analysis.tou.window_sets[0].windows is None
 
 
 def test_defaults_round_trip_through_a_document() -> None:
@@ -253,7 +257,7 @@ def test_defaults_round_trip_through_a_document() -> None:
 def test_the_v1_to_v2_migration_inserts_the_defaults_and_null_zone_and_windows() -> None:
     v1: dict[str, JSONValue] = {"kind": "params", "schema_version": 1}
     frozen = copy.deepcopy(v1)
-    assert upgrade(v1) == {
+    assert registered_migrations()[("params", 1)](v1) == {
         "kind": "params",
         "schema_version": 2,
         "meter": {"timebase": "nem_aest", "local_tz": None},
@@ -271,13 +275,272 @@ def test_the_v1_to_v2_migration_inserts_the_defaults_and_null_zone_and_windows()
     assert v1 == frozen  # the input is untouched
 
 
-def test_a_v1_document_reads_as_v2_with_null_zone_and_windows() -> None:
+def test_a_v1_document_reads_as_v3_with_null_zone_and_windows() -> None:
     params = Params.from_document({"kind": "params", "schema_version": 1})
-    assert params.schema_version == 2
+    assert params.schema_version == 3
     assert params.meter.local_tz is None
     assert params.validation.timebase.windows is None
+    assert params.analysis.tou.window_sets[0].windows is None
 
 
 def test_a_v1_document_with_an_unknown_key_is_still_invalid() -> None:
     with pytest.raises(InvalidInputError):
         Params.from_document({"kind": "params", "schema_version": 1, "unknown": 1})
+
+
+# `analysis` (P3 spec §4.1)
+
+
+def doc_v3(**changes: Any) -> dict[str, Any]:
+    """A valid v3 document; `changes` replace whole top-level sections."""
+    doc = doc_v2() | {"schema_version": 3}
+    doc["analysis"] = {
+        "reference_months": 12,
+        "coverage_threshold": 0.95,
+        "seasons": {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]},
+        "weekend": ["saturday", "sunday"],
+        "band_percentiles": [10, 50, 90],
+        "base_load": {"from": "01:00", "to": "05:00", "percentile": 10},
+        "demand_minutes": 30,
+        "tou": {
+            "window_sets": [{"effective_from": None, "windows": {"Alpha": ["08:00-20:00"], "Beta": ["20:00-08:00"]}}]
+        },
+    }
+    return doc | changes
+
+
+def with_analysis(**changes: Any) -> dict[str, Any]:
+    doc = doc_v3()
+    doc["analysis"].update(changes)
+    return doc
+
+
+def with_sets(*sets: dict[str, Any]) -> dict[str, Any]:
+    return with_analysis(tou={"window_sets": list(sets)})
+
+
+FIRST = {"effective_from": None, "windows": {"Alpha": ["08:00-20:00"], "Beta": ["20:00-08:00"]}}
+SECOND = {"effective_from": "2025-07-01", "windows": {"Alpha": ["07:00-21:00"], "Beta": ["21:00-07:00"]}}
+
+
+def test_a_valid_v3_document_validates() -> None:
+    analysis = Params.from_document(doc_v3()).analysis
+    assert analysis.reference_months == 12
+    assert analysis.coverage_threshold == 0.95
+    assert analysis.seasons["DJF"] == (12, 1, 2)
+    assert analysis.weekend == ("saturday", "sunday")
+    assert analysis.band_percentiles == (10, 50, 90)
+    assert (analysis.base_load.start, analysis.base_load.end, analysis.base_load.percentile) == ("01:00", "05:00", 10)
+    assert analysis.demand_minutes == 30
+    assert analysis.tou.window_sets[0].windows == {"Alpha": ("08:00-20:00",), "Beta": ("20:00-08:00",)}
+
+
+def test_the_v3_dump_uses_the_documents_keys_and_order() -> None:
+    dumped = Params.from_document(doc_v3()).model_dump(mode="json")
+    assert list(dumped["analysis"]) == [
+        "reference_months",
+        "coverage_threshold",
+        "seasons",
+        "weekend",
+        "band_percentiles",
+        "base_load",
+        "demand_minutes",
+        "tou",
+    ]
+    assert dumped["analysis"]["base_load"] == {"from": "01:00", "to": "05:00", "percentile": 10}
+    assert dumped == doc_v3()  # a valid document survives a load and a dump unchanged
+
+
+def test_the_first_set_windows_allow_null() -> None:
+    doc = with_sets({"effective_from": None, "windows": None})
+    assert Params.from_document(doc).analysis.tou.window_sets[0].windows is None
+
+
+@pytest.mark.parametrize(
+    "mutate",
+    [
+        lambda a: a.update(reference_months=0),
+        lambda a: a.update(reference_months=1.5),
+        lambda a: a.update(coverage_threshold=0),
+        lambda a: a.update(coverage_threshold=1.01),
+        lambda a: a.update(weekend=[]),
+        lambda a: a.update(weekend=["saturday", "sunday", "monday", "tuesday", "wednesday", "thursday", "friday"]),
+        lambda a: a.update(weekend=["saturday", "saturday"]),
+        lambda a: a.update(weekend=["Saturday"]),
+        lambda a: a.update(weekend=["funday"]),
+        lambda a: a.update(band_percentiles=[10, 50]),
+        lambda a: a.update(band_percentiles=[50, 50, 90]),
+        lambda a: a.update(band_percentiles=[90, 50, 10]),
+        lambda a: a.update(band_percentiles=[-1, 50, 90]),
+        lambda a: a.update(band_percentiles=[10, 50, 101]),
+        lambda a: a["base_load"].update(percentile=101),
+        lambda a: a["base_load"].update(percentile=-1),
+        lambda a: a["base_load"].update({"from": "01:03"}),
+        lambda a: a["base_load"].update(to="24:00"),
+        lambda a: a["base_load"].update({"from": "1:00"}),
+        lambda a: a["base_load"].pop("to"),
+        lambda a: a.update(demand_minutes=0),
+        lambda a: a.update(demand_minutes=25),
+        lambda a: a.update(demand_minutes=7),
+        lambda a: a.update(demand_minutes=120),
+        lambda a: a.update(extra=1),
+        lambda a: a.pop("tou"),
+        lambda a: a["tou"]["window_sets"].clear(),
+    ],
+)
+def test_invalid_analysis_documents_are_invalid_input(mutate: Any) -> None:
+    doc = doc_v3()
+    mutate(doc["analysis"])
+    with pytest.raises(InvalidInputError):
+        Params.from_document(doc)
+
+
+def test_the_base_load_window_may_wrap_past_midnight_and_need_not_partition_the_day() -> None:
+    doc = with_analysis(base_load={"from": "23:00", "to": "02:00", "percentile": 5})
+    assert Params.from_document(doc).analysis.base_load.start == "23:00"
+
+
+@pytest.mark.parametrize(
+    "seasons",
+    [
+        {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8]},  # September to November left out
+        {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [8, 9, 10, 11]},  # August twice
+        {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11, 13]},  # month 13
+        {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11, 0]},  # month 0
+        {"DJF": [12, 1, 2, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]},  # twice in one season
+        {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11], "XXX": []},  # an empty season
+        {"": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]},  # an empty label
+        {},
+    ],
+)
+def test_seasons_that_do_not_partition_the_months_name_their_field(seasons: dict[str, list[int]]) -> None:
+    with pytest.raises(InvalidInputError) as caught:
+        Params.from_document(with_analysis(seasons=seasons))
+    assert caught.value.details["field"] == "analysis.seasons"
+
+
+@pytest.mark.parametrize(
+    "seasons",
+    [
+        {"DJF": [12, 1, 2], "MAM": [3, 4, 5], "JJA": [6, 7, 8], "SON": [9, 10, 11]},  # DJF wraps the year
+        {"Warm": [10, 11, 12, 1, 2, 3], "Cool": [4, 5, 6, 7, 8, 9]},
+        {"All": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]},
+    ],
+)
+def test_seasons_that_partition_the_months_are_accepted(seasons: dict[str, list[int]]) -> None:
+    assert Params.from_document(with_analysis(seasons=seasons)).analysis.seasons.keys() == seasons.keys()
+
+
+@pytest.mark.parametrize("minutes", [5, 10, 15, 20, 30, 60])
+def test_the_demand_block_may_be_any_multiple_of_five_that_divides_an_hour(minutes: int) -> None:
+    assert Params.from_document(with_analysis(demand_minutes=minutes)).analysis.demand_minutes == minutes
+
+
+# Window sets (P3 spec §4.1, §6)
+
+
+def test_one_set_and_two_sets_are_accepted() -> None:
+    one = Params.from_document(with_sets(FIRST)).analysis.tou.window_sets
+    two = Params.from_document(with_sets(FIRST, SECOND)).analysis.tou.window_sets
+    assert [found.effective_from for found in one] == [None]
+    assert [str(found.effective_from) if found.effective_from else None for found in two] == [None, "2025-07-01"]
+
+
+def test_a_date_written_unquoted_in_yaml_is_accepted() -> None:
+    import datetime
+
+    doc = with_sets(FIRST, SECOND | {"effective_from": datetime.date(2025, 7, 1)})
+    assert Params.from_document(doc).analysis.tou.window_sets[1].effective_from == datetime.date(2025, 7, 1)
+    assert Params.from_document(doc).model_dump(mode="json")["analysis"]["tou"]["window_sets"][1] == SECOND
+
+
+def test_three_sets_with_increasing_dates_are_accepted() -> None:
+    third = SECOND | {"effective_from": "2026-01-01"}
+    assert len(Params.from_document(with_sets(FIRST, SECOND, third)).analysis.tou.window_sets) == 3
+
+
+@pytest.mark.parametrize(
+    ("sets", "field"),
+    [
+        ([FIRST | {"effective_from": "2024-01-01"}], "analysis.tou.window_sets[0].effective_from"),  # first has a start
+        ([FIRST, SECOND | {"effective_from": None}], "analysis.tou.window_sets[1].effective_from"),
+        ([FIRST, SECOND, SECOND], "analysis.tou.window_sets[2].effective_from"),  # equal dates
+        (
+            [FIRST, SECOND, SECOND | {"effective_from": "2025-01-01"}],
+            "analysis.tou.window_sets[2].effective_from",  # decreasing
+        ),
+        ([FIRST, SECOND | {"windows": {"Alpha": ["00:00-00:00"]}}], "analysis.tou.window_sets[1].windows"),  # labels
+        (
+            [FIRST, SECOND | {"windows": {"Alpha": ["07:00-21:00"], "Gamma": ["21:00-07:00"]}}],
+            "analysis.tou.window_sets[1].windows",
+        ),
+        (
+            [FIRST, SECOND | {"windows": {"Alpha": ["07:00-21:00"], "Beta": ["21:05-07:00"]}}],  # a gap
+            "analysis.tou.window_sets[1].windows",
+        ),
+        (
+            [FIRST | {"windows": {"Alpha": ["08:00-20:00"]}}],  # the first set leaves the night uncovered
+            "analysis.tou.window_sets[0].windows",
+        ),
+        ([FIRST, SECOND | {"windows": None}], "analysis.tou.window_sets[1].windows"),  # only the first may be null
+    ],
+)
+def test_window_sets_that_break_a_rule_name_the_entry(sets: list[dict[str, Any]], field: str) -> None:
+    with pytest.raises(InvalidInputError) as caught:
+        Params.from_document(with_sets(*sets))
+    assert caught.value.details["field"] == field
+
+
+def test_a_null_first_set_does_not_hide_a_label_mismatch_among_the_others() -> None:
+    third = SECOND | {"effective_from": "2026-01-01", "windows": {"Alpha": ["00:00-12:00"], "Gamma": ["12:00-00:00"]}}
+    with pytest.raises(InvalidInputError) as caught:
+        Params.from_document(with_sets(FIRST | {"windows": None}, SECOND, third))
+    assert caught.value.details["field"] == "analysis.tou.window_sets[2].windows"
+
+
+def test_the_window_set_error_never_repeats_the_window_text() -> None:
+    with pytest.raises(InvalidInputError) as caught:
+        Params.from_document(with_sets(FIRST | {"windows": {"Alpha": ["08:03-20:00"], "Beta": ["20:00-08:03"]}}))
+    assert "08:03" not in caught.value.message
+    assert "08:03" not in str(caught.value.details)
+
+
+# The v2 to v3 migration
+
+
+def test_the_v2_to_v3_migration_inserts_the_analysis_defaults_with_a_null_first_set() -> None:
+    v2 = doc_v2()
+    frozen = copy.deepcopy(v2)
+    upgraded = registered_migrations()[("params", 2)](v2)
+    assert upgraded == doc_v3(analysis={**doc_v3()["analysis"], "tou": {"window_sets": [FIRST | {"windows": None}]}})
+    assert v2 == frozen  # the input is untouched
+
+
+def test_the_migration_keeps_every_v2_value() -> None:
+    doc = doc_v2()
+    doc["meter"] = {"timebase": "local_wall", "local_tz": "Other/Zone"}
+    doc["validation"]["meter"]["total_tolerance_kwh"] = 0.5
+    upgraded = Params.from_document(doc)
+    assert upgraded.meter.timebase == "local_wall"
+    assert upgraded.meter.local_tz == "Other/Zone"
+    assert upgraded.validation.meter.total_tolerance_kwh == 0.5
+    assert upgraded.validation.timebase.windows == {"Alpha": ("08:00-20:00",), "Beta": ("20:00-08:00",)}
+    assert upgraded.analysis.tou.window_sets[0].windows is None  # the validation windows are not copied
+
+
+def test_a_v2_document_with_an_unknown_key_is_still_invalid() -> None:
+    with pytest.raises(InvalidInputError):
+        Params.from_document(doc_v2(unknown=1))
+
+
+def test_a_v3_document_without_analysis_is_invalid() -> None:
+    doc = doc_v3()
+    del doc["analysis"]
+    with pytest.raises(InvalidInputError):
+        Params.from_document(doc)
+
+
+def test_the_analysis_defaults_hold_no_zone_and_the_defaults_function_matches_the_migration() -> None:
+    migrated = Params.from_document(doc_v2())
+    defaults = Params.defaults(profile())
+    assert migrated.analysis.model_copy(update={"tou": defaults.analysis.tou}) == defaults.analysis

@@ -7,12 +7,13 @@ randomness, no environment, no current directory, and no absolute path in anythi
 """
 
 import importlib.resources
+import re
 import shutil
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from types import MappingProxyType
-from typing import ClassVar, Final, Literal
+from typing import ClassVar, Final, Literal, cast
 from zoneinfo import ZoneInfo
 
 import yaml
@@ -49,6 +50,7 @@ from energatron.services.files import fsync_directory, make_dirs, parquet_rows, 
 _IGNORED: Final = frozenset({".DS_Store"})
 _NEW_SUFFIX: Final = ".energatron-new"
 _OLD_SUFFIX: Final = ".energatron-old"
+_FIELD_PART: Final = re.compile(r"([^.\[\]]+)|\[([0-9]+)\]")
 
 
 @dataclass(frozen=True)
@@ -150,9 +152,12 @@ def _refuse_unset_region_values(values: Mapping[str, JSONValue], declared: tuple
     """A declared key that is, or holds, a region value still `null` → `E_INVALID_INPUT` (P2 spec §5.1).
 
     Only `pipeline sync` fills the zone and the TOU windows from the region profile, so a stage never sees `null`.
+    A `[n]` in a field is a list index (the first analysis window set).
     """
     for field in REGION_FIELDS:
-        if any(field == key or field.startswith(f"{key}.") for key in declared) and _is_null(values, field):
+        if any(field == key or field.startswith((f"{key}.", f"{key}[")) for key in declared) and _is_null(
+            values, field
+        ):
             raise InvalidInputError(
                 f"params.yaml has no value for {field} yet: run `energatron pipeline sync`.", field=field
             )
@@ -160,10 +165,18 @@ def _refuse_unset_region_values(values: Mapping[str, JSONValue], declared: tuple
 
 def _is_null(values: Mapping[str, JSONValue], field: str) -> bool:
     current: JSONValue = values
-    for part in field.split("."):
-        if not isinstance(current, Mapping) or part not in current:
-            return False
-        current = current[part]
+    for name, index in _FIELD_PART.findall(field):
+        if name:
+            if not isinstance(current, Mapping) or name not in current:
+                return False
+            current = current[name]
+        else:
+            if not isinstance(current, list):
+                return False
+            items = cast("list[JSONValue]", current)
+            if int(index) >= len(items):
+                return False
+            current = items[int(index)]
     return current is None
 
 

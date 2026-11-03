@@ -242,6 +242,67 @@ def test_declared_keys_that_are_set_pass_while_the_zone_is_null(root: Path, keys
     assert set(prepared.params) == set(keys)
 
 
+PARAMS_V3_NULL_SET = """\
+kind: params
+schema_version: 3
+meter: {timebase: nem_aest, local_tz: Test/Zone}
+validation:
+  meter: {total_tolerance_kwh: 0.01}
+  timebase:
+    windows: {Alpha: ["08:00-20:00"], Beta: ["20:00-08:00"]}
+    register_tolerance_kwh: 0.05
+    register_tolerance_pct: 0.1
+    total_tolerance_kwh: 0.05
+    min_fit_periods: 3
+analysis:
+  reference_months: 12
+  coverage_threshold: 0.95
+  seasons: {DJF: [12, 1, 2], MAM: [3, 4, 5], JJA: [6, 7, 8], SON: [9, 10, 11]}
+  weekend: [saturday, sunday]
+  band_percentiles: [10, 50, 90]
+  base_load: {from: "01:00", to: "05:00", percentile: 10}
+  demand_minutes: 30
+  tou:
+    window_sets:
+      - {effective_from: null, windows: null}
+"""
+
+
+@pytest.mark.parametrize("keys", [("analysis",), ("analysis.tou",), ("analysis.tou.window_sets",)])
+def test_a_stage_that_declares_analysis_with_a_null_first_set_is_invalid_input(
+    root: Path, keys: tuple[str, ...]
+) -> None:
+    """P3 spec §4.1: the first set's windows are region data; only `pipeline sync` fills them."""
+    (root / "params.yaml").write_text(PARAMS_V3_NULL_SET)
+    with pytest.raises(InvalidInputError) as caught:
+        prepare_stage(spec_of(params=keys), root=root, params_file=root / "params.yaml")
+    assert caught.value.details["field"] == "analysis.tou.window_sets[0].windows"
+    assert "pipeline sync" in caught.value.message
+
+
+@pytest.mark.parametrize("keys", [("analysis.reference_months",), ("analysis.base_load",), ("analysis.seasons",)])
+def test_declared_analysis_keys_that_are_set_pass_while_the_first_set_is_null(
+    root: Path, keys: tuple[str, ...]
+) -> None:
+    (root / "params.yaml").write_text(PARAMS_V3_NULL_SET)
+    assert set(prepare_stage(spec_of(params=keys), root=root, params_file=root / "params.yaml").params) == set(keys)
+
+
+def test_a_filled_first_set_passes_and_reaches_the_stage_whole(root: Path) -> None:
+    filled = PARAMS_V3_NULL_SET.replace(
+        "{effective_from: null, windows: null}",
+        '{effective_from: null, windows: {Alpha: ["08:00-20:00"], Beta: ["20:00-08:00"]}}',
+    )
+    (root / "params.yaml").write_text(filled)
+    prepared = prepare_stage(spec_of(params=("analysis",)), root=root, params_file=root / "params.yaml")
+    analysis = prepared.params["analysis"]
+    assert isinstance(analysis, dict)
+    assert analysis["base_load"] == {"from": "01:00", "to": "05:00", "percentile": 10}
+    assert analysis["tou"] == {
+        "window_sets": [{"effective_from": None, "windows": {"Alpha": ["08:00-20:00"], "Beta": ["20:00-08:00"]}}]
+    }
+
+
 # StageRun.zone (P2 spec §6)
 
 

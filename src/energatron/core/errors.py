@@ -305,6 +305,8 @@ class WarningCode(StrEnum):
     W_METER_UNVALIDATED = "W_METER_UNVALIDATED"  # no SUMMARY row covers the merged data (P2 spec §8)
     W_TIMEBASE_UNCONFIRMED = "W_TIMEBASE_UNCONFIRMED"  # too little evidence, or the configured basis tied (P2 §9.4)
     W_TIMEBASE_UNEXPLAINED = "W_TIMEBASE_UNEXPLAINED"  # periods no time-basis hypothesis fits (P2 spec §9.4)
+    W_USAGE_MIXED_WINDOWS = "W_USAGE_MIXED_WINDOWS"  # months in which more than one TOU window set applied (P3 §6)
+    W_USAGE_PARTIAL_DAYS = "W_USAGE_PARTIAL_DAYS"  # dates in a covered month that are not complete (P3 spec §8)
 
 
 class ResultWarning(BaseModel):

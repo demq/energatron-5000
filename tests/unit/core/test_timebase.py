@@ -13,7 +13,16 @@ from hypothesis import given
 from hypothesis import strategies as st
 
 from energatron.core.errors import InvalidInputError
-from energatron.core.timebase import NEM_UTC_OFFSET, Timebase, Window, bucket, local_clock, parse_windows, to_local
+from energatron.core.timebase import (
+    NEM_UTC_OFFSET,
+    Timebase,
+    Window,
+    bucket,
+    local_clock,
+    local_day_minutes,
+    parse_windows,
+    to_local,
+)
 from tests.fixtures import oracle
 from tests.fixtures.pipeline_workspace import WINDOWS
 
@@ -225,3 +234,34 @@ def test_the_wall_clock_basis_is_unplaceable_exactly_in_the_two_dst_hours(steps:
         moment.date() in (APRIL, OCTOBER) and moment.hour == 2 for moment in moments
     ]  # both changes are at 02:00 standard time
     assert list(found.unplaceable) == in_hour
+
+
+# `local_day_minutes` (P3 spec §3, §13.1)
+
+
+def test_an_ordinary_day_is_1440_minutes() -> None:
+    assert local_day_minutes(WINTER, ZONE) == 1440
+    assert local_day_minutes(SUMMER, ZONE) == 1440
+
+
+def test_the_spring_forward_day_is_23_hours_and_the_fall_back_day_25() -> None:
+    assert local_day_minutes(OCTOBER, ZONE) == 1380  # daylight saving starts
+    assert local_day_minutes(APRIL, ZONE) == 1500  # daylight saving ends
+
+
+def test_the_days_either_side_of_a_change_are_ordinary() -> None:
+    for change in (APRIL, OCTOBER):
+        assert local_day_minutes(change - timedelta(days=1), ZONE) == 1440
+        assert local_day_minutes(change + timedelta(days=1), ZONE) == 1440
+
+
+def test_a_zone_without_daylight_saving_has_only_1440_minute_days() -> None:
+    fixed = ZoneInfo("Australia/Brisbane")
+    assert [local_day_minutes(day, fixed) for day in (APRIL, OCTOBER, WINTER)] == [1440, 1440, 1440]
+
+
+@given(offset=st.integers(min_value=0, max_value=364))
+def test_a_days_length_agrees_with_the_oracle_for_any_date_of_the_year(offset: int) -> None:
+    day = date(2025, 1, 1) + timedelta(days=offset)
+    expected = 1380 if day == OCTOBER else 1500 if day == APRIL else 1440
+    assert local_day_minutes(day, ZONE) == expected

@@ -10,6 +10,7 @@ import re
 
 import pytest
 
+from energatron.core.models.params import AnalysisParams
 from tests.architecture._support import PACKAGE_DIR, source_files
 
 ZONE_KEY = re.compile(r"[A-Z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)+")
@@ -54,6 +55,24 @@ def test_the_scan_covers_core_and_services() -> None:
     files = layer_files()
     assert "core/models/params.py" in files
     assert "services/stages/runner.py" in files
+
+
+def strings_in(value: object) -> list[str]:
+    """Every string in a dumped document, keys and values."""
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, dict):
+        return [text for key, item in value.items() for text in [str(key), *strings_in(item)]]
+    if isinstance(value, list):
+        return [text for item in value for text in strings_in(item)]
+    return []
+
+
+def test_the_analysis_defaults_hold_no_zone_key_or_window() -> None:
+    """P3 spec §13.1: the season labels (`DJF`…) name months, not zones, and the first window set is `null`."""
+    dumped = AnalysisParams.defaults(None).model_dump(mode="json")
+    assert dumped["tou"]["window_sets"][0]["windows"] is None
+    assert [text for text in strings_in(dumped) if ZONE_KEY.fullmatch(text) or WINDOW.fullmatch(text)] == []
 
 
 @pytest.mark.parametrize(

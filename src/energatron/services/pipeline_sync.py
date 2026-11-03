@@ -5,8 +5,9 @@
   chain when older, keeping every value (comments are lost). DVC reads declared params from the file itself, so an
   in-memory upgrade isn't enough (D3 §10.2). A newer file → `E_SCHEMA_TOO_NEW`.
 - The region's values are copied from `ctx.region` (P2 spec §5.3): `meter.local_tz` is the region's, so a file whose
-  zone differs (or is `null`) is rewritten with only that value changed; `validation.timebase.windows` is replaced only
-  while `null`, because the owner may edit it. Every other value is the owner's and is kept.
+  zone differs (or is `null`) is rewritten with only that value changed; `validation.timebase.windows` and the first
+  `analysis.tou.window_sets` entry's windows (P3 spec §4.3) are replaced only while `null`, because the owner may edit
+  them. Every other value is the owner's and is kept.
 - Every source without a catalog gets an empty one, and the directories created are tracked (`dvc add`).
 - Nothing is committed: the result lists the pointer files to commit.
 
@@ -165,13 +166,17 @@ def _params(data: bytes | None, profile: RegionProfile) -> tuple[ParamsState, st
 
 
 def _with_region_values(model: type[Params], params: Params, profile: RegionProfile) -> Params:
-    """`params` with the region's zone, and the region's windows where `params` has none (P2 spec §5.3)."""
+    """`params` with the region's zone, and the region's windows where `params` has none (P2 §5.3, P3 §4.3)."""
     values = cast(dict[str, Any], params.model_dump(mode="json"))
     values["meter"]["local_tz"] = profile.local_tz
+    region_windows = (
+        None if profile.tou_windows is None else {label: list(found) for label, found in profile.tou_windows.items()}
+    )
     if values["validation"]["timebase"]["windows"] is None:
-        values["validation"]["timebase"]["windows"] = (
-            None if profile.tou_windows is None else {label: list(w) for label, w in profile.tou_windows.items()}
-        )
+        values["validation"]["timebase"]["windows"] = region_windows
+    first_set = values["analysis"]["tou"]["window_sets"][0]
+    if first_set["windows"] is None:
+        first_set["windows"] = region_windows
     return model.model_validate(values)
 
 

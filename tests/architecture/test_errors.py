@@ -63,6 +63,8 @@ EXPECTED_WARNINGS = frozenset(
         "W_METER_UNVALIDATED",  # P2 spec §8, §12
         "W_TIMEBASE_UNCONFIRMED",  # P2 spec §9.4, §12
         "W_TIMEBASE_UNEXPLAINED",  # P2 spec §9.4, §12
+        "W_USAGE_MIXED_WINDOWS",  # P3 spec §5.6, §6, §11
+        "W_USAGE_PARTIAL_DAYS",  # P3 spec §8, §11
     }
 )
 

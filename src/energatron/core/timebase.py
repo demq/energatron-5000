@@ -10,7 +10,8 @@ local wall clock:
 
 Pure: no clock, no I/O, and no zone is built here. The zone is always an object the caller got from
 `StageRun.zone()` (P2 spec §6). `parse_windows` applies the rules of `validation.timebase.windows` (§5.1); `bucket`
-gives each local time the label of the window that holds it.
+gives each local time the label of the window that holds it. `local_day_minutes` is the length of a local date in a
+zone (P3 spec §3).
 """
 
 from collections.abc import Mapping, Sequence
@@ -29,6 +30,8 @@ NEM_UTC_OFFSET: Final = timedelta(hours=10)
 _WINDOWS_FIELD: Final = "validation.timebase.windows"
 _MINUTES_PER_DAY: Final = 1440
 _NOON: Final = time(12)
+_ONE_DAY: Final = timedelta(days=1)
+_ONE_MINUTE: Final = timedelta(minutes=1)
 
 
 class Timebase(StrEnum):
@@ -124,6 +127,16 @@ def bucket(local_start: pd.Series, windows: Mapping[str, Sequence[Window]]) -> p
     found = labels[minute]
     found[~present.to_numpy()] = None
     return pd.Series(found, index=local_start.index, dtype=object)
+
+
+def local_day_minutes(local_date: date, zone: tzinfo) -> int:
+    """The length of a local date in the zone, from one local midnight to the next, measured in UTC.
+
+    1440 on an ordinary day, 1380 on a spring-forward day and 1500 on a fall-back day.
+    """
+    start = datetime.combine(local_date, time.min, tzinfo=zone).astimezone(UTC)
+    end = datetime.combine(local_date + _ONE_DAY, time.min, tzinfo=zone).astimezone(UTC)
+    return (end - start) // _ONE_MINUTE
 
 
 # the conversions

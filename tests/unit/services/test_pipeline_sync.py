@@ -115,7 +115,7 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     root = ctx.paths.root
     assert (root / "dvc.yaml").read_bytes() == GOLDEN.read_bytes()
     text = (root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 2\nmeter:\n")
+    assert text.startswith("kind: params\nschema_version: 3\nmeter:\n")
     assert yaml.safe_load(text) == DEFAULTS
     assert DEFAULTS["meter"]["local_tz"] == TEST_REGION.local_tz  # the test region's, not a shipped one
     for source in SourceType:
@@ -215,7 +215,7 @@ def test_an_invalid_params_file_is_invalid_input_in_sync_and_check(ctx: ServiceC
 
 
 def test_a_newer_params_file_is_schema_too_new_and_nothing_is_written(ctx: ServiceContext, vcs: TrackingVcs) -> None:
-    write(ctx.paths.root, "params.yaml", "kind: params\nschema_version: 3\n")
+    write(ctx.paths.root, "params.yaml", "kind: params\nschema_version: 4\n")
     before = snapshot(ctx.paths.root)
     with pytest.raises(SchemaTooNewError):
         pipeline_sync.sync(ctx)
@@ -256,7 +256,7 @@ def test_an_older_params_file_is_drift_then_rewritten_with_the_zone_and_windows_
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     text = (ctx.paths.root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 2\n")
+    assert text.startswith("kind: params\nschema_version: 3\n")
     assert (
         yaml.safe_load(text) == DEFAULTS
     )  # the v1 file held nothing to keep: the zone and windows come from the profile
@@ -274,6 +274,9 @@ def test_a_missing_params_file_is_written_from_the_defaults_of_the_contexts_prof
     synced(elsewhere)
     assert params_on_disk(ctx)["meter"]["local_tz"] == "Other/Place"
     assert params_on_disk(ctx)["validation"]["timebase"]["windows"] == {"Gamma": ["00:00-00:00"]}
+    assert params_on_disk(ctx)["analysis"]["tou"]["window_sets"] == [
+        {"effective_from": None, "windows": {"Gamma": ["00:00-00:00"]}}
+    ]
 
 
 def test_a_hand_edited_zone_is_drift_and_is_rewritten_alone(ctx: ServiceContext) -> None:
@@ -330,6 +333,93 @@ def test_a_null_zone_or_windows_value_is_drift_and_is_filled(ctx: ServiceContext
     assert target[last] == expected
     assert on_disk["meter"]["timebase"] == "local_wall"
     pipeline_sync.check(ctx)
+
+
+# The first analysis window set (P3 spec §4.3)
+
+FIRST_SET = {"effective_from": None, "windows": {"Alpha": ["08:00-20:00"], "Beta": ["20:00-08:00"]}}
+OWN_SET = {"Gamma": ["00:00-12:00"], "Delta": ["12:00-00:00"]}
+
+
+def v2_defaults() -> dict[str, Any]:
+    """The defaults as a version 2 file: no `analysis`."""
+    doc = copy.deepcopy(DEFAULTS)
+    del doc["analysis"]
+    doc["schema_version"] = 2
+    return doc
+
+
+def test_a_v2_params_file_is_rewritten_to_v3_with_the_first_set_filled_from_the_profile(ctx: ServiceContext) -> None:
+    prepare_synced(ctx, v2_defaults())
+    assert drift_of(ctx) == ["params.yaml"]
+    result = synced(ctx)
+    assert (result.params_written, result.params_rewritten) == (False, True)
+    on_disk = params_on_disk(ctx)
+    assert on_disk["schema_version"] == 3
+    assert on_disk["analysis"]["tou"]["window_sets"] == [FIRST_SET]
+    assert on_disk == DEFAULTS
+    pipeline_sync.check(ctx)
+
+
+def test_a_v2_files_own_values_survive_the_rewrite_and_its_validation_windows_are_not_copied(
+    ctx: ServiceContext,
+) -> None:
+    doc = v2_defaults()
+    doc["validation"]["timebase"]["windows"] = OWN_SET
+    doc["meter"]["timebase"] = "local_wall"
+    prepare_synced(ctx, doc)
+    synced(ctx)
+    on_disk = params_on_disk(ctx)
+    assert on_disk["validation"]["timebase"]["windows"] == OWN_SET
+    assert on_disk["meter"]["timebase"] == "local_wall"
+    assert on_disk["analysis"]["tou"]["window_sets"] == [FIRST_SET]  # the region's, not the owner's validation set
+
+
+def test_an_edited_first_set_and_every_other_edited_analysis_value_survive_with_no_drift(ctx: ServiceContext) -> None:
+    doc = copy.deepcopy(DEFAULTS)
+    doc["analysis"]["tou"]["window_sets"] = [
+        {"effective_from": None, "windows": OWN_SET},
+        {"effective_from": "2025-07-01", "windows": {"Gamma": ["00:00-06:00"], "Delta": ["06:00-00:00"]}},
+    ]
+    doc["analysis"]["reference_months"] = 6
+    doc["analysis"]["weekend"] = ["sunday"]
+    doc["analysis"]["base_load"]["percentile"] = 5
+    prepare_synced(ctx, "# my comment\n" + dump(doc))
+    pipeline_sync.check(ctx)
+    result = synced(ctx)
+    assert (result.params_written, result.params_rewritten) == (False, False)
+    assert (ctx.paths.root / "params.yaml").read_text(encoding="utf-8").startswith("# my comment\n")
+
+
+def test_a_null_first_set_is_drift_and_is_filled_while_the_other_sets_survive(ctx: ServiceContext) -> None:
+    doc = copy.deepcopy(DEFAULTS)
+    later = {"effective_from": "2025-07-01", "windows": {"Alpha": ["07:00-21:00"], "Beta": ["21:00-07:00"]}}
+    doc["analysis"]["tou"]["window_sets"] = [{"effective_from": None, "windows": None}, later]
+    doc["analysis"]["demand_minutes"] = 15
+    prepare_synced(ctx, doc)
+    assert drift_of(ctx) == ["params.yaml"]
+    assert synced(ctx).params_rewritten is True
+    on_disk = params_on_disk(ctx)
+    assert on_disk["analysis"]["tou"]["window_sets"] == [FIRST_SET, later]
+    assert on_disk["analysis"]["demand_minutes"] == 15
+    pipeline_sync.check(ctx)
+
+
+def test_a_dry_run_reports_the_v3_rewrite_and_writes_nothing(ctx: ServiceContext) -> None:
+    prepare_synced(ctx, v2_defaults())
+    before = snapshot(ctx.paths.root)
+    result = pipeline_sync.sync(ctx, dry_run=True)
+    assert (result.params_rewritten, result.dry_run) == (True, True)
+    assert snapshot(ctx.paths.root) == before
+
+
+def test_an_invalid_analysis_value_is_invalid_input_in_sync_and_check(ctx: ServiceContext) -> None:
+    doc = copy.deepcopy(DEFAULTS)
+    doc["analysis"]["demand_minutes"] = 25
+    prepare_synced(ctx, doc)
+    for call in (pipeline_sync.check, pipeline_sync.sync):
+        with pytest.raises(InvalidInputError):
+            call(ctx)
 
 
 # Catalogs

@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P3.1.1
-- Last commit: energatron-5000 `P3.1.1: approve the P3 usage profile spec and apply plan rev 11 and D1 rev 4`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` kept; `TZ=UTC pytest -q` 2372
-  passed in ~56 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
+- Last done: P3.2.1
+- Last commit: energatron-5000 `P3.2.1: add Params v3, the first TOU window set in pipeline sync and local_day_minutes`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` kept; `TZ=UTC pytest -q` 2463
+  passed in ~54 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
 - Review: none
-- Next: P3.2.1 (`Params` v3, `pipeline sync` for the first window set, `local_day_minutes`, the P3 warnings)
+- Next: P3.2.2 (metric functions in `core/usage.py`, `core/models/usage.py`, and their test oracle)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,46 +110,41 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
   (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`) are approved.
-- P0, P1 and P2 are all done and accepted in the workspace (P0.5.2: Codex half waived). P3 is specified and its
-  sub-tasks P3.2.1-P3.2.5, P3.3.1 and P3.3.2 are written from the spec's §2; P3.2.1 is the next ⬜.
-- P0 is complete (archived in `agent_docs/2026-11/2026-11-03_tasks-archive-p0.md`). The tool repo is on GitHub
-  (private, `origin`); P0.4.2 pushed the fix for CI's 2 Linux/UTC-only test failures.
-- The owner's iCloud backup folder is not `iCloud Drive/Backups`. It is set in two git-ignored workspace files:
-  `backup.bundle_dir` in `.energatron/local.toml` and the `icloud` remote URL in `.dvc/config.local`.
-  `icloud_backup.py` follows `local.toml` (P0.4.4), so `backup`, `check`, `step0` and `drill` need no
-  `--backups-dir`. A new machine needs both entries set again.
+- P0, P1 and P2 are done and accepted in the workspace. P3.2.1 is done: `Params` v3 with the `analysis` block, the first
+  TOU window set filled by `pipeline sync`, `local_day_minutes` in `core/timebase.py`, and the P3 warning codes.
+  P3.2.2 is the next ⬜.
+- The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
+  files (`backup.bundle_dir` in `.energatron/local.toml`, the `icloud` remote URL in `.dvc/config.local`);
+  `icloud_backup.py` follows `local.toml`. A new machine needs both entries set again.
 
-**Read first** (for P3.2.1)
-- The P3 spec §3-§4, §11 and §13.1, the P2 spec §5 (`Params` v2 and `pipeline sync`), and `core/models/params.py`.
-- Later P3 sub-tasks read the spec sections their Refs name. P3.3.1 also reads the P2 acceptance note
+**Read first** (for P3.2.2)
+- The P3 spec §3, §5, §6, §7, §13.1 and §13.2, and `core/models/params.py` (`AnalysisParams`), `core/timebase.py`
+  (`local_day_minutes`, `parse_windows`, `bucket`) and `tests/fixtures/oracle.py`.
+- Later P3 sub-tasks read the sections their Refs name. P3.3.1 also reads the P2 acceptance note
   `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md` (it mentions data, so nothing from it
   is copied into the tool repo).
 
 **Facts**
-- Owner decision on the P2 spec (2026-10-30): Q1-Q9 approved as written, except Q6: no waiver of hand-over
-  decision #11, so `localise` runs only on a `confirmed` verdict (spec §9.4, §10, §15).
 - Owner decisions on the P3 spec (2026-11-03): Q1-Q11 as recommended. Two stages (`usage_profile`, `usage_report`);
-  `params` v3 with `analysis` and date-ranged TOU window sets in `params.yaml`; `usage_profile` fails below
-  `reference_months` covered months or the coverage threshold; daylight-saving days are left out of hourly metrics;
-  hand-written SVG; `validate_timebase` untouched. Retailer plan details (TOU windows, dates, rates) are not private;
-  only the household's usage and identifiers are.
-- Planned in P3: `core/usage.py`, `core/charts.py`, `core/usage_report.py`, `core/models/usage.py`, and
-  `local_day_minutes` in `core/timebase.py`; stages `usage_profile` and `usage_report` registered after `localise`
-  (eight stages); marts in `data/marts/usage_profile/`, report in `data/reports/usage/index.html`.
-- Built in P2.2: `Params` v2, `RegionProfile` v2, `StageRun.zone(key)` (tzdata, never the system database), readers in
-  `core/`, `precedence_order`, `core/timebase.py`; stages `parse_nem12`, `merge_interval`, `validate_meter`,
-  `validate_timebase`, `localise`, registered in that order after `catalog_index`. Shared schemas and `load_table` in
-  `services/stages/tables.py` (a stage may not import another stage). Stage modules must not use `ZoneInfo(...)`, a
-  string `tz=`, `pytz` or `dateutil.tz` (`test_stage_purity`).
-- `localise` writes `data/interim/elec_interval_local/intervals.parquet`; on a failed gate that directory holds only
-  `_provenance.json` and `dvc repro` stops with `E_CHECK_FAILED` in `localise`. A `contradicted` basis stops earlier,
-  in `validate_timebase`.
-- `tests/integration/_scratch.make_scratch` copies a template repo made once per test process; a scratch helper
-  that needs a fresh git or DVC repo should go through it rather than run `git init` or `dvc init` per test.
-- Fixtures: `tests/fixtures/pipeline_workspace.py` (`build_raw_zone`), `tests/integration/_stage_inputs.py` (one builder
-  per stage), `make_nem12`, `make_sources`, `oracle.py`. Any test that runs every stage needs data that confirms a basis;
-  an empty raw zone no longer reproduces.
-- P2.2.1-P2.2.7 changed every registered stage's code entry.
+  `params` v3 with `analysis` and date-ranged TOU window sets; `usage_profile` fails below `reference_months` covered
+  months or the coverage threshold; daylight-saving days are left out of hourly metrics; hand-written SVG;
+  `validate_timebase` untouched. Retailer plan details (TOU windows, dates, rates) are not private; only the
+  household's usage and identifiers are.
+- Built in P3.2.1: `AnalysisParams` (`reference_months`, `coverage_threshold`, `seasons`, `weekend`, `band_percentiles`,
+  `base_load` with fields `start`/`end` aliased `from`/`to`, `demand_minutes`, `tou.window_sets`); window sets are
+  `WindowSet(effective_from: date | None, windows)`; a stage that declares `analysis` gets `E_INVALID_INPUT` while the
+  first set is `null`. `AnalysisParams.defaults(windows)` builds the defaults. `params_v3_text(...)` is in
+  `tests/fixtures/params_text.py`; `params_v2_text` still exists and reads as v3.
+- Planned in P3: `core/usage.py`, `core/charts.py`, `core/usage_report.py`, `core/models/usage.py`; stages
+  `usage_profile` and `usage_report` registered after `localise` (eight stages); marts in
+  `data/marts/usage_profile/`, report in `data/reports/usage/index.html`.
+- Built in P2: `Params` v2, `StageRun.zone(key)` (tzdata, never the system database), readers in `core/`,
+  `core/timebase.py`; stages `parse_nem12`, `merge_interval`, `validate_meter`, `validate_timebase`, `localise`. Shared
+  schemas and `load_table` in `services/stages/tables.py` (a stage may not import another stage). Stage modules must
+  not use `ZoneInfo(...)`, a string `tz=`, `pytz` or `dateutil.tz` (`test_stage_purity`).
+- `tests/integration/_scratch.make_scratch` copies a template repo made once per test process. Fixtures:
+  `tests/fixtures/pipeline_workspace.py` (`build_raw_zone`), `tests/integration/_stage_inputs.py`, `make_nem12`,
+  `make_sources`, `oracle.py`. Any test that runs every stage needs data that confirms a basis.
 - The hourly JSON in the legacy folder stays unlanded.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing except the tool
@@ -160,27 +155,21 @@ Then clear the context and type `/next`.
 
 **Watch out**
 - `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice,
-  2026-11-03). TOML has no null and a blank street is refused, so leaving the key out is the only opt-out.
-- The Step 0 copy sits outside the configured backup folder, so `check` doesn't list it. Agents never move or delete it.
-- With the tool on GitHub and CI green, the restore drill no longer needs `--tool-source local`.
-- P0.4.2 changed `src/energatron/`, so the workspace `fingerprint --check` is stale: re-run `fingerprint` (and commit
-  it) before the next `dvc repro`.
-- CI runs on Linux under UTC; tests that depend on the stack depth or the local zone can pass on macOS and fail there.
-- The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). P3.2.1 moves it
-  to params v3 in the tool; the workspace follows in P3.3.1 (`pipeline sync`). After a tool commit that changes `src/energatron/`, `fingerprint --check` reports stale (spec §2): re-run `fingerprint` before any
-  `dvc repro`, and commit it with `dvc.lock`.
+  2026-11-03).
+- P3.2.1 changed `src/energatron/`, so every stage's code entry is stale and the workspace `fingerprint --check` reports
+  it: re-run `fingerprint` (and commit it with `dvc.lock`) before any `dvc repro`. The workspace is still on params v2;
+  it moves to v3 in P3.3.1 (`pipeline sync`), and until then `pipeline sync --check` there reports `params.yaml` drift.
 - The workspace time basis is `confirmed` as `nem_aest`. The retailer's tariff windows changed on or about early
-  July 2025 (probe in the workspace note); `validate_timebase` keeps one window set (P2 spec §17 Q5). P3 adds
-  date-ranged sets in `analysis.tou.window_sets`; P3.3.1 asks the owner to confirm the second set before editing
+  July 2025 (probe in the workspace note); P3.3.1 asks the owner to confirm the second window set before editing
   `params.yaml`.
 - If `validate_timebase` is `contradicted` or `localise` fails its gate in the workspace, stop and ask the owner before
-  changing `meter.timebase` (decision #11 allows nothing weaker).
-- `offer_cdr` records `extra.source_ts_from: "content"` (D3 §3.3; §5.7's list omits it).
-- D3 §14 check 3: a blob is `0444` after `dvc add` but `0644` after `dvc pull` into a fresh clone.
-- A new stage that reads a raw source must check every dataset's blob and detector (§3.1), as `validate_meter` does.
+  changing `meter.timebase`.
+- The Step 0 copy sits outside the configured backup folder; agents never move or delete it.
+- CI runs on Linux under UTC; tests that depend on the local zone can pass on macOS and fail there.
+- A new stage that reads a raw source must check every dataset's blob and detector (D3 §3.1).
 - `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
-- pytest takes ~1 minute in parallel (pytest-xdist, `-n auto`; `-n0` runs it serially). A safety hook holds any
-  command containing `rm`. Agents never read `demq-elektric/private/`. In zsh pass file lists as an array.
+- pytest takes ~1 minute in parallel (pytest-xdist; `-n0` runs it serially). A safety hook holds any command containing
+  `rm`. Agents never read `demq-elektric/private/`. In zsh pass file lists as an array.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -590,7 +579,7 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
     Watch: P3.2.1 changes every stage's code entry (`Params` v3, `local_day_minutes`); P3.3.1 must ask the owner to confirm the second window set before editing `params.yaml`.
 
 #### P3.2 Build ⬜
-- ⬜ **P3.2.1** Foundations: `Params` v3, `pipeline sync` for the first window set, `local_day_minutes`, the P3 warnings.
+- ✅ **P3.2.1** Foundations: `Params` v3, `pipeline sync` for the first window set, `local_day_minutes`, the P3 warnings.
   - `core/models/params.py` v3 (the `analysis` block, season partition, window sets with strictly increasing
     `effective_from`, same labels, each a day partition, `null` first-set windows after migration, the v2 to v3
     migration, `Params.defaults(profile)`); `pipeline sync` fills and checks the first set (`params_rewritten` as in P2);
@@ -603,6 +592,8 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
     `tests/unit/services/test_pipeline_sync.py`, `tests/fixtures/{params_text.py,schemas/}`.
   - Done when: the standard checks pass; the golden v2 `params` document upgrades and validates; a stage reading a
     `null` first-set window fails with `E_INVALID_INPUT`; `localise`'s tests pass unchanged.
+  - Handover: `Params` v3 (`analysis` block, date-ranged TOU window sets, v2 to v3 migration), `pipeline sync` fills the first set from the region profile, `local_day_minutes` in `core/timebase.py`, the two P3 warning codes, golden `params/v3.json` (2463 tests). Decision: the runner reads `[n]` list indexes so `REGION_FIELDS` can name `analysis.tou.window_sets[0].windows`; `base_load` keeps `from`/`to` through field aliases.
+    Watch: every stage's code entry is stale until a workspace runs `fingerprint`; the P3 warnings exist but nothing raises them until P3.2.3.
 - ⬜ **P3.2.2** Metric functions and their test oracle.
   - `core/usage.py` (daily, monthly, reference window, seasonal, year on year, hourly profile, heatmap, `tou_split`,
     base load, peak demand, load factor, quality classes) and `core/models/usage.py` (kinds, column lists,
@@ -660,6 +651,7 @@ its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-03 · P3.2.1 · `Params` v3 (`analysis` block, date-ranged TOU window sets, v2 to v3 migration), `pipeline sync` fills the first window set, `local_day_minutes` moved to `core/timebase.py`, two P3 warning codes (2463 tests) · energatron-5000 `P3.2.1: add Params v3, the first TOU window set in pipeline sync and local_day_minutes`
 - 2026-11-03 · P3.1.1 · P3 usage profile spec approved (owner: Q1-Q11 as recommended; retailer plan details are not private); plan rev 11 and D1 rev 4 applied from its §15; P3.2-P3.3 rewritten from its order of work (P3.2.1-P3.2.5, P3.3.1, P3.3.2) · energatron-5000 `P3.1.1: approve the P3 usage profile spec and apply plan rev 11 and D1 rev 4`
 - 2026-11-03 · M.1 · Test suite in parallel (pytest-xdist, worksteal) and a template scratch repo: `pytest -q` ~5 min → ~55 s, 2372 passed · energatron-5000 `M.1: run the tests in parallel and copy a template scratch repo`
 - 2026-11-03 · P0.4.2 · CI fixes for 2 Linux/UTC-only test failures (`cdr_plan.py` maps an uncaught `RecursionError` to `bad_json`; tag test pinned off `+0000`), pushed to `origin`; P0.4 and P0 ticked, P0 archived · energatron-5000 `P0.4.2: fix the two Linux-only CI failures`
