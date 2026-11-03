@@ -97,13 +97,14 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P0.4.3, P0.5.3, P1.5.3, P2.3.2 (one batch, at the owner's request)
-- Last commit: energatron-5000 `P0.4.3: record the first backup, the restore drill and the P1 and P2 backups` (no demq-elektric commit)
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2369 passed at P0.4.4
-  (no code changed since); workspace `backup --status` `refs_backed_up: true`, 0 commits pending; privacy guard `--figures`
-  on `TASKS.md` and the commit message 0 violations
+- Last done: P0.3.2
+- Last commit: demq-elektric `P0.3.2: re-track private/ after adding the postcode and an account`; energatron-5000
+  `P0.3.2: record the private values step`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `pytest -q` 2369 passed;
+  `denylist --check` ok (7 entries; only `premises.street` warned, accepted); workspace pre-commit passed; privacy guard
+  `--figures` on `TASKS.md` and the commit messages 0 violations
 - Review: none
-- Next: no ⬜ sub-task left; owner steps open (P0.3.2, P0.4.2, P0.5.2), then the P3 spec sub-task (to be added)
+- Next: no ⬜ sub-task left; owner steps open (P0.4.2, P0.5.2), then the P3 spec sub-task (to be added)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -113,9 +114,10 @@ Then clear the context and type `/next`.
 - P0, P1 and P2 agent work are all done and accepted in the workspace; both repos on `main`, no remote, nothing
   pushed. No ⬜ sub-task is left. The next phase is P3 (usage profile, plan §15), which starts with its own spec
   sub-task; the owner asks for it, or it is added to this file first.
-- Owner steps open: P0.3.2 (private values), P0.4.2 (GitHub repo + push, needs the owner's go-ahead), P0.5.2
-  (fresh-session checks; Codex not installed, so its half is installed or waived). Backups and the restore drill
-  are done and nothing is pending as of 2026-11-03.
+- Owner steps open: P0.4.2 (GitHub repo + push, needs the owner's go-ahead), P0.5.2 (fresh-session checks; Codex
+  not installed, so its half is installed or waived). P0.3.2 is done: the private config has the postcode and an
+  electricity account, not the street (owner's choice). The restore drill is done; the P0.3.2 workspace commit
+  awaits the owner's backup.
 - The owner's iCloud backup folder is not `iCloud Drive/Backups`. It is set in two git-ignored workspace files:
   `backup.bundle_dir` in `.energatron/local.toml` and the `icloud` remote URL in `.dvc/config.local`.
   `icloud_backup.py` follows `local.toml` (P0.4.4), so `backup`, `check`, `step0` and `drill` need no
@@ -150,6 +152,8 @@ Then clear the context and type `/next`.
 - none
 
 **Watch out**
+- `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice,
+  2026-11-03). TOML has no null and a blank street is refused, so leaving the key out is the only opt-out.
 - The Step 0 copy sits outside the configured backup folder, so `check` doesn't list it. Agents never move or delete it.
 - After P0.4.2 the restore drill no longer needs `--tool-source local`.
 - The workspace is in sync with the tool at P2.2.7 (params v2, `dvc.lock`, fingerprint committed). After a tool
@@ -303,7 +307,7 @@ and 6) are one sub-task, P0.3.1.
   - Handover: `CLAUDE.md`/`AGENTS.md`, `parent/CLAUDE.md`, deny-only settings, `new-doc` skill, parent links via
     `link_parent.py --parent-dir`, README/CHANGELOG (877 tests); 2 review fixes. Watch: foreign symlinks are reported.
 
-#### P0.3 Workspace ⬜
+#### P0.3 Workspace ✅
 - ✅ **P0.3.1** Set up the workspace and prepare its first commit.
   - D2 §11.4 in order, up to the commit: `git init -b main`; the §11.1 files; `uv sync`; `dvc init`; the
     `--local` iCloud remote and `.energatron/local.toml` (configuration only: nothing here reads or writes
@@ -320,13 +324,16 @@ and 6) are one sub-task, P0.3.1.
   - On /done: commit exactly those files with the subject `P0: bootstrap demq-elektric workspace` (D2 §11.4).
   - Handover: done 2026-10-30 by the acting owner's session: workspace committed (16 files, hooks passed); the
     owner ran the §11.2 snippet (counts 2/1/1) after the classifier blocked the agent. Watch: backup pending (P0.4.3).
-- ⛔ **P0.3.2** Owner: add the optional private values.
+- ✅ **P0.3.2** Owner: add the optional private values.
   - Why: owner step (only the owner writes these values; agents never read the file, D2 §11.2).
   - In an editor, add `street`, `postcode` and `accounts` to `demq-elektric/private/config.toml`. Then a
     `/next P0.3.2` session runs `uv run energatron denylist` and `--check`.
   - Refs: D2 §6.3, §7.2, §7.3, §11.2.
   - Files (`demq-elektric/`): `private.dvc`.
-  - Done when: `energatron denylist` gives no `W_PRIVATE_FIELDS_MISSING`, and `--check` passes.
+  - Done when: `energatron denylist` gives no `W_PRIVATE_FIELDS_MISSING` other than `premises.street`, and `--check`
+    passes. The owner chose (2026-11-03) to leave `street` out; that warning stays and is expected.
+  - Handover: postcode and an electricity account added by the owner; denylist 7 entries, `private.dvc` re-tracked.
+    Decision: `street` stays out (omission is the opt-out). Watch: `denylist` keeps warning `premises.street`.
   - No agent sub-task waits for it: without it the denylist lacks those values, and P1.5.2's usage exports warn
     `W_UNKNOWN_IDENTIFIER` (account).
 
@@ -756,6 +763,7 @@ operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-03 · P0.3.2 · Owner added the postcode and an electricity account to the private config and left the street out (Done when relaxed to allow it); `denylist` re-generated (7 entries) and `private/` re-tracked; `--check` ok · demq-elektric `P0.3.2: re-track private/ after adding the postcode and an account`; energatron-5000 `P0.3.2: record the private values step`
 - 2026-11-03 · P0.4.3, P0.5.3, P1.5.3, P2.3.2 · Owner-run backup and drill steps recorded in one batch: first backup pushed 57 DVC files and wrote 1 bundle, repeats were no-ops, the agent-hosting app gets `E_STORAGE`; restore drill 12 of 12 steps, exit 0 (step 9 `verify` passed); `refs_backed_up: true`; P1 and P2 phases ticked · energatron-5000 `P0.4.3: record the first backup, the restore drill and the P1 and P2 backups`
 - 2026-11-03 · P0.4.4 · `icloud_backup.py` defaults its backups folder to the parent of `backup.bundle_dir` in the workspace's `.energatron/local.toml` (else iCloud `Backups`; `--backups-dir` still wins); 12 new tests (2369 tests), D2 §4 and the runbook updated; owner moved the backup destinations through the git-ignored local config · energatron-5000 `P0.4.4: default the backups folder from the workspace's local.toml`
 - 2026-11-02 · P2.3.1 · P2 acceptance in the workspace: `pipeline sync` (params v2), `fingerprint`, `dvc repro` (5 stages, 24 checks), time basis `confirmed`, 22 of 22 SUMMARY rows match, 0 merge conflicts, 3 short and 3 long DST days, `verify` ok; backup pending · demq-elektric `P2.3.1: record the P2 pipeline run and acceptance in the workspace`; energatron-5000 `P2.3.1: record P2 acceptance in the workspace`
