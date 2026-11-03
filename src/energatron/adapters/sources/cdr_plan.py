@@ -54,7 +54,7 @@ class CdrPlanParser:
             raise fail(_SOURCE, "data.fuelType is missing or invalid.", "bad_fuel_type")
         try:
             snapshot = offer_snapshot_id(plan_id, last_updated, body)
-        except ValueError:  # a number canonical JSON can't hold, e.g. an overflowing float
+        except ValueError, RecursionError:  # a number canonical JSON can't hold; nesting that parses but is too deep
             raise fail(_SOURCE, "The file isn't valid JSON.", "bad_json") from None
         extra: dict[str, JSONValue] = {
             "plan_id": plan_id,

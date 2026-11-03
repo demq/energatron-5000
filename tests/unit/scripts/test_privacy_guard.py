@@ -690,7 +690,10 @@ def test_history_checks_annotated_tag_messages_down_a_tag_chain(repo: Repo) -> N
     assert "privacy_guard: ref refs/tags/outer: denylist hit in annotated tag (street)" in ran.lines
 
 
-def test_history_with_clean_refs_and_tags_passes(repo: Repo) -> None:
+def test_history_with_clean_refs_and_tags_passes(repo: Repo, monkeypatch: pytest.MonkeyPatch) -> None:
+    # The whole tag object is searched, its tagger line too. Under UTC that line ends in `+0000`, which is the
+    # synthetic postcode as a word, so the tag gets a fixed time with a non-zero offset.
+    monkeypatch.setenv("GIT_COMMITTER_DATE", "2026-01-01T12:00:00+1030")
     repo.stage("a.txt", "clean\n")
     repo.commit("add")
     repo.git("tag", "-a", "v1", "-m", "release")

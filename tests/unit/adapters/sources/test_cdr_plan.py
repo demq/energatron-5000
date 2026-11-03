@@ -126,7 +126,34 @@ def test_lowercase_t_and_z_are_rfc_3339_and_normalised(value: str) -> None:
     assert info.extra["offer_snapshot_id"] != upper.extra["offer_snapshot_id"]  # `data` differs in its text
 
 
+def nested(depth: int) -> bytes:
+    """A valid plan-detail response with `data.deep` nested `depth` arrays deep."""
+    document = json.loads(make_cdr_plan_detail())
+    document["data"]["deep"] = "@"
+    return json.dumps(document).encode("utf-8").replace(b'"@"', b"[" * depth + b"]" * depth)
+
+
 def test_deeply_nested_json_is_bad_json() -> None:
-    depth = 100_000
-    data = b'{"data": {"planId": "x", "lastUpdated": "y", "deep": ' + b"[" * depth + b"]" * depth + b"}}"
-    assert reason(data) == "bad_json"
+    # Too deep to parse or to hash, depending on the platform's stack: either way `bad_json`, never a crash.
+    assert reason(nested(1_000_000)) == "bad_json"
+
+
+def test_nesting_too_deep_to_parse_is_bad_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    def too_deep(*args: object, **kwargs: object) -> object:
+        raise RecursionError("maximum recursion depth exceeded")
+
+    monkeypatch.setattr("energatron.adapters.sources.cdr_plan.json.loads", too_deep)
+    assert reason(make_cdr_plan_detail()) == "bad_json"
+
+
+def test_nesting_that_parses_but_is_too_deep_to_hash_is_bad_json(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Python parses deeper than it encodes, so a document can parse and still overflow the stack when hashed.
+    def too_deep(*args: object) -> str:
+        raise RecursionError("Stack overflow while encoding a JSON object")
+
+    monkeypatch.setattr("energatron.adapters.sources.cdr_plan.offer_snapshot_id", too_deep)
+    assert reason(make_cdr_plan_detail()) == "bad_json"
+
+
+def test_moderate_nesting_is_accepted() -> None:
+    assert inspect(nested(100)).extra["plan_id"] == PLAN
