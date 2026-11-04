@@ -44,8 +44,9 @@ specs stay binding; §15 lists every change this spec makes to them.
 - **The base URI is not the brand.** The AER's base-URI list maps several brands to one base; for example RAA Energy is
   served from base `energy-locals`, under which no current SAPN residential plan was listed on 2026-11-04. List items
   carry their own `brand`.
-- Of the base URIs probed, 24 returned SAPN residential electricity plans, 609 unique plan IDs in total.
-- Structure seen in those 609 details:
+- Of the 93 base URIs on the AER's list (January 2026), 27 returned SAPN residential electricity plans, about 640 in
+  total.
+- Structure seen in 609 of those details (23 bases):
   - `pricingModel`: `SINGLE_RATE`, `SINGLE_RATE_CONT_LOAD`, `TIME_OF_USE`, `TIME_OF_USE_CONT_LOAD` only.
   - `timeZone`: mostly `LOCAL`, some `AEST`, some absent (the standard says absent means `AEST`).
   - one `tariffPeriod` each, covering `07-01`→`06-30` or `01-01`→`12-31`; `dailySupplyChargeType` always `SINGLE`.
@@ -197,7 +198,7 @@ validation:
 ### 4.2 `RegionProfile` v3 and `regions/sa.yaml`
 
 Adds `distributor: str` and `cdr_retailers: tuple[str, ...]` (unique, each `[a-z0-9-]+`). `sa.yaml` v3 lists
-`SA Power Networks` and the 24 base URIs of §1 plus `energy-locals` (the owner's retailer of record, listed so a return
+`SA Power Networks` and the 27 base URIs of §1 plus `energy-locals` (the owner's retailer of record, listed so a return
 to CDR is noticed). Migration v2 → v3 inserts `null` for both; `build_context()` refuses a profile with either unset.
 
 ### 4.3 `pipeline sync`

@@ -1,10 +1,42 @@
-# South Australia (D3 §10.3; P2 spec §5.2).
+# South Australia (D3 §10.3; P2 spec §5.2; P4 spec §4.2).
 kind: region_profile
-schema_version: 2
+schema_version: 3
 name: sa
 local_tz: Australia/Adelaide
 tou_windows: # plan §3.3: the retailer's windows for this network
   Peak: ["06:00-10:00", "15:00-01:00"]
   Off Peak: ["01:00-06:00"]
   Shoulder: ["10:00-15:00"]
+distributor: SA Power Networks
+# CDR base URIs (not brands) from the AER's base-URI list (January 2026) that listed SAPN residential electricity
+# plans on 2026-11-04, plus energy-locals, which serves RAA Energy and listed none that day.
+cdr_retailers:
+  - 1st-energy
+  - agl
+  - alinta
+  - amber
+  - covau
+  - diamond
+  - dodo
+  - energy-locals
+  - energy-locals-urban
+  - energyaustralia
+  - engie
+  - flipped
+  - flow-power
+  - future-x
+  - globird
+  - kogan
+  - lumo
+  - momentum
+  - nectr
+  - next-business
+  - origin
+  - ovo-energy
+  - powershop
+  - radian
+  - red-energy
+  - silver-asset
+  - sumo-power
+  - tango
 parsers: [elec_bill, gas_bill, offer_cdr, retailer_txn, retailer_usage, sapn_interval, sapn_summary]

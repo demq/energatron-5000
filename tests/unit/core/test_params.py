@@ -26,6 +26,8 @@ def profile(*, local_tz: str | None = "Test/Zone", windows: dict[str, tuple[str,
         name="sa",
         local_tz=local_tz,
         tou_windows=TEST_WINDOWS if windows is None else windows,
+        distributor="Test Networks",
+        cdr_retailers=("alpha",),
         parsers=(SourceType.SAPN_INTERVAL,),
     )
 
@@ -70,9 +72,18 @@ def test_a_valid_v2_document_validates() -> None:
 
 def test_the_dump_keeps_the_specs_key_order() -> None:
     dumped = Params.from_document(doc_v2()).model_dump(mode="json")
-    assert list(dumped) == ["kind", "schema_version", "meter", "validation", "analysis"]
+    assert list(dumped) == [
+        "kind",
+        "schema_version",
+        "meter",
+        "validation",
+        "analysis",
+        "offers",
+        "pricing",
+        "backtest",
+    ]
     assert list(dumped["meter"]) == ["timebase", "local_tz"]
-    assert list(dumped["validation"]) == ["meter", "timebase"]
+    assert list(dumped["validation"]) == ["meter", "timebase", "backtest"]
     assert list(dumped["validation"]["timebase"]) == [
         "windows",
         "register_tolerance_kwh",
@@ -90,8 +101,8 @@ def test_the_zone_and_windows_allow_null() -> None:
     assert params.validation.timebase.windows is None
 
 
-def test_the_region_fields_are_the_zone_and_the_two_window_fields() -> None:
-    assert REGION_FIELDS == ("meter.local_tz", WINDOWS_FIELD, FIRST_SET_FIELD)
+def test_the_region_fields_are_the_zone_the_two_window_fields_and_the_two_offer_fields() -> None:
+    assert REGION_FIELDS == ("meter.local_tz", WINDOWS_FIELD, FIRST_SET_FIELD, "offers.retailers", "offers.distributor")
 
 
 @pytest.mark.parametrize(
@@ -236,13 +247,13 @@ def test_defaults_take_the_zone_and_windows_from_the_profile_they_are_given() ->
     assert params.validation.timebase.register_tolerance_pct == 0.1
     assert params.validation.timebase.total_tolerance_kwh == 0.05
     assert params.validation.timebase.min_fit_periods == 3
-    assert params.schema_version == 3
+    assert params.schema_version == 4
     assert params.analysis.tou.window_sets[0].windows == TEST_WINDOWS
     assert params.analysis.tou.window_sets[0].effective_from is None
 
 
 def test_defaults_carry_a_null_profile_value_through() -> None:
-    other = RegionProfile(name="sa", local_tz=None, tou_windows=None, parsers=())
+    other = RegionProfile(name="sa", local_tz=None, tou_windows=None, distributor=None, cdr_retailers=None, parsers=())
     params = Params.defaults(other)
     assert params.meter.local_tz is None
     assert params.validation.timebase.windows is None
@@ -275,9 +286,9 @@ def test_the_v1_to_v2_migration_inserts_the_defaults_and_null_zone_and_windows()
     assert v1 == frozen  # the input is untouched
 
 
-def test_a_v1_document_reads_as_v3_with_null_zone_and_windows() -> None:
+def test_a_v1_document_reads_as_v4_with_null_zone_and_windows() -> None:
     params = Params.from_document({"kind": "params", "schema_version": 1})
-    assert params.schema_version == 3
+    assert params.schema_version == 4
     assert params.meter.local_tz is None
     assert params.validation.timebase.windows is None
     assert params.analysis.tou.window_sets[0].windows is None
@@ -348,7 +359,11 @@ def test_the_v3_dump_uses_the_documents_keys_and_order() -> None:
         "tou",
     ]
     assert dumped["analysis"]["base_load"] == {"from": "01:00", "to": "05:00", "percentile": 10}
-    assert dumped == doc_v3()  # a valid document survives a load and a dump unchanged
+    v3 = doc_v3()  # a valid document's v3 values survive a load (which upgrades it) and a dump unchanged
+    assert {
+        key: value for key, value in dumped.items() if key in v3 and key not in ("schema_version", "validation")
+    } == {key: value for key, value in v3.items() if key not in ("schema_version", "validation")}
+    assert {key: value for key, value in dumped["validation"].items() if key != "backtest"} == v3["validation"]
 
 
 def test_the_first_set_windows_allow_null() -> None:

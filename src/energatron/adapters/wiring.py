@@ -75,7 +75,8 @@ def load_region_profile(name: str) -> RegionProfile:
     """The region profile `regions/<name>.yaml` from package data (D3 §10.3).
 
     No such profile → `E_INVALID_INPUT` with `details.field: "region"` (D2 §6.1). A profile the package ships that
-    can't be read or validated, is newer than this tool, leaves its time zone or TOU windows `null`, or names a zone
+    can't be read or validated, is newer than this tool, leaves its time zone, TOU windows, distributor or CDR retailers
+    `null`, or names a zone
     the installed `tzdata` doesn't have, is a bug → `E_INTERNAL` (P2 spec §5.2).
     """
     resource = importlib.resources.files("energatron").joinpath("regions", f"{name}.yaml")
@@ -90,6 +91,10 @@ def load_region_profile(name: str) -> RegionProfile:
         raise InternalError("A region profile in the package is invalid.", region=name) from error
     if profile.local_tz is None or profile.tou_windows is None:
         raise InternalError("A region profile in the package leaves its time zone or TOU windows unset.", region=name)
+    if profile.distributor is None or profile.cdr_retailers is None:
+        raise InternalError(
+            "A region profile in the package leaves its distributor or CDR retailers unset.", region=name
+        )
     if not importlib.resources.files("tzdata").joinpath("zoneinfo", *profile.local_tz.split("/")).is_file():
         raise InternalError("A region profile in the package names a time zone that tzdata doesn't have.", region=name)
     return profile

@@ -30,6 +30,7 @@ from tests.unit.adapters._workspace import make_workspace, write
 from tests.unit.services.test_context import TEST_REGION, build
 
 GOLDEN = Path(__file__).resolve().parents[2] / "fixtures" / "golden" / "dvc.yaml"
+RULES_DIR = "config/offer_rules.local"
 PARAMS_V1 = "kind: params\nschema_version: 1\n"
 DEFAULTS = Params.defaults(TEST_REGION).model_dump(mode="json")
 ALL_SOURCES = sorted(source.value for source in SourceType)
@@ -115,7 +116,7 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     root = ctx.paths.root
     assert (root / "dvc.yaml").read_bytes() == GOLDEN.read_bytes()
     text = (root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 3\nmeter:\n")
+    assert text.startswith("kind: params\nschema_version: 4\nmeter:\n")
     assert yaml.safe_load(text) == DEFAULTS
     assert DEFAULTS["meter"]["local_tz"] == TEST_REGION.local_tz  # the test region's, not a shipped one
     for source in SourceType:
@@ -125,7 +126,12 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     assert result.params_rewritten is False
     assert result.catalogs_created == ALL_SOURCES
     assert vcs.tracked == [[f"data/raw/{source}" for source in ALL_SOURCES]]
-    assert result.pointer_files == [*(f"data/raw/{source}.dvc" for source in ALL_SOURCES), "data/raw/.gitignore"]
+    assert result.pointer_files == [
+        *(f"data/raw/{source}.dvc" for source in ALL_SOURCES),
+        "data/raw/.gitignore",
+        f"{RULES_DIR}/README.md",
+    ]
+    assert "offer_rule" in (root / RULES_DIR / "README.md").read_text(encoding="utf-8")
     assert result.dry_run is False
     pipeline_sync.check(ctx)  # in sync now
 
@@ -215,7 +221,7 @@ def test_an_invalid_params_file_is_invalid_input_in_sync_and_check(ctx: ServiceC
 
 
 def test_a_newer_params_file_is_schema_too_new_and_nothing_is_written(ctx: ServiceContext, vcs: TrackingVcs) -> None:
-    write(ctx.paths.root, "params.yaml", "kind: params\nschema_version: 4\n")
+    write(ctx.paths.root, "params.yaml", "kind: params\nschema_version: 99\n")
     before = snapshot(ctx.paths.root)
     with pytest.raises(SchemaTooNewError):
         pipeline_sync.sync(ctx)
@@ -242,6 +248,7 @@ def prepare_synced(ctx: ServiceContext, params: dict[str, Any] | str) -> None:
     write(ctx.paths.root, "dvc.yaml", emit_dvc_yaml(STAGES))
     for source in SourceType:
         write(ctx.paths.root, f"data/raw/{source.value}/_catalog.jsonl", "")
+    write(ctx.paths.root, f"{RULES_DIR}/README.md", "the owner's own words\n")
     write(ctx.paths.root, "params.yaml", params if isinstance(params, str) else dump(params))
 
 
@@ -256,7 +263,7 @@ def test_an_older_params_file_is_drift_then_rewritten_with_the_zone_and_windows_
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     text = (ctx.paths.root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 3\n")
+    assert text.startswith("kind: params\nschema_version: 4\n")
     assert (
         yaml.safe_load(text) == DEFAULTS
     )  # the v1 file held nothing to keep: the zone and windows come from the profile
@@ -268,7 +275,14 @@ def test_a_missing_params_file_is_written_from_the_defaults_of_the_contexts_prof
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (True, False)
     assert params_on_disk(ctx) == DEFAULTS
-    other = RegionProfile(name="sa", local_tz="Other/Place", tou_windows={"Gamma": ("00:00-00:00",)}, parsers=())
+    other = RegionProfile(
+        name="sa",
+        local_tz="Other/Place",
+        tou_windows={"Gamma": ("00:00-00:00",)},
+        distributor="Other Networks",
+        cdr_retailers=("gamma",),
+        parsers=(),
+    )
     elsewhere = dataclasses.replace(ctx, region=other)
     (ctx.paths.root / "params.yaml").unlink()
     synced(elsewhere)
@@ -342,20 +356,22 @@ OWN_SET = {"Gamma": ["00:00-12:00"], "Delta": ["12:00-00:00"]}
 
 
 def v2_defaults() -> dict[str, Any]:
-    """The defaults as a version 2 file: no `analysis`."""
+    """The defaults as a version 2 file: no `analysis`, and none of v4's blocks."""
     doc = copy.deepcopy(DEFAULTS)
-    del doc["analysis"]
+    for block in ("analysis", "offers", "pricing", "backtest"):
+        del doc[block]
+    del doc["validation"]["backtest"]
     doc["schema_version"] = 2
     return doc
 
 
-def test_a_v2_params_file_is_rewritten_to_v3_with_the_first_set_filled_from_the_profile(ctx: ServiceContext) -> None:
+def test_a_v2_params_file_is_rewritten_to_v4_with_the_first_set_filled_from_the_profile(ctx: ServiceContext) -> None:
     prepare_synced(ctx, v2_defaults())
     assert drift_of(ctx) == ["params.yaml"]
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     on_disk = params_on_disk(ctx)
-    assert on_disk["schema_version"] == 3
+    assert on_disk["schema_version"] == 4
     assert on_disk["analysis"]["tou"]["window_sets"] == [FIRST_SET]
     assert on_disk == DEFAULTS
     pipeline_sync.check(ctx)
@@ -445,7 +461,7 @@ def test_the_gitignore_is_listed_only_when_it_changed(ctx: ServiceContext) -> No
     write(ctx.paths.root, "data/raw/.gitignore", "".join(f"/{source}\n" for source in ALL_SOURCES))
     result = synced(ctx)
     assert "data/raw/.gitignore" not in result.pointer_files
-    assert len(result.pointer_files) == len(ALL_SOURCES)
+    assert len(result.pointer_files) == len(ALL_SOURCES) + 1  # and the rules readme
 
 
 # --check and --dry-run
@@ -453,7 +469,7 @@ def test_the_gitignore_is_listed_only_when_it_changed(ctx: ServiceContext) -> No
 
 def test_check_lists_every_kind_of_drift_in_order(ctx: ServiceContext) -> None:
     before = snapshot(ctx.paths.root)
-    assert drift_of(ctx) == ["dvc.yaml", "params.yaml", "catalogs"]
+    assert drift_of(ctx) == ["dvc.yaml", "params.yaml", "catalogs", RULES_DIR]
     assert snapshot(ctx.paths.root) == before
 
 
@@ -501,3 +517,71 @@ def test_written_files_are_world_readable_and_atomic(ctx: ServiceContext) -> Non
         assert os.stat(root / name).st_mode & 0o777 == 0o644
     leftovers: Iterator[Path] = root.glob(".*.tmp")
     assert list(leftovers) == []
+
+
+# The offer fields and the local rules directory (P4 spec §4.3)
+
+
+@pytest.mark.parametrize(
+    ("leaf", "expected"),
+    [("offers.retailers", ["alpha", "beta-energy"]), ("offers.distributor", "Test Networks")],
+)
+def test_a_null_retailers_or_distributor_value_is_drift_and_is_filled(
+    ctx: ServiceContext, leaf: str, expected: Any
+) -> None:
+    prepare_synced(ctx, edited(**{leaf: None, "offers.controlled_load": True}))
+    assert drift_of(ctx) == ["params.yaml"]
+    assert synced(ctx).params_rewritten is True
+    on_disk = params_on_disk(ctx)
+    block, key = leaf.split(".")
+    assert on_disk[block][key] == expected
+    assert on_disk["offers"]["controlled_load"] is True  # the owner's value survives
+    pipeline_sync.check(ctx)
+
+
+def test_edited_retailers_and_distributor_survive_with_no_drift(ctx: ServiceContext) -> None:
+    owners = edited(**{"offers.retailers": ["gamma"], "offers.distributor": "Owner Networks"})
+    prepare_synced(ctx, owners)
+    pipeline_sync.check(ctx)
+    assert synced(ctx).params_rewritten is False
+    assert params_on_disk(ctx) == owners
+
+
+def test_a_v3_file_is_rewritten_as_v4_with_the_offer_fields_filled_and_its_values_kept(ctx: ServiceContext) -> None:
+    doc = copy.deepcopy(DEFAULTS)
+    for block in ("offers", "pricing", "backtest"):
+        del doc[block]
+    del doc["validation"]["backtest"]
+    doc["schema_version"] = 3
+    doc["meter"]["timebase"] = "local_wall"
+    prepare_synced(ctx, doc)
+    assert drift_of(ctx) == ["params.yaml"]
+    assert synced(ctx).params_rewritten is True
+    assert params_on_disk(ctx) == edited(**{"meter.timebase": "local_wall"})
+
+
+def test_a_missing_rules_directory_is_drift_and_is_created_with_its_readme(ctx: ServiceContext) -> None:
+    prepare_synced(ctx, DEFAULTS)
+    readme = ctx.paths.root / RULES_DIR / "README.md"
+    readme.unlink()
+    readme.parent.rmdir()
+    assert drift_of(ctx) == [RULES_DIR]
+    result = synced(ctx)
+    assert result.pointer_files == [f"{RULES_DIR}/README.md"]
+    assert readme.is_file()
+    pipeline_sync.check(ctx)
+
+
+def test_an_existing_rules_directory_is_left_alone(ctx: ServiceContext) -> None:
+    prepare_synced(ctx, DEFAULTS)
+    readme = ctx.paths.root / RULES_DIR / "README.md"
+    readme.unlink()  # the owner removed the readme but kept the directory
+    pipeline_sync.check(ctx)
+    assert synced(ctx).pointer_files == []
+    assert not readme.exists()
+
+
+def test_a_dry_run_creates_no_rules_directory(ctx: ServiceContext) -> None:
+    result = pipeline_sync.sync(ctx, dry_run=True)
+    assert result.pointer_files == []
+    assert not (ctx.paths.root / RULES_DIR).exists()

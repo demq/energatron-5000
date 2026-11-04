@@ -27,6 +27,7 @@ from energatron.core.models.provenance import CodeFingerprint, StageCode, StageP
 from energatron.services.files import write_parquet
 from energatron.services.stages import registry, runner
 from energatron.services.stages.runner import StageRun, StageSpec, prepare_stage, run_stage
+from tests.fixtures.params_text import params_v4_text
 
 PARAMS_V1 = "kind: params\nschema_version: 1\n"
 
@@ -686,3 +687,45 @@ def test_the_zone_key_pattern_is_the_one_core_defines() -> None:
     """One definition, in `core/models/_common.py`: the stage's `zone()` and the `ZoneKey` field type agree."""
     assert runner.ZONE_KEY is _common.ZONE_KEY
     assert _common.ZONE_KEY.pattern == r"^[A-Za-z0-9_+-]+(/[A-Za-z0-9_+-]+)*$"  # the P2 spec §6 pattern, verbatim
+
+
+# The offer region fields (P4 spec §4.1)
+
+
+@pytest.mark.parametrize(
+    ("keys", "field"),
+    [
+        (("offers",), "offers.retailers"),
+        (("offers.retailers",), "offers.retailers"),
+        (("offers.distributor",), "offers.distributor"),
+    ],
+)
+def test_a_stage_that_declares_a_null_retailers_or_distributor_is_invalid_input(
+    root: Path, keys: tuple[str, ...], field: str
+) -> None:
+    """A v3 file migrates to v4 with both `null`; only `pipeline sync` fills them from the region profile."""
+    (root / "params.yaml").write_text(params_v4_text(region=False))
+    with pytest.raises(InvalidInputError) as caught:
+        prepare_stage(spec_of(params=keys), root=root, params_file=root / "params.yaml")
+    assert caught.value.details["field"] == field
+    assert "pipeline sync" in caught.value.message
+
+
+def test_declared_offer_keys_that_are_set_pass_and_reach_the_stage_whole(root: Path) -> None:
+    (root / "params.yaml").write_text(params_v4_text(region=True))
+    prepared = prepare_stage(spec_of(params=("offers", "pricing")), root=root, params_file=root / "params.yaml")
+    offers = prepared.params["offers"]
+    assert isinstance(offers, dict)
+    assert offers["retailers"] == ["alpha", "beta-energy"]
+    assert prepared.params["pricing"] == {
+        "gst_rate": "0.10",
+        "assume_conditions_met": ["PAY_ON_TIME", "DIRECT_DEBIT"],
+        "demand_minutes": 30,
+    }
+
+
+def test_pricing_passes_while_the_retailers_are_null(root: Path) -> None:
+    (root / "params.yaml").write_text(params_v4_text(region=False))
+    assert set(prepare_stage(spec_of(params=("pricing",)), root=root, params_file=root / "params.yaml").params) == {
+        "pricing"
+    }

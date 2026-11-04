@@ -133,6 +133,31 @@ def partitioned_windows[T: Mapping[str, Sequence[str]]](field: str) -> Callable[
     return check
 
 
+_RETAILER_BASE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+def retailer_bases(field: str) -> Callable[[tuple[str, ...]], tuple[str, ...]]:
+    """A validator for a non-empty tuple of unique CDR base URIs (lower-case words joined by `-`), naming `field`."""
+
+    def check(bases: tuple[str, ...]) -> tuple[str, ...]:
+        if not bases or len(set(bases)) != len(bases) or any(_RETAILER_BASE.fullmatch(base) is None for base in bases):
+            raise ValueError(f"{field}: unique CDR base URIs, lower-case words joined by '-'")
+        return bases
+
+    return check
+
+
+def trimmed_text(field: str) -> Callable[[str], str]:
+    """A validator for a non-empty string with no surrounding whitespace, naming `field`."""
+
+    def check(value: str) -> str:
+        if not value or value != value.strip():
+            raise ValueError(f"{field}: non-empty, with no surrounding whitespace")
+        return value
+
+    return check
+
+
 def _utc(value: datetime) -> datetime:
     if value.utcoffset() != timedelta(0):
         raise ValueError("expected a UTC time")

@@ -7,8 +7,11 @@
 - The region's values are copied from `ctx.region` (P2 spec §5.3): `meter.local_tz` is the region's, so a file whose
   zone differs (or is `null`) is rewritten with only that value changed; `validation.timebase.windows` and the first
   `analysis.tou.window_sets` entry's windows (P3 spec §4.3) are replaced only while `null`, because the owner may edit
-  them. Every other value is the owner's and is kept.
+  them. `offers.retailers` and `offers.distributor` (P4 spec §4.3) are likewise filled only while `null`. Every other
+  value is the owner's and is kept.
 - Every source without a catalog gets an empty one, and the directories created are tracked (`dvc add`).
+- The local offer-rules directory `config/offer_rules.local/` (a `normalise_offers` dependency, P4 spec §6) is created
+  with a `README.md` when it is missing. It is git-tracked config, never DVC.
 - Nothing is committed: the result lists the pointer files to commit.
 
 `check` writes nothing and fails with `E_PIPELINE_NOT_SYNCED` naming the drift; `land` and the workspace's
@@ -32,7 +35,7 @@ from energatron.core.models.region import RegionProfile
 from energatron.core.models.storage import RAW_PREFIX
 from energatron.core.persisted import Persisted, registered_kinds
 from energatron.services.context import ServiceContext, ServiceResult
-from energatron.services.files import atomic_write_text
+from energatron.services.files import atomic_write_text, make_dirs
 from energatron.services.stages.dvc_yaml import emit_dvc_yaml
 from energatron.services.stages.registry import STAGES
 
@@ -41,6 +44,27 @@ _log = logging.getLogger(__name__)
 DVC_YAML: Final = "dvc.yaml"
 PARAMS_YAML: Final = "params.yaml"
 RAW_GITIGNORE: Final = f"{RAW_PREFIX}.gitignore"
+RULES_DIR: Final = "config/offer_rules.local"
+RULES_README: Final = f"{RULES_DIR}/README.md"
+_RULES_README_TEXT: Final = """\
+# Local offer rules
+
+One YAML file per rule (`kind: offer_rule`, `schema_version: 1`), read by the `normalise_offers` stage after the
+curated rules that ship with energatron. A rule here with the same `id` as a curated one replaces it.
+
+```yaml
+kind: offer_rule
+schema_version: 1
+id: my-rule                 # kebab-case, unique
+description: Why this rule exists.
+match: {brand: <brand>, plan_id: null, from: null, to: null}   # brand or plan_id (a regex) is required
+effect: {approximate: <reason>}   # or {exclude: <reason>} or {note: <text>}
+verified_on: "YYYY-MM-DD"
+cites: []                   # offer snapshot IDs the rule was derived from
+```
+
+Offer details are public; never put an identifier or a figure about this household here.
+"""
 
 type ParamsState = Literal["missing", "older", "drifted", "current"]  # "older", "drifted": rewritten
 
@@ -57,7 +81,7 @@ class PipelineSyncResult(ServiceResult):
     params_written: bool  # created
     params_rewritten: bool  # upgraded from an older version
     catalogs_created: list[str]  # sources, sorted
-    pointer_files: list[str]  # workspace-relative; `data/raw/.gitignore` when it changed
+    pointer_files: list[str]  # workspace-relative files to commit: pointers, `data/raw/.gitignore`, the rules readme
     dry_run: bool
 
 
@@ -69,6 +93,7 @@ class _Plan:
     params_state: ParamsState
     params_text: str | None  # the text to write, or None when the file is current
     missing: list[SourceType]
+    rules_dir_missing: bool
 
 
 def check(ctx: ServiceContext) -> None:
@@ -83,6 +108,7 @@ def check(ctx: ServiceContext) -> None:
             (DVC_YAML, plan.dvc_yaml is not None),
             (PARAMS_YAML, plan.params_text is not None),
             ("catalogs", bool(plan.missing)),
+            (RULES_DIR, plan.rules_dir_missing),
         )
         if drifted
     ]
@@ -115,6 +141,10 @@ def sync(ctx: ServiceContext, *, dry_run: bool = False) -> PipelineSyncResult:
             pointers = list(ctx.vcs.track([f"{RAW_PREFIX}{source}" for source in created]))
             if _read_bytes(ignore) != before and RAW_GITIGNORE not in pointers:
                 pointers.append(RAW_GITIGNORE)
+        if plan.rules_dir_missing:
+            _make_rules_dir(root / RULES_DIR)
+            _write(root / RULES_README, _RULES_README_TEXT, RULES_README)
+            pointers.append(RULES_README)
     result = PipelineSyncResult(
         dvc_yaml_written=plan.dvc_yaml is not None,
         params_written=plan.params_state == "missing",
@@ -141,7 +171,13 @@ def _plan(ctx: ServiceContext) -> _Plan:
     expected = emit_dvc_yaml(STAGES)
     dvc_yaml = None if _read_bytes(root / DVC_YAML) == expected.encode("utf-8") else expected
     state, params_text = _params(_read_bytes(root / PARAMS_YAML), ctx.region)
-    return _Plan(dvc_yaml=dvc_yaml, params_state=state, params_text=params_text, missing=ctx.catalog.missing_sources())
+    return _Plan(
+        dvc_yaml=dvc_yaml,
+        params_state=state,
+        params_text=params_text,
+        missing=ctx.catalog.missing_sources(),
+        rules_dir_missing=not (root / RULES_DIR).is_dir(),
+    )
 
 
 def _params(data: bytes | None, profile: RegionProfile) -> tuple[ParamsState, str | None]:
@@ -166,7 +202,8 @@ def _params(data: bytes | None, profile: RegionProfile) -> tuple[ParamsState, st
 
 
 def _with_region_values(model: type[Params], params: Params, profile: RegionProfile) -> Params:
-    """`params` with the region's zone, and the region's windows where `params` has none (P2 §5.3, P3 §4.3)."""
+    """`params` with the region's zone, and the region's windows, retailers and distributor where `params` has none
+    (P2 §5.3, P3 §4.3, P4 §4.3)."""
     values = cast(dict[str, Any], params.model_dump(mode="json"))
     values["meter"]["local_tz"] = profile.local_tz
     region_windows = (
@@ -177,6 +214,11 @@ def _with_region_values(model: type[Params], params: Params, profile: RegionProf
     first_set = values["analysis"]["tou"]["window_sets"][0]
     if first_set["windows"] is None:
         first_set["windows"] = region_windows
+    offers = values["offers"]
+    if offers["retailers"] is None and profile.cdr_retailers is not None:
+        offers["retailers"] = list(profile.cdr_retailers)
+    if offers["distributor"] is None:
+        offers["distributor"] = profile.distributor
     return model.model_validate(values)
 
 
@@ -217,4 +259,13 @@ def _write(path: Path, text: str, name: str) -> None:
             f"{name} couldn't be written.",
             location="workspace",
             hint="check that the workspace is writable and the disk isn't full",
+        ) from None
+
+
+def _make_rules_dir(path: Path) -> None:
+    try:
+        make_dirs(path)
+    except OSError:
+        raise StorageError(
+            f"{RULES_DIR} couldn't be created.", location="workspace", hint="check that the workspace is writable"
         ) from None

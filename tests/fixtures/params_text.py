@@ -1,11 +1,14 @@
-"""A minimal `params.yaml` at version 2 or 3, as text (P2 spec §5.1, P3 spec §4.1). Every value is made up.
+"""A minimal `params.yaml` at version 2, 3 or 4, as text (P2 spec §5.1, P3 spec §4.1, P4 spec §4.1). Every value is
+made up.
 
 DVC reads declared params from the file itself, so a scratch workspace that runs a stage with params needs current text,
 not the v1 stub that the migration would upgrade in memory. By default the zone and windows stay `null`, as after a
 migration; `region=True` fills them the way `pipeline sync` would, with the fixture's zone and windows.
-`params_v3_text` adds the `analysis` block, optionally with a second TOU window set.
+`params_v3_text` adds the `analysis` block, optionally with a second TOU window set; `params_v4_text` adds the
+`offers`, `pricing`, `backtest` and `validation.backtest` blocks.
 """
 
+import json
 import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
@@ -17,6 +20,10 @@ from tests.fixtures.pipeline_workspace import WINDOWS
 
 ZONE: Final = "Australia/Adelaide"
 """The zone the fixtures' TOU exports are generated in (see `tests/fixtures/oracle.py`)."""
+RETAILERS: Final = ("alpha", "beta-energy")
+"""Made-up CDR base URIs."""
+DISTRIBUTOR: Final = "Test Networks"
+"""A made-up distributor."""
 
 _TEMPLATE: Final = """\
 kind: params
@@ -107,6 +114,72 @@ def params_v3_text(
         sets += f'      - {{effective_from: "{start}", windows: {text}}}\n'
     analysis = _V3_ANALYSIS.format(reference_months=reference_months, coverage_threshold=coverage_threshold, sets=sets)
     return base.replace("schema_version: 2", "schema_version: 3", 1) + analysis
+
+
+_V4_BLOCKS: Final = """\
+offers:
+  retailers: {retailers}
+  distributor: {distributor}
+  customer_type: RESIDENTIAL
+  fuel_types: [ELECTRICITY]
+  unmet_eligibility: [EXISTING_SOLAR, EXISTING_BATTERY]
+  controlled_load: {controlled_load}
+pricing:
+  gst_rate: "{gst_rate}"
+  assume_conditions_met: [PAY_ON_TIME, DIRECT_DEBIT]
+  demand_minutes: 30
+backtest:
+  tariffs: {tariffs}
+"""
+_V4_VALIDATION: Final = """\
+  backtest:
+    tolerance_pct: {tolerance_pct}
+    invoice_window_days: 14
+"""
+
+
+def params_v4_text(
+    tolerance: float = 0.01,
+    *,
+    region: bool = False,
+    basis: str = "nem_aest",
+    windows: Mapping[str, Sequence[str]] | None = None,
+    min_fit_periods: int = 3,
+    reference_months: int = 12,
+    coverage_threshold: float = 0.95,
+    second_set: tuple[str, Mapping[str, Sequence[str]]] | None = None,
+    controlled_load: bool = False,
+    gst_rate: str = "0.10",
+    tariffs: Sequence[Mapping[str, str | None]] = (),
+    tolerance_pct: float = 1.0,
+) -> str:
+    """`params.yaml` v4: `params_v3_text` (schema version 4) with `validation.backtest` and the P4 blocks.
+
+    `region=True` also fills `offers.retailers` and `offers.distributor` (`RETAILERS`, `DISTRIBUTOR`); otherwise both
+    are `null`. `tariffs` is `backtest.tariffs`, written with quoted dates.
+    """
+    base = params_v3_text(
+        tolerance,
+        region=region,
+        basis=basis,
+        windows=windows,
+        min_fit_periods=min_fit_periods,
+        reference_months=reference_months,
+        coverage_threshold=coverage_threshold,
+        second_set=second_set,
+    ).replace("schema_version: 3", "schema_version: 4", 1)
+    marker = "    min_fit_periods: "
+    head, tail = base.split(marker, 1)
+    line, rest = tail.split("\n", 1)
+    with_validation = f"{head}{marker}{line}\n{_V4_VALIDATION.format(tolerance_pct=tolerance_pct)}{rest}"
+    blocks = _V4_BLOCKS.format(
+        retailers=yaml.safe_dump(list(RETAILERS), default_flow_style=True).strip() if region else "null",
+        distributor=DISTRIBUTOR if region else "null",
+        controlled_load="true" if controlled_load else "false",
+        gst_rate=gst_rate,
+        tariffs=json.dumps([dict(found) for found in tariffs]),
+    )
+    return with_validation + blocks
 
 
 def set_reference_months(params_file: Path, months: int) -> None:

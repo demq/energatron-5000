@@ -307,6 +307,10 @@ class WarningCode(StrEnum):
     W_TIMEBASE_UNEXPLAINED = "W_TIMEBASE_UNEXPLAINED"  # periods no time-basis hypothesis fits (P2 spec §9.4)
     W_USAGE_MIXED_WINDOWS = "W_USAGE_MIXED_WINDOWS"  # months in which more than one TOU window set applied (P3 §6)
     W_USAGE_PARTIAL_DAYS = "W_USAGE_PARTIAL_DAYS"  # dates in a covered month that are not complete (P3 spec §8)
+    W_FETCH_FAILED = "W_FETCH_FAILED"  # a CDR base or plan detail couldn't be fetched (P4 spec §3.2)
+    W_OFFERS_MISSING_SNAPSHOT = "W_OFFERS_MISSING_SNAPSHOT"  # a current plan has no landed snapshot (P4 spec §8)
+    W_BACKTEST_OUTSIDE_TOLERANCE = "W_BACKTEST_OUTSIDE_TOLERANCE"  # a bill outside the tolerance (P4 spec §10)
+    W_BACKTEST_NO_TARIFF = "W_BACKTEST_NO_TARIFF"  # no tariff in force, or no period priced (P4 spec §10)
 
 
 class ResultWarning(BaseModel):

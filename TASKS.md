@@ -97,25 +97,27 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.1.1
-- Last commit: energatron-5000 `P4.1.1: approve the P4 offers and electricity engine spec and apply plan rev 12 and D1 rev 5`
-- Checks: privacy guard `--figures` on the spec, plan, D1 and `TASKS.md` 0 violations; no code changed
+- Last done: P4.2.1
+- Last commit: energatron-5000 `P4.2.1: add params v4, region profile v3 and the P4 warnings`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 2815 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.1 (foundations: `Params` v4, `RegionProfile` v3, `pipeline sync` for the offer fields)
+- Next: P4.2.2 (the `Tariff` model and the CDR mapping)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
-  approved (Q1-Q8 as recommended, given on the owner's standing instruction to review and accept each step); plan rev 12
-  and D1 rev 5 hold its §15 edits. P4.2.1-P4.2.9, P4.3.1 and P4.3.2 follow its §2 order.
+  approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
+  D1 rev 5 hold its §15 edits.
+- P4.2.1 is done: `Params` v4, `RegionProfile` v3, the `pipeline sync` fill and the P4 warnings.
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §2 (order), §4 (params v4, region profile v3), §12 (kinds, warnings); D1 rev 5 §5 and §7.
-- `core/models/params.py`, `core/models/region.py`, `services/pipeline_sync.py`: the P2/P3 fill pattern for region
-  fields (`REGION_FIELDS`, `null` until `pipeline sync`).
+- The P4 spec §1 (CDR facts), §5.1 (the `Tariff` model, partition rules, GST constants), §5.2 (the support table: one
+  test per row), §14 (fixtures: `tests/fixtures/make_cdr.py` builds CDR documents from parameters).
+- `core/models/_common.py` (`FrozenModel`, window helpers) and `core/ids.py` (`offer_snapshot_id`).
+- Real CDR shapes were probed into the agent's scratch folder only; fixtures are generated, never copied.
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -533,8 +535,8 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Handover: P4 spec approved 2026-11-04 (Q1-Q8 as recommended, on the owner's standing instruction); `/done` applied plan rev 12 and D1 rev 5 (spec §15) and rewrote P4.2-P4.3 from spec §2. Decision: CDR base URIs, not brand slugs (RAA Energy is served from `energy-locals`, with no current SAPN plan).
     Watch: no historical tariff exists for the backtest until the owner writes an `offer_manual` (P4.3.2).
 
-#### P4.2 Build ⬜
-- ⬜ **P4.2.1** Foundations: `Params` v4, `RegionProfile` v3, `pipeline sync` for the offer fields, the P4 warnings.
+#### P4.2 Build 🔄
+- ✅ **P4.2.1** Foundations: `Params` v4, `RegionProfile` v3, `pipeline sync` for the offer fields, the P4 warnings.
   - `core/models/params.py` v4 (`offers`, `pricing`, `backtest`, `validation.backtest`, the v3 to v4 migration with
     `null` region fields, `Params.defaults(profile)`); `core/models/region.py` v3 and `regions/sa.yaml` v3
     (`distributor`, `cdr_retailers`), `build_context()` refusing unset values; `pipeline sync` fills `offers.retailers`
@@ -547,6 +549,8 @@ warn; the historical tariff comes from the owner; no new dependency.
     `tests/fixtures/{params_text.py,schemas/}`.
   - Done when: the standard checks pass; the golden v3 `params` and v2 `region_profile` documents upgrade and validate;
     a stage reading a `null` `offers.retailers` fails with `E_INVALID_INPUT`.
+  - Handover: `Params` v4 (`offers`, `pricing`, `backtest`, `validation.backtest`; v3 to v4 migration with `null` retailers and distributor), `RegionProfile` v3 and `sa.yaml` v3 (SA Power Networks, 28 CDR base URIs), `pipeline sync` fills both and creates `config/offer_rules.local/README.md`, four P4 warnings, `params_v4_text` (2815 tests). Decision: `pointer_files` also lists the rules readme (no version bump); spec §1/§4.2 corrected to 27 bases (all 93 AER bases probed).
+    Watch: every stage's code entry is stale until a workspace runs `fingerprint`; P4 stage tests need `params_v4_text` (DVC reads keys from the file).
 - ⬜ **P4.2.2** Tariff model and CDR mapping.
   - `core/tariff.py` (`Tariff` and parts, partition checks, inclusive-to-half-open windows, the two GST constants),
     `core/cdr_tariff.py` (`map_cdr` → `Tariff` or `Excluded`, every row of spec §5.2), `tests/fixtures/make_cdr.py`.
@@ -629,6 +633,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-04 · P4.2.1 · `Params` v4 and `RegionProfile` v3 (distributor, CDR retailers), `pipeline sync` fills them and creates `config/offer_rules.local/`, four P4 warnings, golden `params/v4` and `region_profile/v3` (2815 tests); self-review pass, no findings · energatron-5000 `P4.2.1: add params v4, region profile v3 and the P4 warnings`
 - 2026-11-04 · P4.1.1 · P4 offers and electricity engine spec approved (Q1-Q8 as recommended, on the owner's standing instruction); plan rev 12 and D1 rev 5 applied from its §15; P4.2-P4.3 rewritten from its order of work (P4.2.1-P4.2.9, P4.3.1, P4.3.2) · energatron-5000 `P4.1.1: approve the P4 offers and electricity engine spec and apply plan rev 12 and D1 rev 5`
 - 2026-11-04 · P3.3.2 · owner backup done (`backup --status`: `refs_backed_up` true, 0 commits behind); P3.3 and P3 ticked, P3 archived · energatron-5000 `P3.3.2: close P3 after the owner's backup`
 - 2026-11-04 · P3.3.1 · P3 acceptance in the workspace: params v3 with a second TOU window set (applied on the owner's behalf; to confirm), `fingerprint`, `dvc repro` (`usage_profile` 7 checks, `usage_report`), reference window full, report 1 file within budget with no external reference, legacy reconciliation R1-R4 pass, `verify` ok, privacy guard 0 violations; browser look and backup pending · demq-elektric `P3.3.1: record the P3 usage profile and report run in the workspace`; energatron-5000 `P3.3.1: record P3 acceptance in the workspace`

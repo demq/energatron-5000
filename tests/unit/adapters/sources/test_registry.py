@@ -19,7 +19,9 @@ from tests.unit.adapters._workspace import make_workspace
 
 
 def profile(*sources: SourceType) -> RegionProfile:
-    return RegionProfile(name="sa", local_tz=None, tou_windows=None, parsers=sources)
+    return RegionProfile(
+        name="sa", local_tz=None, tou_windows=None, distributor=None, cdr_retailers=None, parsers=sources
+    )
 
 
 def test_one_parser_per_source_and_each_source_is_a_source_type() -> None:

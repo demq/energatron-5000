@@ -129,9 +129,11 @@ TEST_REGION = RegionProfile(
     name="sa",
     local_tz="Test/Zone",
     tou_windows={"Alpha": ("08:00-20:00",), "Beta": ("20:00-08:00",)},
+    distributor="Test Networks",
+    cdr_retailers=("alpha", "beta-energy"),
     parsers=(SourceType.SAPN_INTERVAL,),
 )
-"""A made-up region profile: a zone and labels that exist nowhere (P2 spec §13.1)."""
+"""A made-up region profile: a zone, labels, a distributor and retailers that exist nowhere (P2 spec §13.1)."""
 
 
 def build(**changes: object) -> ServiceContext:

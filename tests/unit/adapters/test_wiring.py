@@ -125,7 +125,9 @@ def test_an_unknown_region_is_invalid_input(tmp_path: Path) -> None:
 
 
 V2 = "kind: region_profile\nschema_version: 2\nname: bad\nparsers: []\n"
+V3 = "kind: region_profile\nschema_version: 3\nname: bad\nparsers: []\n"
 WINDOWS = "tou_windows: {Alpha: ['08:00-20:00'], Beta: ['20:00-08:00']}\n"
+OFFERS = "distributor: Test Networks\ncdr_retailers: [alpha]\n"
 
 
 def shipped_profile_at(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> None:
@@ -151,6 +153,9 @@ def shipped_profile_at(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: st
         V2 + "local_tz: Australia\n" + WINDOWS,  # a directory in tzdata, not a zone
         V2 + "local_tz: Australia/Adelaide\ntou_windows: {Alpha: ['08:00-20:00']}\n",  # leaves the night uncovered
         V2 + "local_tz: Australia/Adelaide\ntou_windows: {Alpha: ['08:00-24:00'], Beta: ['00:00-08:00']}\n",
+        V2 + "local_tz: Australia/Adelaide\n" + WINDOWS,  # v2: migrates to a null distributor and retailers
+        V3 + "local_tz: Australia/Adelaide\n" + WINDOWS + "distributor: null\ncdr_retailers: [alpha]\n",
+        V3 + "local_tz: Australia/Adelaide\n" + WINDOWS + "distributor: Test Networks\ncdr_retailers: null\n",
     ],
 )
 def test_a_broken_shipped_profile_is_internal(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str) -> None:
@@ -159,10 +164,10 @@ def test_a_broken_shipped_profile_is_internal(tmp_path: Path, monkeypatch: pytes
         wiring.load_region_profile("bad")
 
 
-def test_a_shipped_v2_profile_with_a_real_zone_and_partitioning_windows_loads(
+def test_a_shipped_v3_profile_with_a_real_zone_partitioning_windows_and_offer_fields_loads(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    shipped_profile_at(tmp_path, monkeypatch, V2 + "local_tz: Australia/Adelaide\n" + WINDOWS)
+    shipped_profile_at(tmp_path, monkeypatch, V3 + "local_tz: Australia/Adelaide\n" + WINDOWS + OFFERS)
     profile = wiring.load_region_profile("bad")
     assert profile.local_tz == "Australia/Adelaide"
 

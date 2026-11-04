@@ -9,8 +9,9 @@ import ast
 import re
 
 import pytest
+import yaml
 
-from energatron.core.models.params import AnalysisParams
+from energatron.core.models.params import AnalysisParams, Params
 from tests.architecture._support import PACKAGE_DIR, source_files
 
 ZONE_KEY = re.compile(r"[A-Z][A-Za-z0-9_+-]*(?:/[A-Za-z0-9_+-]+)+")
@@ -106,3 +107,38 @@ def test_the_scan_catches_a_zone_key_or_window(source: str, finding: str) -> Non
 )
 def test_the_scan_skips_docstrings_and_lookalikes(source: str) -> None:
     assert region_values(source) == []
+
+
+def test_the_offer_defaults_hold_no_retailer_or_distributor() -> None:
+    """P4 spec §4.1: the CDR retailers and the distributor come from the region profile, so a migration leaves them
+    `null`."""
+    migrated = Params.from_document({"kind": "params", "schema_version": 1})  # migrates through v3 to v4
+    assert (migrated.offers.retailers, migrated.offers.distributor) == (None, None)
+
+
+def shipped_offer_names() -> set[str]:
+    """The distributor and CDR retailers every shipped region profile names (P4 spec §4.2)."""
+    names: set[str] = set()
+    for path in sorted((PACKAGE_DIR / "regions").glob("*.yaml")):
+        document = yaml.safe_load(path.read_text(encoding="utf-8"))
+        names.add(document["distributor"])
+        names.update(document["cdr_retailers"])
+    return names
+
+
+def string_literals(source: str) -> set[str]:
+    return {
+        node.value.strip()
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str)
+    }
+
+
+@pytest.mark.parametrize("relative", layer_files())
+def test_core_and_services_never_name_a_shipped_distributor_or_retailer(relative: str) -> None:
+    literals = string_literals((PACKAGE_DIR / relative).read_text(encoding="utf-8"))
+    assert sorted(literals & shipped_offer_names()) == []
+
+
+def test_the_shipped_offer_names_are_found() -> None:
+    assert len(shipped_offer_names()) > 2

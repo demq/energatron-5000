@@ -65,6 +65,10 @@ EXPECTED_WARNINGS = frozenset(
         "W_TIMEBASE_UNEXPLAINED",  # P2 spec §9.4, §12
         "W_USAGE_MIXED_WINDOWS",  # P3 spec §5.6, §6, §11
         "W_USAGE_PARTIAL_DAYS",  # P3 spec §8, §11
+        "W_FETCH_FAILED",  # P4 spec §3.2, §12
+        "W_OFFERS_MISSING_SNAPSHOT",  # P4 spec §8, §12
+        "W_BACKTEST_OUTSIDE_TOLERANCE",  # P4 spec §10, §12
+        "W_BACKTEST_NO_TARIFF",  # P4 spec §10, §12
     }
 )
 
