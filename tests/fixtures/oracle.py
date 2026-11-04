@@ -8,6 +8,8 @@ in standard time and UTC+10:30 in daylight time.
 The P3 half (P3 spec §13.2) works on a *local table spec*: a list of `LocalInterval`, each already on the local wall
 clock. It sums by local day, time-of-use label and clock hour, finds the aligned-block peak, takes a percentile by the
 linear rule written out, and repeats the TOU sums on the meter clock (`meter_tou_by_day`) for the §12 reconciliation.
+
+The P4 half (P4 spec §14) prices a plain-dict tariff interval by interval (`oracle_bill`).
 """
 
 import math
@@ -15,6 +17,7 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from typing import Any
 
 BASES = ("nem_aest", "local_wall", "local_standard")
 STANDARD_OFFSET = timedelta(hours=9, minutes=30)
@@ -277,3 +280,163 @@ def meter_tou_by_day(
         label = window_label(item.meter_start.hour * 60 + item.meter_start.minute, windows)
         parts[item.suffix, item.meter_start.date(), label].append(item.kwh)
     return {key: math.fsum(values) for key, values in parts.items()}
+
+
+# The P4 half (P4 spec §14): a bill computed interval by interval, from a plain-dict tariff.
+#
+# `OracleTariff` is a dict: {"seasons": [{"start": "MM-DD", "end": "MM-DD", "clock": "LOCAL" | "AEST",
+# "supply": Decimal, "charges": [{"label", "windows": [(days, start, end)], "period": "P1D" | "P1M",
+# "blocks": [(volume | None, price)]}], "demand": [{"days", "start", "end", "amount", "measurement", "charge",
+# "min_kw", "max_kw"}]}], "discounts": [{"kind", "category", "method", "rate"}], "fees": [{"term", "amount"}]}.
+# Windows are half-open minute ranges of the clock's day; an end not after the start wraps past midnight.
+
+WEEKDAYS = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")
+
+
+@dataclass(frozen=True)
+class UsageRow:
+    utc_start: datetime  # naive UTC
+    local_start: datetime  # naive local wall clock
+    local_date: date
+    meter_date: date
+    minutes: int
+    kwh: float
+
+
+def _clock_time(row: UsageRow, clock: str) -> datetime:
+    return row.local_start if clock == "LOCAL" else row.utc_start + NEM_OFFSET
+
+
+def _in_range(text: str, start: str, end: str) -> bool:
+    return start <= text <= end if start <= end else text >= start or text <= end
+
+
+def _in_window(minute: int, start: int, end: int) -> bool:
+    return start <= minute < end if end > start else minute >= start or minute < end
+
+
+def _season_of(tariff: dict, md: str) -> int:
+    matches = [index for index, season in enumerate(tariff["seasons"]) if _in_range(md, season["start"], season["end"])]
+    assert len(matches) == 1, "the seasons partition the year"
+    return matches[0]
+
+
+def _round(value: Any) -> Any:
+    from decimal import ROUND_HALF_UP, Decimal
+
+    return Decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
+def oracle_bill(
+    tariff: dict,
+    rows: Sequence[UsageRow],
+    periods: Sequence[tuple[date, date]],
+    *,
+    gst_rate: Any,
+    conditions: frozenset[str],
+    scenario: str,
+    demand_minutes: int,
+    by: str = "local_date",
+) -> dict[str, Any]:
+    """Each period's total and its usage quantities by `(season, label, block)`: plain loops, no shared code."""
+    from decimal import Decimal
+
+    totals: dict[tuple[date, date], Any] = {}
+    usage_kwh: dict[tuple[date, date, int, str, int], float] = {}
+    for first, last in periods:
+        chosen = [row for row in rows if first <= getattr(row, by) <= last]
+        groups: dict[tuple[int, int, object], float] = defaultdict(float)
+        demand_blocks: dict[tuple[int, int, date, int], list[float]] = defaultdict(lambda: [0.0, 0.0])
+        for row in chosen:
+            first_clock = _clock_time(row, tariff["seasons"][0]["clock"])
+            s_index = _season_of(tariff, first_clock.strftime("%m-%d"))
+            season = tariff["seasons"][s_index]
+            when = _clock_time(row, season["clock"])
+            minute = when.hour * 60 + when.minute
+            weekday = WEEKDAYS[when.weekday()]
+            found = [
+                index
+                for index, charge in enumerate(season["charges"])
+                for days, start, end in charge["windows"]
+                if weekday in days and _in_window(minute, start, end)
+            ]
+            assert len(found) == 1, "the windows partition the week"
+            charge = season["charges"][found[0]]
+            group = when.date() if charge["period"] == "P1D" else "period"
+            groups[(s_index, found[0], group)] += row.kwh
+            for d_index, demand in enumerate(season["demand"]):
+                if weekday not in demand["days"]:
+                    continue
+                block_start = (minute // demand_minutes) * demand_minutes
+                cell = demand_blocks[(s_index, d_index, when.date(), block_start)]
+                cell[0] += row.kwh
+                cell[1] += row.minutes
+        quantities: dict[tuple[int, int, int], float] = defaultdict(float)
+        for (s_index, c_index, _), total in sorted(groups.items(), key=lambda item: str(item[0])):
+            remaining = total
+            for b_index, (volume, _price) in enumerate(tariff["seasons"][s_index]["charges"][c_index]["blocks"]):
+                take = remaining if volume is None else min(remaining, float(volume))
+                quantities[(s_index, c_index, b_index)] += take
+                remaining -= take
+        usage_amount = Decimal(0)
+        for (s_index, c_index, b_index), qty in quantities.items():
+            charge = tariff["seasons"][s_index]["charges"][c_index]
+            exact = Decimal(f"{qty:.6f}")
+            usage_amount += _round(exact * charge["blocks"][b_index][1])
+            usage_kwh[(first, last, s_index, charge["label"], b_index)] = qty
+        supply = Decimal(0)
+        day = first
+        season_days: dict[int, int] = defaultdict(int)
+        while day <= last:
+            season_days[_season_of(tariff, day.strftime("%m-%d"))] += 1
+            day += timedelta(days=1)
+        for s_index, count in season_days.items():
+            supply += _round(Decimal(count) * tariff["seasons"][s_index]["supply"])
+        demand_amount = Decimal(0)
+        for s_index, season in enumerate(tariff["seasons"]):
+            for d_index, demand in enumerate(season["demand"]):
+                per_day: dict[date, float] = {}
+                for (bs, bd, when_day, block_start), (energy, minutes) in demand_blocks.items():
+                    if (bs, bd) != (s_index, d_index) or minutes != demand_minutes:
+                        continue
+                    if not all(
+                        _in_window(m, demand["start"], demand["end"])
+                        for m in (block_start, block_start + demand_minutes - 1)
+                    ):
+                        continue
+                    kw = energy * 60.0 / demand_minutes
+                    per_day[when_day] = max(per_day.get(when_day, 0.0), kw)
+
+                def chargeable(peak: float, demand: dict = demand) -> float:
+                    capped = peak if demand["max_kw"] is None else min(peak, float(demand["max_kw"]))
+                    return max(0.0, capped - float(demand["min_kw"]))
+
+                if demand["measurement"] == "DAY":
+                    daily = [chargeable(value) for value in per_day.values()]
+                    measured = math.fsum(daily) if demand["charge"] == "DAY" else max(daily, default=0.0)
+                else:
+                    peak = chargeable(max(per_day.values(), default=0.0)) if per_day else 0.0
+                    measured = peak * season_days.get(s_index, 0) if demand["charge"] == "DAY" else peak
+                demand_amount += _round(Decimal(f"{measured:.6f}") * demand["amount"])
+        base = usage_amount + supply + demand_amount
+        discounts = Decimal(0)
+        for discount in tariff["discounts"]:
+            applies = discount["kind"] == "guaranteed" or (
+                scenario != "conditions_not_met" and discount["category"] in conditions
+            )
+            if applies:
+                discount_base = base if discount["method"] == "percent_of_bill" else usage_amount
+                discounts -= _round(discount_base * discount["rate"])
+        net = base + discounts
+        gst = _round(net * gst_rate)
+        fee_days = {
+            "ANNUAL": Decimal(365),
+            "BIANNUAL": Decimal("182.5"),
+            "MONTHLY": Decimal(365) / 12,
+            "WEEKLY": Decimal(7),
+            "DAILY": Decimal(1),
+        }
+        days = Decimal((last - first).days + 1)
+        fees = sum((_round(fee["amount"] * days / fee_days[fee["term"]]) for fee in tariff["fees"]), Decimal(0))
+        totals[(first, last)] = net + gst + fees
+    return {"totals": totals, "usage_kwh": usage_kwh}

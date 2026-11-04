@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.5
-- Last commit: energatron-5000 `P4.2.5: add the normalise_offers stage`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3032 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.2.6
+- Last commit: energatron-5000 `P4.2.6: add the cost engine`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3062 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.6 (the engine)
+- Next: P4.2.7 (`cost_elec`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -109,16 +109,16 @@ Then clear the context and type `/next`.
 - P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
   approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
   D1 rev 5 hold its §15 edits.
-- Done in P4: P4.2.1 (params v4, region v3), P4.2.2 (`Tariff`, `map_cdr`), P4.2.3 (fetch log, `offer_manual`, rules),
-  P4.2.4 (CDR provider, `fetch-offers`), P4.2.5 (`normalise_offers`).
+- Done in P4: P4.2.1-P4.2.6 (params v4, region v3, `Tariff` and `map_cdr`, fetch log, `offer_manual`, rules, CDR
+  provider, `fetch-offers`, `normalise_offers`, the engine).
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §7 (the engine: clock, season, label, blocks, supply, rounding, demand, fees, discounts, GST, the §7.9
-  invariants), §14 (the oracle in `tests/fixtures/oracle.py`, no `energatron` import).
-- `core/tariff.py` (the model the engine prices), `core/usage.py` (aligned demand blocks), `core/models/meter.py`
-  (`elec_interval_local` columns), `tests/fixtures/oracle.py`.
+- The P4 spec §9 (`cost_elec`: inputs, the register, the reference window, outputs and four checks); the P3 spec §8
+  (`usage_summary`: `window_start`, `window_end`).
+- `core/engine.py` (`prepare_usage`, `price`, `Bill`), `core/models/costs.py` (add the cost kinds), `services/stages/
+  tables.py` (add the decimal schemas), `services/stages/usage_profile.py` (reads the local table).
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -591,11 +591,13 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Done when: the standard checks pass; every check passes and fails in its test.
   - Handover: `normalise_offers` (current plans from each base's latest error-free fetch log, newest snapshot per plan, `map_cdr` then rules; `offers.parquet`, `tariffs.json`, `summary.json`; six checks; `W_OFFERS_MISSING_SNAPSHOT`), the `offer_status`/`offer_tariffs`/`offers_summary` kinds (`core/models/costs.py`), `tests/fixtures/offer_workspace.py`, golden `dvc.yaml` with nine stages (3032 tests). Decision: a manual offer is judged effective on its own dates, so historical tariffs stay priceable for the backtest.
     Watch: fixture raw zones now create `config/offer_rules.local/` (a DVC dependency), and tests that run `dvc repro` need `params_v4_text`.
-- ⬜ **P4.2.6** The engine.
+- ✅ **P4.2.6** The engine.
   - `core/engine.py` (spec §7), the oracle additions in `tests/fixtures/oracle.py`, property tests.
   - Refs: the P4 spec §7, §14.
   - Files: `src/energatron/core/engine.py`, `tests/fixtures/oracle.py`, `tests/unit/core/test_engine{,_properties}.py`.
   - Done when: the standard checks pass; the engine equals the oracle on the fixtures; spec §7.9 holds.
+  - Handover: `core/engine.py`: `prepare_usage(frame)` (arrays for both clocks), `price(tariff, usage, periods, scenario=, pricing=, by=)` → `Bill` of `LineItem`s (supply, usage by block, demand, discounts, GST, fees) and a one-off credit; equals the independent `oracle_bill` on DST-spanning half-hourly and 5-minute usage; the §7.9 properties hold (3062 tests). Decision: monthly blocks restart at a season boundary inside a period, and the season is chosen on the first season's clock.
+    Watch: about 4 ms per tariff-year of 5-minute data; the scenario `backtest` prices conditional discounts like `conditions_met`.
 - ⬜ **P4.2.7** `cost_elec`.
   - The stage, its three outputs and four checks, the cost table kinds, the golden `dvc.yaml`, the fixture workspace.
   - Refs: the P4 spec §9; the P3 spec §8 (`usage_summary`).
@@ -642,6 +644,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-05 · P4.2.6 · cost engine (`core/engine.py`: clocks, seasons, TOU labels, daily and monthly blocks, demand, discounts, GST, prorated fees, `Decimal` cents) checked against an independent interval-by-interval oracle and five properties (3062 tests); self-review pass · energatron-5000 `P4.2.6: add the cost engine`
 - 2026-11-04 · P4.2.5 · `normalise_offers` stage (current plans, newest snapshots, rules, three outputs, six checks), offer mart kinds, fixture offer zone, golden `dvc.yaml` with nine stages, pipeline tests moved to params v4 (3032 tests); self-review pass · energatron-5000 `P4.2.5: add the normalise_offers stage`
 - 2026-11-04 · P4.2.4 · CDR provider over stdlib `urllib` (tested against a local HTTP server), `fetch-offers` service and command with the local filter, unchanged skip, partial failures and one `land` commit, lock coverage, `fetch_offers_result` v1 (3003 tests); self-review pass · energatron-5000 `P4.2.4: add the CDR provider and energatron fetch-offers`
 - 2026-11-04 · P4.2.3 · fetch log and `offer_manual` models and parsers, offer rules (model, two directories, matching, effects) and three curated wholesale-estimate rules, fixture builders (2960 tests); self-review pass; spec §3.3 and §6 brought in line · energatron-5000 `P4.2.3: add the fetch log, offer_manual and offer rules`
