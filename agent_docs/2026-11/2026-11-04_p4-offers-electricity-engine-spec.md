@@ -158,7 +158,8 @@ selected: [{base, plan_id, last_updated, action: fetched|unchanged|failed, sha25
   `offer_cdr` parser (D3 §5.7, unchanged) can't detect it. Field names in the log are snake_case for the same reason.
 - No postcode, no identifier: only `postcode_applied`.
 - Parser `cdr_index` (`adapters/sources/cdr_index.py`, version 1): detects content starting with `{` whose head (the
-  64 KiB `land` passes) matches `"kind"\s*:\s*"offer_fetch_log"`; the writer puts `kind` first; `inspect` validates
+  64 KiB `land` passes) matches `"kind"\s*:\s*"offer_fetch_log"`; the writer's sorted keys put `kind` before the page
+  bodies; `inspect` validates
   the model; `source_ts` = `fetched_at`; `extra`: `fetch_batch_id`, `retailers` (bases), `selected` count. Public source
   (D3 §6, already in `PUBLIC_SOURCES`). `regions/sa.yaml` lists it.
 - The latest log per base defines which plans are **current** (§8 step 2): a plan that disappears from the retailer's
@@ -309,19 +310,23 @@ kind: offer_rule
 schema_version: 1
 id: <kebab-case, unique across both directories>
 description: <text>
-match: {brand: <brand> | null, plan_id: <regex, fullmatch> | null, from: "YYYY-MM-DD" | null, to: … | null}
+match: {brand: <brand> | null, plan_id: <regex, fullmatch> | null, display_name: <regex, fullmatch> | null,
+        from: "YYYY-MM-DD" | null, to: … | null}
 effect: {exclude: <reason>} | {approximate: <reason>} | {note: <text>}
 verified_on: "YYYY-MM-DD"
 cites: [<offer snapshot IDs the rule was derived from>]
 ```
-- `match` needs `brand` or `plan_id`; `from`/`to` compare with the snapshot's `lastUpdated` date.
+- `match` needs `brand`, `plan_id` or `display_name`; `from`/`to` compare with the snapshot's `lastUpdated` date.
+  Brands are compared trimmed (`map_cdr` trims them: some retailers publish a trailing space).
 - Rules apply after `map_cdr`, in rule-id order: `exclude` turns an offer excluded with reason `rule:<id>:<reason>`;
   `approximate` adds `rule:<id>:<reason>` to `approximations`; `note` adds a note. Applied rule IDs are recorded.
 - Curated rules ship as package data `offer_rules/*.yaml` (the stage declares it as `package_data`, so a rule change
   reruns it); a local rule in the workspace's `config/offer_rules.local/*.yaml` with the same `id` replaces the curated
   one. Any invalid file fails the stage (`rules_valid`).
-- P4 ships one curated rule: `wholesale-pass-through`, `approximate` for brands whose CDR rates are illustrative
-  wholesale estimates (verified against their `variation` text), citing the snapshot IDs seen when it was written.
+- P4 ships three curated rules, each `approximate` with reason `wholesale_estimate` for plans whose CDR rates are
+  illustrative wholesale estimates (verified against their `variation` text and names), citing the snapshot IDs seen
+  when they were written: `amber-wholesale` (brand `amber`), `flow-power-variable-estimate` and
+  `globird-wholesave-estimate` (by display name).
 
 ---
 

@@ -1,0 +1,14 @@
+# Curated offer rule (P4 spec §6). Public facts only.
+kind: offer_rule
+schema_version: 1
+id: amber-wholesale
+description: >-
+  Amber passes wholesale prices through; its CDR plans state that the listed usage rate is for illustrative purposes
+  only, so a price computed from it is an estimate.
+match: {brand: amber}
+effect: {approximate: wholesale_estimate}
+verified_on: "2026-11-04"
+cites:
+  - AMB1126144MRE2@EME~20260930T140804Z~eeefa535
+  - AMB1126150MRE2@EME~20260930T140804Z~4f3252ae
+  - AMB1126169MRE2@EME~20260930T140804Z~130b821a

@@ -1,0 +1,46 @@
+{
+  "brand": "manualco",
+  "display_name": "A made-up retained offer",
+  "effective_from": "2025-07-01",
+  "effective_to": null,
+  "electricityContract": {
+    "billFrequency": [
+      "P1M"
+    ],
+    "fees": [],
+    "isFixed": false,
+    "paymentOption": [
+      "DIRECT_DEBIT"
+    ],
+    "pricingModel": "SINGLE_RATE",
+    "tariffPeriod": [
+      {
+        "dailySupplyCharge": "1.00",
+        "dailySupplyChargeType": "SINGLE",
+        "displayName": "Single Rate",
+        "endDate": "12-31",
+        "rateBlockUType": "singleRate",
+        "singleRate": {
+          "displayName": "Single",
+          "period": "P1D",
+          "rates": [
+            {
+              "measureUnit": "KWH",
+              "unitPrice": "0.30"
+            }
+          ]
+        },
+        "startDate": "01-01"
+      }
+    ],
+    "terms": "Made-up terms.",
+    "timeZone": "LOCAL"
+  },
+  "evidence": [],
+  "kind": "offer_manual",
+  "plan_id": "MANUAL-TEST-TOU",
+  "prices_include_gst": false,
+  "published": "2025-07-01T00:00:00Z",
+  "schema_version": 1,
+  "source": "bill"
+}

@@ -1,0 +1,12 @@
+# Curated offer rule (P4 spec §6). Public facts only.
+kind: offer_rule
+schema_version: 1
+id: flow-power-variable-estimate
+description: >-
+  Flow Power plans named "Variable Prices (estimate)" follow wholesale prices; the CDR rates are an estimate.
+match: {brand: flow-power, display_name: '(?i).*variable prices \(estimate\).*'}
+effect: {approximate: wholesale_estimate}
+verified_on: "2026-11-04"
+cites:
+  - FP11199005MRE1@EME~20260930T140800Z~c4a95432
+  - FP11199019MRE1@EME~20260930T140800Z~d8c08900

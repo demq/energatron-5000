@@ -4,9 +4,12 @@ Everything is made up: plan IDs, brands, distributors, postcodes and prices. The
 (v1.36) as the public API returns them; nothing here is copied from a real response.
 """
 
+import base64
 import json
 from collections.abc import Mapping, Sequence
 from typing import Any, Final
+
+import yaml
 
 ALL_DAYS: Final = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
 DISTRIBUTOR: Final = "Test Networks"
@@ -253,3 +256,94 @@ def list_body(
         "meta": {"totalRecords": len(plans), "totalPages": 1},
     }
     return json.dumps(document).encode("utf-8")
+
+
+# The fetch log (`offer_cdr_index`) and `offer_manual`
+
+
+def fetch_log(
+    *,
+    batch: str = "fetch-20261101T000000Z",
+    fetched_at: str = "2026-11-01T00:00:00Z",
+    retailers: Sequence[tuple[str, Sequence[Mapping[str, Any]]]] = (("alpha", ()),),
+    selected: Sequence[Mapping[str, Any]] = (),
+    postcode_applied: bool = True,
+) -> dict[str, Any]:
+    """An `offer_fetch_log` v1 document: each `(base, plans)` gets one list page holding `plans`."""
+    entries = []
+    for base, plans in retailers:
+        body = list_body(plans, self_url=f"https://cdr.test/{base}/plans")
+        page = {
+            "url": f"https://cdr.test/{base}/plans",
+            "request_headers": {"x-v": "1"},
+            "status": 200,
+            "fetched_at": fetched_at,
+            "response_headers": {"content-type": "application/json"},
+            "body_b64": base64.b64encode(body).decode("ascii"),
+        }
+        entries.append({"base": base, "pages": [page], "listed": len(plans), "left_out": {}, "error": None})
+    return {
+        "kind": "offer_fetch_log",
+        "schema_version": 1,
+        "fetch_batch_id": batch,
+        "fetched_at": fetched_at,
+        "filter": {
+            "fuel_types": ["ELECTRICITY"],
+            "customer_type": "RESIDENTIAL",
+            "distributor": DISTRIBUTOR,
+            "postcode_applied": postcode_applied,
+        },
+        "retailers": entries,
+        "selected": [dict(item) for item in selected],
+    }
+
+
+def selected(
+    plan_id: str = "TEST1@EME",
+    *,
+    base: str = "alpha",
+    last_updated: str = "2026-10-01T00:00:00Z",
+    action: str = "fetched",
+    sha256: str | None = None,
+    snapshot: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "base": base,
+        "plan_id": plan_id,
+        "last_updated": last_updated,
+        "action": action,
+        "sha256": sha256,
+        "offer_snapshot_id": snapshot,
+    }
+
+
+def fetch_log_body(document: Mapping[str, Any]) -> bytes:
+    """As `fetch-offers` writes it: sorted keys, `indent=2`, a trailing newline."""
+    return (json.dumps(document, sort_keys=True, indent=2) + "\n").encode("utf-8")
+
+
+def offer_manual_text(
+    plan_id: str = "MANUAL-TEST-TOU",
+    *,
+    published: str = "2025-07-01T00:00:00Z",
+    prices_include_gst: bool = False,
+    effective_from: str | None = "2025-07-01",
+    effective_to: str | None = None,
+    contract: Mapping[str, Any] | None = None,
+) -> str:
+    """An `offer_manual` v1 YAML document with every date quoted; `contract` defaults to a TOU plan's."""
+    document: dict[str, Any] = {
+        "kind": "offer_manual",
+        "schema_version": 1,
+        "plan_id": plan_id,
+        "brand": "manualco",
+        "display_name": "A made-up retained offer",
+        "published": published,
+        "source": "bill",
+        "evidence": [],
+        "prices_include_gst": prices_include_gst,
+        "effective_from": effective_from,
+        "effective_to": effective_to,
+        "electricityContract": dict(contract or plan()["electricityContract"]),
+    }
+    return yaml.safe_dump(document, sort_keys=False)  # PyYAML quotes every date-like string

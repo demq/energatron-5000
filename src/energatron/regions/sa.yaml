@@ -39,4 +39,4 @@ cdr_retailers:
   - silver-asset
   - sumo-power
   - tango
-parsers: [elec_bill, gas_bill, offer_cdr, retailer_txn, retailer_usage, sapn_interval, sapn_summary]
+parsers: [elec_bill, gas_bill, offer_cdr, offer_cdr_index, offer_manual, retailer_txn, retailer_usage, sapn_interval, sapn_summary]

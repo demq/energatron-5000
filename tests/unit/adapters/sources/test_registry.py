@@ -6,7 +6,9 @@ import pytest
 
 from energatron.adapters import wiring
 from energatron.adapters.sources.bill_pdf import ELEC_BILL, GAS_BILL
+from energatron.adapters.sources.cdr_index import OFFER_CDR_INDEX
 from energatron.adapters.sources.cdr_plan import OFFER_CDR
+from energatron.adapters.sources.offer_manual import OFFER_MANUAL
 from energatron.adapters.sources.registry import PARSERS, parsers_for
 from energatron.adapters.sources.retailer_txn import RETAILER_TXN
 from energatron.adapters.sources.retailer_usage import RETAILER_USAGE
@@ -31,7 +33,17 @@ def test_one_parser_per_source_and_each_source_is_a_source_type() -> None:
     assert all(isinstance(parser.version, int) and parser.version >= 1 for parser in PARSERS)
 
 
-ALL = (SAPN_INTERVAL, SAPN_SUMMARY, RETAILER_USAGE, RETAILER_TXN, ELEC_BILL, GAS_BILL, OFFER_CDR)
+ALL = (
+    SAPN_INTERVAL,
+    SAPN_SUMMARY,
+    RETAILER_USAGE,
+    RETAILER_TXN,
+    ELEC_BILL,
+    GAS_BILL,
+    OFFER_CDR,
+    OFFER_CDR_INDEX,
+    OFFER_MANUAL,
+)
 P1_SOURCES = {
     SourceType.ELEC_BILL,
     SourceType.GAS_BILL,
@@ -41,17 +53,16 @@ P1_SOURCES = {
     SourceType.SAPN_INTERVAL,
     SourceType.SAPN_SUMMARY,
 }
+REGISTERED_SOURCES = P1_SOURCES | {SourceType.OFFER_CDR_INDEX, SourceType.OFFER_MANUAL}
 
 
-def test_the_seven_p1_parsers_are_registered() -> None:
+def test_the_seven_p1_and_two_p4_parsers_are_registered() -> None:
     assert PARSERS == ALL
-    assert {parser.source for parser in PARSERS} == P1_SOURCES
+    assert {parser.source for parser in PARSERS} == REGISTERED_SOURCES
 
 
-def test_sources_without_a_p1_parser_have_none() -> None:
-    sources = {parser.source for parser in PARSERS}
-    for source in (SourceType.GAS_BILL_RECORD, SourceType.OFFER_MANUAL, SourceType.OFFER_CDR_INDEX):
-        assert source not in sources
+def test_only_gas_bill_record_has_no_parser_yet() -> None:
+    assert set(SourceType) - {parser.source for parser in PARSERS} == {SourceType.GAS_BILL_RECORD}
 
 
 def test_the_profile_keeps_the_listed_parsers_in_registry_order() -> None:
@@ -83,13 +94,13 @@ def test_the_registry_order_wins_over_the_profile_order() -> None:
 
 def test_a_listed_source_without_a_parser_is_internal() -> None:
     with pytest.raises(InternalError):
-        parsers_for(profile(SourceType.OFFER_MANUAL))
+        parsers_for(profile(SourceType.GAS_BILL_RECORD))
 
 
 def test_the_sa_profile_is_valid_and_lists_only_parsers_that_exist() -> None:
     sa = wiring.load_region_profile("sa")
     assert sa.name == "sa"
-    assert set(sa.parsers) == P1_SOURCES
+    assert set(sa.parsers) == REGISTERED_SOURCES
     assert [source.value for source in sa.parsers] == sorted(source.value for source in sa.parsers)
 
 

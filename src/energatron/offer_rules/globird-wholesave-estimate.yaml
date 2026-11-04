@@ -1,0 +1,12 @@
+# Curated offer rule (P4 spec §6). Public facts only.
+kind: offer_rule
+schema_version: 1
+id: globird-wholesave-estimate
+description: >-
+  GloBird WHOLESAVE plans named "estimate" follow wholesale prices; the CDR rates are an estimate.
+match: {brand: globird, display_name: '(?i)wholesave.*estimate.*'}
+effect: {approximate: wholesale_estimate}
+verified_on: "2026-11-04"
+cites:
+  - GLO1168918MRE2@EME~20261004T060103Z~b8bcc19c
+  - GLO1168920MRE2@EME~20261004T060103Z~d2ed0a60

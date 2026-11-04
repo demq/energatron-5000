@@ -50,6 +50,10 @@ def test_a_tou_plan_maps_its_seasons_windows_rates_and_header() -> None:
     assert (peak.windows[0].start_minute, peak.windows[0].end_minute) == (960, 1380)  # 16:00-22:59 inclusive
 
 
+def test_a_brand_published_with_surrounding_whitespace_is_trimmed() -> None:
+    assert tariff(cdr.plan(brand="alpha ")).brand == "alpha"
+
+
 def test_a_single_rate_plan_has_one_all_week_charge() -> None:
     found = tariff(cdr.plan(pricing_model="SINGLE_RATE"))
     (charge,) = found.seasons[0].energy

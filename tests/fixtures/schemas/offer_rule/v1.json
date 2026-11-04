@@ -1,0 +1,20 @@
+{
+  "cites": [
+    "TEST1@EME~20261001T000000Z~0123abcd"
+  ],
+  "description": "A made-up rule.",
+  "effect": {
+    "approximate": "wholesale_estimate"
+  },
+  "id": "test-rule",
+  "kind": "offer_rule",
+  "match": {
+    "brand": "alpha",
+    "display_name": "(?i).*test.*",
+    "from": "2026-01-01",
+    "plan_id": null,
+    "to": null
+  },
+  "schema_version": 1,
+  "verified_on": "2026-11-04"
+}

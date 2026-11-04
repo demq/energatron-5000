@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.2
-- Last commit: energatron-5000 `P4.2.2: add the Tariff model and the CDR mapping`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 2907 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.2.3
+- Last commit: energatron-5000 `P4.2.3: add the fetch log, offer_manual and offer rules`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 2960 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.3 (offer sources and rules: the fetch log, `offer_manual`, `offer_rule`)
+- Next: P4.2.4 (the CDR client and `energatron fetch-offers`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -109,15 +109,15 @@ Then clear the context and type `/next`.
 - P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
   approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
   D1 rev 5 hold its §15 edits.
-- Done in P4: P4.2.1 (`Params` v4, `RegionProfile` v3, the `pipeline sync` fill, the P4 warnings) and P4.2.2 (`Tariff`,
-  `map_cdr`, `make_cdr`).
+- Done in P4: P4.2.1 (params v4, region v3), P4.2.2 (`Tariff`, `map_cdr`), P4.2.3 (fetch log, `offer_manual`, rules).
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §3.3 (the fetch log and the `cdr_index` parser), §5.3 (`offer_manual`), §6 (offer rules); D3 §5.7, §6.
-- `adapters/sources/cdr_plan.py` (the `offer_cdr` parser to mirror), `adapters/sources/registry.py`, `core/models/offers.py`
-  (`Fetched`), `core/cdr_tariff.py` (`map_cdr`, `Plan`: manual offers reuse it with `prices_include_gst`).
+- The P4 spec §3.1 (`CdrProvider`), §3.2 (`fetch-offers` steps), §14 (the adapter and service tests); D1 rev 5 §4.6,
+  §8.6 (the lock); D3 §7 (`land`, which `fetch-offers` calls on a staging directory).
+- `services/land.py`, `adapters/cli/commands/land.py` (a writing command with the lock), `adapters/wiring.py`
+  (`ServiceContext.offers`), `core/models/offers.py` (`Fetched`, `OfferFetchLog`), `tests/fixtures/make_cdr.py`.
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -560,7 +560,7 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Done when: the standard checks pass; one test per row of spec §5.2's table.
   - Handover: `core/tariff.py` (`Tariff`, `Season`, `EnergyCharge`, `Window`, `Block`, `DemandCharge`, `Discount`, `Fee`; partition checks; the two GST constants) and `core/cdr_tariff.py` (`map_cdr(data, Plan, Household, as_of=)` → `Tariff` or `Excluded`, every §5.2 row tested), `tests/fixtures/make_cdr.py` (2907 tests). Decision: the clock lives on each `Season` (a CDR tariff period may override `timeZone`); unpriced discounts are notes, so `Discount.kind` is guaranteed or conditional only.
     Watch: run on the 609 real SAPN plans in the agent's scratch folder the mapper gave 189 normalised, 81 approximate, 339 excluded, 0 malformed (counts of public offers).
-- ⬜ **P4.2.3** Offer sources and rules: the fetch log, `offer_manual`, `offer_rule`.
+- ✅ **P4.2.3** Offer sources and rules: the fetch log, `offer_manual`, `offer_rule`.
   - `core/models/offers.py` (`OfferFetchLog`, `OfferManual`); parsers `adapters/sources/{cdr_index,offer_manual}.py`
     and `regions/sa.yaml` listing them; `core/offer_rules.py` (model, loading from two directories, matching, effects);
     curated `src/energatron/offer_rules/wholesale-pass-through.yaml`; `make_offer_manual` and a fetch-log generator.
@@ -569,6 +569,8 @@ warn; the historical tariff comes from the owner; no new dependency.
     `src/energatron/regions/sa.yaml`, `src/energatron/offer_rules/`, `tests/fixtures/make_cdr.py`,
     `tests/unit/core/test_offer_rules.py`, `tests/unit/adapters/sources/`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; `offer_cdr` never detects a fetch log and `cdr_index` never detects a plan.
+  - Handover: `OfferFetchLog` and `OfferManual` (`core/models/offers.py`), parsers `cdr_index` and `offer_manual` registered and in `sa.yaml`, `core/offer_rules.py` (`load_rules`, `apply_rules`), three curated `offer_rules/*.yaml`, fixture builders (2960 tests). Decision: rules may also match `display_name` and three curated wholesale-estimate rules ship (spec §6 updated); `map_cdr` trims brands (a real brand has a trailing space).
+    Watch: the fetch log must be written with sorted keys (`write_json`) so `kind` precedes the page bodies in the 64 KiB head.
 - ⬜ **P4.2.4** CDR client and `energatron fetch-offers`.
   - `adapters/offers/cdr.py` (`CdrProvider`), wired into `ServiceContext.offers`; `services/fetch_offers.py` and the
     command; `fetch_offers_result` v1.
@@ -635,6 +637,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-04 · P4.2.3 · fetch log and `offer_manual` models and parsers, offer rules (model, two directories, matching, effects) and three curated wholesale-estimate rules, fixture builders (2960 tests); self-review pass; spec §3.3 and §6 brought in line · energatron-5000 `P4.2.3: add the fetch log, offer_manual and offer rules`
 - 2026-11-04 · P4.2.2 · `Tariff` model with partition rules and the GST constants, `map_cdr` covering every row of the spec's §5.2 table, `make_cdr` fixture generator (2907 tests); self-review pass; on the real SAPN market every plan normalises, is approximate or is excluded with a reason · energatron-5000 `P4.2.2: add the Tariff model and the CDR mapping`
 - 2026-11-04 · P4.2.1 · `Params` v4 and `RegionProfile` v3 (distributor, CDR retailers), `pipeline sync` fills them and creates `config/offer_rules.local/`, four P4 warnings, golden `params/v4` and `region_profile/v3` (2815 tests); self-review pass, no findings · energatron-5000 `P4.2.1: add params v4, region profile v3 and the P4 warnings`
 - 2026-11-04 · P4.1.1 · P4 offers and electricity engine spec approved (Q1-Q8 as recommended, on the owner's standing instruction); plan rev 12 and D1 rev 5 applied from its §15; P4.2-P4.3 rewritten from its order of work (P4.2.1-P4.2.9, P4.3.1, P4.3.2) · energatron-5000 `P4.1.1: approve the P4 offers and electricity engine spec and apply plan rev 12 and D1 rev 5`

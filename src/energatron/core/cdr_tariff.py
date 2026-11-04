@@ -155,7 +155,7 @@ def _map(
         return Tariff(
             offer_snapshot_id=plan.offer_snapshot_id,
             plan_id=_text(data, "planId", "planId"),
-            brand=_text(data, "brand", "brand"),
+            brand=brand_of(data),
             retailer=plan.retailer,
             display_name=_text(data, "displayName", "displayName"),
             source=plan.source,
@@ -174,6 +174,14 @@ def _map(
     except (ValidationError, InvalidInputError) as error:  # a rule the checks above don't cover; never expected
         where = _first_location(error)
         return Excluded(reasons=(f"malformed:{where}",), notes=_sorted(found.notes))
+
+
+def brand_of(data: Mapping[str, JSONValue]) -> str:
+    """The plan's brand, trimmed: some retailers publish it with surrounding whitespace. Missing → `malformed:brand`."""
+    value = data.get("brand")
+    if not isinstance(value, str) or not value.strip():
+        raise _Malformed("brand")
+    return value.strip()
 
 
 # Eligibility, seasons and charges
