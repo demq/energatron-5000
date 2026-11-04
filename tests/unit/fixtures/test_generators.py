@@ -9,9 +9,10 @@ from pathlib import Path
 
 import pytest
 
+from energatron.adapters.sources.cdr_plan import OFFER_CDR
 from energatron.core.models.private import PrivateConfig
 from energatron.core.privacy import nmi_checksum
-from tests.fixtures import oracle
+from tests.fixtures import make_cdr, oracle
 from tests.fixtures.make_nem12 import (
     Nem12Spec,
     QualityRange,
@@ -456,3 +457,22 @@ def test_the_oracle_and_its_fixture_imports_never_import_energatron() -> None:
             if module.startswith("tests.fixtures.") and candidate.exists():
                 pending.append(candidate)
     assert FIXTURES / "oracle.py" in seen
+
+
+# make_cdr (P4 spec §14)
+
+
+def test_a_generated_plan_detail_is_landable_as_offer_cdr() -> None:
+    body = make_cdr.detail_body(make_cdr.plan("GEN1@EME"))
+    assert OFFER_CDR.detect("alpha__GEN1@EME.json", body) is not None
+    info = OFFER_CDR.inspect("alpha__GEN1@EME.json", body)
+    assert info.extra["plan_id"] == "GEN1@EME"
+
+
+def test_a_generated_list_page_holds_headers_but_no_contract() -> None:
+    page = json.loads(
+        make_cdr.list_body([make_cdr.plan("GEN1@EME"), make_cdr.plan("GEN2@EME")], next_url="https://cdr.test/p2")
+    )
+    assert [item["planId"] for item in page["data"]["plans"]] == ["GEN1@EME", "GEN2@EME"]
+    assert all("electricityContract" not in item for item in page["data"]["plans"])
+    assert page["links"]["next"] == "https://cdr.test/p2"
