@@ -390,6 +390,7 @@ def test_the_venv_energatron_runs_whatever_path_the_caller_has_and_prints_nothin
                 "validate_timebase",
                 "localise",
                 "usage_profile",
+                "usage_report",
             ]
         )
     captured = capfd.readouterr()

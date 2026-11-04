@@ -138,6 +138,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
             "validate_timebase",
             "localise",
             "usage_profile",
+            "usage_report",
         ],
         "datasets": 4,
     }
@@ -165,6 +166,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
         "merge_interval",
         "parse_nem12",
         "usage_profile",
+        "usage_report",
         "validate_meter",
         "validate_timebase",
     ]

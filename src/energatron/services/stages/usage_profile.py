@@ -14,18 +14,15 @@ covered month that are not complete.
 
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
 from datetime import date, timedelta
 from itertools import pairwise
 from pathlib import Path
 from typing import Final, cast
 
 import pandas as pd
-import pyarrow as pa
 
 from energatron.core.canonical import JSONValue
 from energatron.core.errors import InternalError, InvalidInputError, WarningCode
-from energatron.core.models import usage as kinds
 from energatron.core.models.meter import LOCAL_KIND, LOCAL_VERSION
 from energatron.core.models.params import AnalysisParams
 from energatron.core.models.usage import DstDays, SuffixSummary, UsageSummary, WindowSetUsed
@@ -54,65 +51,10 @@ from energatron.core.usage import (
 )
 from energatron.services.files import write_json, write_parquet
 from energatron.services.stages.runner import StageRun, StageSpec
-from energatron.services.stages.tables import (
-    LOCAL_SCHEMA,
-    USAGE_DAILY_SCHEMA,
-    USAGE_HEATMAP_SCHEMA,
-    USAGE_HOURLY_PROFILE_SCHEMA,
-    USAGE_MONTHLY_SCHEMA,
-    USAGE_QUALITY_MONTHLY_SCHEMA,
-    USAGE_SEASONAL_SCHEMA,
-    USAGE_TOU_DAILY_SCHEMA,
-    USAGE_TOU_MONTHLY_SCHEMA,
-    USAGE_YOY_SCHEMA,
-    load_table,
-)
+from energatron.services.stages.tables import LOCAL_SCHEMA, SUMMARY_FILENAME, USAGE_TABLES, load_table
 
 INTERVALS_FILENAME: Final = "intervals.parquet"
-SUMMARY_FILENAME: Final = "summary.json"
 _HOURS: Final = frozenset(range(24))
-
-
-@dataclass(frozen=True)
-class _Kind:
-    """How one table is written: its file stem, kind, version, pyarrow schema and sort key."""
-
-    stem: str
-    kind: str
-    version: int
-    schema: pa.Schema
-    sort: tuple[str, ...]
-
-
-_KINDS: Final = (
-    _Kind("daily", kinds.DAILY_KIND, kinds.DAILY_VERSION, USAGE_DAILY_SCHEMA, kinds.DAILY_SORT),
-    _Kind("monthly", kinds.MONTHLY_KIND, kinds.MONTHLY_VERSION, USAGE_MONTHLY_SCHEMA, kinds.MONTHLY_SORT),
-    _Kind("seasonal", kinds.SEASONAL_KIND, kinds.SEASONAL_VERSION, USAGE_SEASONAL_SCHEMA, kinds.SEASONAL_SORT),
-    _Kind("yoy", kinds.YOY_KIND, kinds.YOY_VERSION, USAGE_YOY_SCHEMA, kinds.YOY_SORT),
-    _Kind(
-        "hourly_profile",
-        kinds.HOURLY_PROFILE_KIND,
-        kinds.HOURLY_PROFILE_VERSION,
-        USAGE_HOURLY_PROFILE_SCHEMA,
-        kinds.HOURLY_PROFILE_SORT,
-    ),
-    _Kind("heatmap", kinds.HEATMAP_KIND, kinds.HEATMAP_VERSION, USAGE_HEATMAP_SCHEMA, kinds.HEATMAP_SORT),
-    _Kind("tou_daily", kinds.TOU_DAILY_KIND, kinds.TOU_DAILY_VERSION, USAGE_TOU_DAILY_SCHEMA, kinds.TOU_DAILY_SORT),
-    _Kind(
-        "tou_monthly",
-        kinds.TOU_MONTHLY_KIND,
-        kinds.TOU_MONTHLY_VERSION,
-        USAGE_TOU_MONTHLY_SCHEMA,
-        kinds.TOU_MONTHLY_SORT,
-    ),
-    _Kind(
-        "quality_monthly",
-        kinds.QUALITY_MONTHLY_KIND,
-        kinds.QUALITY_MONTHLY_VERSION,
-        USAGE_QUALITY_MONTHLY_SCHEMA,
-        kinds.QUALITY_MONTHLY_SORT,
-    ),
-)
 
 
 def _run(run: StageRun) -> None:
@@ -167,7 +109,7 @@ def _run(run: StageRun) -> None:
     outcomes = _checks(run, analysis, consumption, tables, split.unlabelled, split.daily, sets, windows, scope)
 
     out = run.output("profile")
-    for kind in _KINDS:
+    for kind in USAGE_TABLES:
         write_parquet(
             tables[kind.stem],
             out / f"{kind.stem}.parquet",
@@ -283,7 +225,7 @@ def _checks(
         abs(_fsum(per_day["kwh"]) - _fsum(consumption["kwh"])) <= SUM_TOLERANCE_KWH,
         days=len(per_day),
     )
-    duplicated = [kind.stem for kind in _KINDS if bool(tables[kind.stem].duplicated(list(kind.sort)).any())]
+    duplicated = [kind.stem for kind in USAGE_TABLES if bool(tables[kind.stem].duplicated(list(kind.sort)).any())]
     record("keys_unique", not duplicated, tables=duplicated)
     mismatched = sum(
         abs(_fsum(tou_daily.loc[tou_daily["suffix"] == suffix, "kwh"]) - _fsum(part["kwh"])) > SUM_TOLERANCE_KWH

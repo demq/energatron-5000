@@ -14,6 +14,7 @@ from energatron.services.stages import (
     merge_interval,
     parse_nem12,
     usage_profile,
+    usage_report,
     validate_meter,
     validate_timebase,
 )
@@ -43,6 +44,7 @@ STAGES: Final[Mapping[str, StageSpec]] = _build(
         validate_timebase.SPEC,
         localise.SPEC,
         usage_profile.SPEC,
+        usage_report.SPEC,
     ]
 )
 """Every stage, in `dvc.yaml` order."""

@@ -106,6 +106,12 @@ def _usage_profile(root: Path) -> None:
     _run_upstream(root, "localise")
 
 
+def _usage_report(root: Path) -> None:
+    """Everything `usage_profile` needs, run: `usage_report` reads its marts."""
+    _usage_profile(root)
+    _run_upstream(root, "usage_profile")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -114,6 +120,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "validate_timebase": _validate_timebase,
     "localise": _localise,
     "usage_profile": _usage_profile,
+    "usage_report": _usage_report,
 }
 
 

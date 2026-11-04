@@ -84,3 +84,12 @@ stages:
       - stages.usage_profile.stage_sha256
     outs:
     - data/marts/usage_profile
+  usage_report:
+    cmd: energatron stage usage_report
+    deps:
+    - data/marts/usage_profile
+    params:
+    - .energatron/code_fingerprint.json:
+      - stages.usage_report.stage_sha256
+    outs:
+    - data/reports/usage

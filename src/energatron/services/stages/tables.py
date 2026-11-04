@@ -7,6 +7,7 @@ shares them. So do `localise`'s table, which `usage_profile` reads, and the nine
 `usage_report` reads. Column names, kinds and versions are in `core.models.meter` and `core.models.usage`.
 """
 
+from dataclasses import dataclass
 from datetime import UTC
 from pathlib import Path
 from typing import Final
@@ -15,6 +16,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from energatron.core.errors import InvalidInputError
+from energatron.core.models import usage
 
 STAGED_SCHEMA: Final = pa.schema(
     [
@@ -166,6 +168,53 @@ USAGE_QUALITY_MONTHLY_SCHEMA: Final = pa.schema(
         ("share_kwh", pa.float64()),
     ]
 )
+
+
+@dataclass(frozen=True)
+class UsageTable:
+    """One mart table: its file stem, kind, version, pyarrow schema and sort key."""
+
+    stem: str
+    kind: str
+    version: int
+    schema: pa.Schema
+    sort: tuple[str, ...]
+
+
+SUMMARY_FILENAME: Final = "summary.json"
+"""The `usage_summary` document beside the nine tables in `usage_profile`'s output."""
+USAGE_TABLES: Final = (
+    UsageTable("daily", usage.DAILY_KIND, usage.DAILY_VERSION, USAGE_DAILY_SCHEMA, usage.DAILY_SORT),
+    UsageTable("monthly", usage.MONTHLY_KIND, usage.MONTHLY_VERSION, USAGE_MONTHLY_SCHEMA, usage.MONTHLY_SORT),
+    UsageTable("seasonal", usage.SEASONAL_KIND, usage.SEASONAL_VERSION, USAGE_SEASONAL_SCHEMA, usage.SEASONAL_SORT),
+    UsageTable("yoy", usage.YOY_KIND, usage.YOY_VERSION, USAGE_YOY_SCHEMA, usage.YOY_SORT),
+    UsageTable(
+        "hourly_profile",
+        usage.HOURLY_PROFILE_KIND,
+        usage.HOURLY_PROFILE_VERSION,
+        USAGE_HOURLY_PROFILE_SCHEMA,
+        usage.HOURLY_PROFILE_SORT,
+    ),
+    UsageTable("heatmap", usage.HEATMAP_KIND, usage.HEATMAP_VERSION, USAGE_HEATMAP_SCHEMA, usage.HEATMAP_SORT),
+    UsageTable(
+        "tou_daily", usage.TOU_DAILY_KIND, usage.TOU_DAILY_VERSION, USAGE_TOU_DAILY_SCHEMA, usage.TOU_DAILY_SORT
+    ),
+    UsageTable(
+        "tou_monthly",
+        usage.TOU_MONTHLY_KIND,
+        usage.TOU_MONTHLY_VERSION,
+        USAGE_TOU_MONTHLY_SCHEMA,
+        usage.TOU_MONTHLY_SORT,
+    ),
+    UsageTable(
+        "quality_monthly",
+        usage.QUALITY_MONTHLY_KIND,
+        usage.QUALITY_MONTHLY_VERSION,
+        USAGE_QUALITY_MONTHLY_SCHEMA,
+        usage.QUALITY_MONTHLY_SORT,
+    ),
+)
+"""The nine tables of `usage_profile` in file order: the stage writes them and `usage_report` reads them."""
 
 
 def load_table(path: Path, schema: pa.Schema, kind: str, version: int, *, input: str) -> pa.Table:

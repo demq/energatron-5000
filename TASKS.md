@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P3.2.4
-- Last commit: energatron-5000 `P3.2.4: add the SVG chart primitives and the usage report page`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2652
-  passed in ~65 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
+- Last done: P3.2.5
+- Last commit: energatron-5000 `P3.2.5: add the usage_report stage and the end-to-end P3 test`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2703
+  passed in ~85 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
 - Review: none
-- Next: P3.2.5 (`usage_report` stage and the end-to-end P3 test)
+- Next: P3.3.1 (P3 acceptance in the workspace; asks the owner to confirm the second TOU window set)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,19 +110,19 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
   (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`) are approved.
-- P0, P1 and P2 are done and accepted in the workspace. P3.2.1 to P3.2.4 are done: `Params` v3, the metric functions,
-  the `usage_profile` stage and the pure report renderer. P3.2.5 (the `usage_report` stage and `test_p3_pipeline`) is the
-  next ⬜.
+- P0, P1 and P2 are done and accepted in the workspace. P3.2.1 to P3.2.5 are done: `Params` v3, the metric functions,
+  the `usage_profile` stage, the pure report renderer and the `usage_report` stage (eight stages in `STAGES`). P3.3.1
+  (acceptance in the workspace) is the next ⬜ and is the first P3 step that touches `demq-elektric/`.
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files (`backup.bundle_dir` in `.energatron/local.toml`, the `icloud` remote URL in `.dvc/config.local`);
   `icloud_backup.py` follows `local.toml`. A new machine needs both entries set again.
 
-**Read first** (for P3.2.5)
-- The P3 spec §9.1, §10 and §13.3 (`test_usage_report`, `test_p3_pipeline`). Then `services/stages/usage_profile.py`
-  (a stage that reads and writes tables), `services/stages/tables.py` (`USAGE_*_SCHEMA`, `load_table`),
-  `services/stages/registry.py`, `tests/fixtures/golden/dvc.yaml` and `tests/integration/test_p2_pipeline.py`.
-- P3.3.1 also reads the P2 acceptance note `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md`
-  (it mentions data, so nothing from it is copied into the tool repo).
+**Read first** (for P3.3.1)
+- The P3 spec §12 (checks 1-8) and §6 (the window change), plan §15 (P3), and the P2 acceptance note
+  `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md` (it mentions data, so nothing from it is
+  copied into the tool repo). Then the workspace `CLAUDE.md` and `params.yaml` (structure only).
+- The workspace tool commit must include `src/energatron/` (committed by this `/done`), otherwise `fingerprint` records
+  `tool_dirty: true`.
 
 **Facts**
 - Owner decisions on the P3 spec (2026-11-03): Q1-Q11 as recommended. Two stages (`usage_profile`, `usage_report`);
@@ -130,18 +130,13 @@ Then clear the context and type `/next`.
   months or the coverage threshold; daylight-saving days are left out of hourly metrics; hand-written SVG;
   `validate_timebase` untouched. Retailer plan details (TOU windows, dates, rates) are not private; only the
   household's usage and identifiers are.
-- Built in P3.2.4: `core/charts.py` (`column_chart`, `line_chart`, `band_panel`, `heatmap_chart`, `legend`, `data_table`,
-  `format_number`, `stylesheet`; `CATEGORICAL` four slots, `SEQUENTIAL` seven steps) and `core/usage_report.py`
-  (`UsageMarts(tables, summary)` with the tables by file stem, `render(marts) -> str`, `TITLE`). `render` sorts each table by
-  its key, so load order does not matter. No `url(` anywhere (the hatch is drawn lines). Test helpers: `report_marts()` in
-  `tests/fixtures/usage_marts.py`; the golden page is rewritten with `UPDATE_GOLDEN=1 pytest tests/unit/core/test_usage_report.py`.
-- The stage must load the nine Parquet files and `summary.json` (`UsageSummary`) from `data/marts/usage_profile/`, check
-  each file's kind and version (`E_INVALID_INPUT` on a mismatch, spec §13.3), build `UsageMarts` and write
-  `report/index.html`. `UsageMarts.tables` is keyed by stem: `daily`, `monthly`, `seasonal`, `yoy`, `hourly_profile`,
-  `heatmap`, `tou_daily`, `tou_monthly`, `quality_monthly`.
-- Built earlier: `usage_profile` is registered after `localise` (seven stages), output `data/marts/usage_profile/`; the
-  usage schemas are in `services/stages/tables.py`; a stage may not import another stage; stage modules must not use
-  `ZoneInfo(...)`, `pytz` or `dateutil.tz` (`test_stage_purity`).
+- Built in P3.2.5: `services/stages/usage_report.py` (input `profile` = `data/marts/usage_profile`, empty `params`, output
+  `report` = `data/reports/usage`, file `index.html`). It checks every Parquet file and `summary.json` (`E_INVALID_INPUT`
+  naming input and file). `UsageTable`/`USAGE_TABLES`/`SUMMARY_FILENAME` live in `services/stages/tables.py`, shared by both
+  stages. Empty `params` works in `prepare_stage`, `run_stage` and the emitter. `test_p3_pipeline` runs all eight stages
+  with real DVC and `verify`.
+- DVC lists only the first stale stage after a param change (`usage_profile`); `usage_report` shows stale once the marts
+  change, and `repro` runs both.
 - `tests/integration/_scratch.make_scratch` copies a template repo made once per test process. Fixtures:
   `tests/fixtures/pipeline_workspace.py` (`build_raw_zone`), `params_text.set_reference_months`. Any test that runs every
   stage needs data that confirms a basis and `params` v3 with a `reference_months` the fixture fills (5 for the raw zone).
@@ -151,24 +146,23 @@ Then clear the context and type `/next`.
   repo on `/done push`; no global installs.
 
 **Open questions for the owner**
-- Add `demand_minutes` to `UsageSummary` (still v1, no migration) in P3.2.5 so the report's headline can name the peak
-  demand's block length? Until answered the headline says "Peak demand (kW)" only.
+- Add `demand_minutes` to `UsageSummary` (still v1, no migration) so the report's headline can name the peak demand's
+  block length? Until answered the headline says "Peak demand (kW)" only. Not needed for P3.3.1.
 - The report's size budget holds per register (about 3.1 MB for three years of one register). Two consumption registers
-  would reach about 6 MB. Accept that, or thin the heatmap tooltips?
+  would reach about 6 MB. Accept that, or thin the heatmap tooltips? Check the real size in P3.3.1.
+- P3.3.1: confirm the retailer's second TOU window set (start date and windows) before `params.yaml` is edited.
 
 **Watch out**
 - `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice,
   2026-11-03).
-- P3.2.1 changed `src/energatron/`, so every stage's code entry is stale and the workspace `fingerprint --check` reports
-  it: re-run `fingerprint` (and commit it with `dvc.lock`) before any `dvc repro`. The workspace is still on params v2;
-  it moves to v3 in P3.3.1 (`pipeline sync`), and until then `pipeline sync --check` there reports `params.yaml` drift.
-- `usage_report` declares an empty `params`: if the runner, `prepare_stage` or the dvc.yaml emitter refuses that, stop and
-  ask (P3.2.5).
+- P3.2.1 and later changed `src/energatron/`, so every stage's code entry is stale and the workspace `fingerprint --check`
+  reports it: re-run `fingerprint` (and commit it with `dvc.lock`) before any `dvc repro`. The workspace is still on params
+  v2; it moves to v3 in P3.3.1 (`pipeline sync`), and until then `pipeline sync --check` there reports `params.yaml` drift.
 - The workspace time basis is `confirmed` as `nem_aest`. The retailer's tariff windows changed on or about early
   July 2025 (probe in the workspace note); P3.3.1 asks the owner to confirm the second window set before editing
-  `params.yaml`.
+  `params.yaml`. The owner opens the report in a browser (check 6).
 - If `validate_timebase` is `contradicted` or `localise` fails its gate in the workspace, stop and ask the owner before
-  changing `meter.timebase`.
+  changing `meter.timebase`. If a §12 check cannot pass, stop and ask; don't change a param to make it pass.
 - The Step 0 copy sits outside the configured backup folder; agents never move or delete it.
 - CI runs on Linux under UTC; tests that depend on the local zone can pass on macOS and fail there.
 - `core/` may not call `.replace()` (`test_core_purity` bans it as a path write); use `re` or slicing.
@@ -583,7 +577,7 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
   - Handover: P3 spec approved 2026-11-03 with Q1-Q11 as recommended; `/done` applied plan rev 11 and D1 rev 4 (spec §15) and rewrote P3.2-P3.3 from spec §2. Decision: two stages (`usage_profile` marts, `usage_report` HTML from the marts alone) and date-ranged TOU window sets in `params.yaml` (retailer plan details are not private).
     Watch: P3.2.1 changes every stage's code entry (`Params` v3, `local_day_minutes`); P3.3.1 must ask the owner to confirm the second window set before editing `params.yaml`.
 
-#### P3.2 Build ⬜
+#### P3.2 Build ✅
 - ✅ **P3.2.1** Foundations: `Params` v3, `pipeline sync` for the first window set, `local_day_minutes`, the P3 warnings.
   - `core/models/params.py` v3 (the `analysis` block, season partition, window sets with strictly increasing
     `effective_from`, same labels, each a day partition, `null` first-set windows after migration, the v2 to v3
@@ -629,7 +623,7 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
     byte-identical; the size budget holds.
   - Handover: `core/charts.py` (SVG primitives, one validated palette, light and dark) and `core/usage_report.py` (`UsageMarts`, `render`) build the page from the marts alone, nine sections per register with a table twin, golden `usage_report.html` (2652 tests). Decision: the hatch is explicit 45° lines because §9.1 bans `url(` and a pattern needs it.
     Watch: `summary.json` has no `demand_minutes`, so the headline can't name the peak block length; the 4 MB budget holds per register (about 3.1 MB), not for two.
-- ⬜ **P3.2.5** `usage_report` and the end-to-end P3 test.
+- ✅ **P3.2.5** `usage_report` and the end-to-end P3 test.
   - The stage (empty `params`, spec §10), its registry entry, the golden `dvc.yaml` with all eight stages, and
     `test_p3_pipeline` in a scratch workspace ending with `verify`. If the runner, `prepare_stage` or the emitter
     refuses an empty `params`, stop and ask.
@@ -637,6 +631,8 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
   - Files: `src/energatron/services/stages/{usage_report,registry}.py`, `tests/unit/services/stages/test_usage_report.py`,
     `tests/integration/test_p3_pipeline.py`, `tests/fixtures/golden/dvc.yaml`.
   - Done when: the standard checks pass; the report builds from the marts alone and `verify` passes.
+  - Handover: `usage_report` reads the `usage_profile` directory alone (empty `params`, every file's kind and version checked, `E_INVALID_INPUT` on a mismatch) and writes `index.html`; eight stages, `test_p3_pipeline` ends with `verify` (2703 tests). Decision: `UsageTable`/`USAGE_TABLES`/`SUMMARY_FILENAME` moved to `services/stages/tables.py` for both stages.
+    Watch: DVC lists only `usage_profile` as stale after a param change; every stage's code entry is stale until a workspace runs `fingerprint`.
 
 #### P3.3 Acceptance ⬜
 - ⬜ **P3.3.1** P3 acceptance in the workspace.
@@ -662,6 +658,7 @@ its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-04 · P3.2.5 · `usage_report` stage (marts in, `index.html` out, empty `params`), golden `dvc.yaml` with eight stages, `test_p3_pipeline` ending with `verify` (2703 tests); fresh-reviewer nits fixed · energatron-5000 `P3.2.5: add the usage_report stage and the end-to-end P3 test`
 - 2026-11-04 · P3.2.4 · SVG chart primitives (`core/charts.py`) and the usage report page built from the marts alone (`core/usage_report.py`, golden `usage_report.html`) (2652 tests) · energatron-5000 `P3.2.4: add the SVG chart primitives and the usage report page`
 - 2026-11-04 · P3.2.3 · `usage_profile` stage (nine tables and `summary.json`, seven checks, two warnings), golden `dvc.yaml` with seven stages, whole-pipeline tests moved to params v3 (2562 tests) · energatron-5000 `P3.2.3: add the usage_profile stage, its nine tables and summary`
 - 2026-11-04 · P3.2.2 · Usage metric functions (`core/usage.py`), nine table kinds and `UsageSummary` v1 (`core/models/usage.py`), the oracle's local-table half and `build_marts` (2522 tests) · energatron-5000 `P3.2.2: add the usage metric functions, the usage table kinds and their test oracle`
