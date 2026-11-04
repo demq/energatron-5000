@@ -318,6 +318,14 @@ def test_malformed_values_are_excluded_naming_the_field(mutate: Any, where: str)
     assert where in reason
 
 
+def test_a_plan_charging_nothing_for_supply_or_usage_is_excluded_as_zero_priced() -> None:
+    """Companion (export-only) plans publish zero supply and usage prices beside a separate import plan."""
+    data = cdr.plan(pricing_model="SINGLE_RATE", periods=[cdr.single_period([cdr.rate("0.00")], supply="0.00")])
+    assert reasons(data) == ("zero_priced",)
+    free_usage = cdr.plan(pricing_model="SINGLE_RATE", periods=[cdr.single_period([cdr.rate("0.00")], supply="1.00")])
+    assert tariff(free_usage).status == "normalised"
+
+
 def test_reasons_are_sorted_and_unique() -> None:
     data = cdr.plan(pricing_model="TIME_OF_USE_CONT_LOAD", eligibility=["EXISTING_SOLAR", "EXISTING_BATTERY"])
     assert reasons(data) == ("controlled_load_plan", "eligibility:EXISTING_BATTERY", "eligibility:EXISTING_SOLAR")

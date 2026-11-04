@@ -272,6 +272,7 @@ notes}`. Every input feature lands in exactly one of: supported, an approximatio
 | `effectiveTo` before `as_of`, or `effectiveFrom` after it | excluded `not_effective` |
 | `fuelType` not `ELECTRICITY` | excluded `fuel:<type>` |
 | malformed values (a non-decimal price, an unparseable time) | excluded `malformed:<field>` |
+| every supply, usage and demand price zero (a companion export plan; added at acceptance, 2026-11-05) | excluded `zero_priced` |
 
 Reasons are sorted and unique. A note never changes a price; an approximation is shown wherever the offer's cost is.
 

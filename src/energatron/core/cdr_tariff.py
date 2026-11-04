@@ -148,6 +148,8 @@ def _map(
         found.notes.add("metering_charges_unpriced")
     if _list(contract.get("controlledLoad"), "controlledLoad") and "controlled_load_plan" not in found.reasons:
         found.notes.add("controlled_load_unpriced")
+    if not found.reasons and _zero_priced([season for _, _, season in seasons if season is not None]):
+        found.reasons.add("zero_priced")  # a companion plan (export only): it prices nothing an import plan does
     if found.reasons:
         return Excluded(reasons=_sorted(found.reasons), notes=_sorted(found.notes))
     geography = _mapping(data.get("geography", {}), "geography")
@@ -182,6 +184,16 @@ def brand_of(data: Mapping[str, JSONValue]) -> str:
     if not isinstance(value, str) or not value.strip():
         raise _Malformed("brand")
     return value.strip()
+
+
+def _zero_priced(seasons: Sequence[Season]) -> bool:
+    """Whether every season charges nothing for supply, usage or demand."""
+    return all(
+        season.daily_supply == 0
+        and all(block.unit_price == 0 for charge in season.energy for block in charge.blocks)
+        and all(demand.amount_per_kw == 0 for demand in season.demand)
+        for season in seasons
+    )
 
 
 # Eligibility, seasons and charges
