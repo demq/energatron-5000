@@ -97,78 +97,74 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P3.2.5
-- Last commit: energatron-5000 `P3.2.5: add the usage_report stage and the end-to-end P3 test`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2703
-  passed in ~85 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
+- Last done: P3.3.1
+- Last commit: energatron-5000 `P3.3.1: record P3 acceptance in the workspace`; demq-elektric `P3.3.1: record the P3 usage profile and report run in the workspace`
+- Checks: workspace `verify` ok (8 stages), `dvc status` clean, `pipeline sync --check` and `fingerprint --check` current, workspace
+  privacy guard `--tracked` 0 violations; tool repo unchanged since P3.2.5 (`TZ=UTC pytest -q` 2703 passed); privacy guard
+  `--figures` on `TASKS.md` 0 violations
 - Review: none
-- Next: P3.3.1 (P3 acceptance in the workspace; asks the owner to confirm the second TOU window set)
+- Next: P3.3.2 (owner: back up after P3). Also waiting on the owner: the browser look at the report (§12 check 5) and a
+  yes or a correction for the second TOU window set (§12 check 2)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2
-  list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
+- Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2 list below. The
+  P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
   (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`) are approved.
-- P0, P1 and P2 are done and accepted in the workspace. P3.2.1 to P3.2.5 are done: `Params` v3, the metric functions,
-  the `usage_profile` stage, the pure report renderer and the `usage_report` stage (eight stages in `STAGES`). P3.3.1
-  (acceptance in the workspace) is the next ⬜ and is the first P3 step that touches `demq-elektric/`.
+- P0, P1 and P2 are done and accepted in the workspace. All P3 build sub-tasks are done (eight stages, params v3), and P3.3.1
+  ran the acceptance in the workspace: checks 1-4 and 6-7 pass (R1-R4 pass), check 5 passes except the owner's look at the
+  report in a browser, check 8 is the pending backup. Only P3.3.2 (owner: back up after P3) is left in P3.
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files (`backup.bundle_dir` in `.energatron/local.toml`, the `icloud` remote URL in `.dvc/config.local`);
   `icloud_backup.py` follows `local.toml`. A new machine needs both entries set again.
 
-**Read first** (for P3.3.1)
-- The P3 spec §12 (checks 1-8) and §6 (the window change), plan §15 (P3), and the P2 acceptance note
-  `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md` (it mentions data, so nothing from it is
-  copied into the tool repo). Then the workspace `CLAUDE.md` and `params.yaml` (structure only).
-- The workspace tool commit must include `src/energatron/` (committed by this `/done`), otherwise `fingerprint` records
-  `tool_dirty: true`.
+**Read first** (for the next session)
+- No ⬜ build sub-task is left. P3.3.2 is the owner's backup. After it, plan §15 says the next phase is P4 (offers +
+  electricity engine), which starts with its own spec sub-task; `/next` then says so.
+- The acceptance results are in `demq-elektric/agent_docs/2026-11/2026-11-04_p3-acceptance-usage-profile.md` (it holds data
+  figures, so nothing from it is copied into the tool repo).
 
 **Facts**
-- Owner decisions on the P3 spec (2026-11-03): Q1-Q11 as recommended. Two stages (`usage_profile`, `usage_report`);
-  `params` v3 with `analysis` and date-ranged TOU window sets; `usage_profile` fails below `reference_months` covered
-  months or the coverage threshold; daylight-saving days are left out of hourly metrics; hand-written SVG;
-  `validate_timebase` untouched. Retailer plan details (TOU windows, dates, rates) are not private; only the
-  household's usage and identifiers are.
-- Built in P3.2.5: `services/stages/usage_report.py` (input `profile` = `data/marts/usage_profile`, empty `params`, output
-  `report` = `data/reports/usage`, file `index.html`). It checks every Parquet file and `summary.json` (`E_INVALID_INPUT`
-  naming input and file). `UsageTable`/`USAGE_TABLES`/`SUMMARY_FILENAME` live in `services/stages/tables.py`, shared by both
-  stages. Empty `params` works in `prepare_stage`, `run_stage` and the emitter. `test_p3_pipeline` runs all eight stages
-  with real DVC and `verify`.
-- DVC lists only the first stale stage after a param change (`usage_profile`); `usage_report` shows stale once the marts
-  change, and `repro` runs both.
-- `tests/integration/_scratch.make_scratch` copies a template repo made once per test process. Fixtures:
-  `tests/fixtures/pipeline_workspace.py` (`build_raw_zone`), `params_text.set_reference_months`. Any test that runs every
-  stage needs data that confirms a basis and `params` v3 with a `reference_months` the fixture fills (5 for the raw zone).
+- Owner decisions on the P3 spec (2026-11-03): Q1-Q11 as recommended. Retailer plan details (TOU windows, dates, rates) are
+  not private; only the household's usage and identifiers are.
+- The workspace `params.yaml` holds two TOU window sets: the region profile's and a second from the retailer's change in early
+  July 2025 (evidence: the P2 probe, exact to the third decimal). The agent applied it on the owner's behalf in P3.3.1 after the
+  owner skipped the confirmation dialog and said to carry on; the workspace note flags it for the owner to confirm or change.
+- A `params.yaml` date must be quoted (`effective_from: "2025-07-04"`): DVC refuses an unquoted YAML date, though
+  `pipeline sync --check` accepts it. A tool follow-up could make `Params` or `pipeline sync` catch this; not scheduled.
+- Real-data results: the reference window is the last 12 whole months with full coverage; the report is under 3 MB for one
+  register (budget 4 MB); `W_USAGE_MIXED_WINDOWS` fires for the month holding the change; the legacy notebook method matches
+  the pipeline exactly on meter-clock data (R1, R2).
+- `tests/integration/_scratch.make_scratch` copies a template repo made once per test process. Any test that runs every stage
+  needs data that confirms a basis and `params` v3 with a `reference_months` the fixture fills (5 for the raw zone).
 - The hourly JSON in the legacy folder stays unlanded.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
-- Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing except the tool
-  repo on `/done push`; no global installs.
+- Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing except the tool repo on
+  `/done push`; no global installs.
 
 **Open questions for the owner**
-- Add `demand_minutes` to `UsageSummary` (still v1, no migration) so the report's headline can name the peak demand's
-  block length? Until answered the headline says "Peak demand (kW)" only. Not needed for P3.3.1.
-- The report's size budget holds per register (about 3.1 MB for three years of one register). Two consumption registers
-  would reach about 6 MB. Accept that, or thin the heatmap tooltips? Check the real size in P3.3.1.
-- P3.3.1: confirm the retailer's second TOU window set (start date and windows) before `params.yaml` is edited.
+- Open the report (`demq-elektric/data/reports/usage/index.html`) in a browser: does it read correctly? (§12 check 5)
+- Confirm or correct the second TOU window set in the workspace `params.yaml` (start 2025-07-04; Peak 06:00-10:00 and
+  16:00-00:00, Off Peak 00:00-06:00, Shoulder 10:00-16:00). If it changes, run `dvc repro` and commit the result in the workspace.
+- Add `demand_minutes` to `UsageSummary` (still v1, no migration) so the report's headline names the peak demand's block
+  length? Until answered the headline says "Peak demand (kW)" only.
+- The size budget holds per register; two consumption registers would reach about 6 MB. Accept that, or thin the heatmap
+  tooltips? (The real workspace has one register.)
 
 **Watch out**
-- `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice,
-  2026-11-03).
-- P3.2.1 and later changed `src/energatron/`, so every stage's code entry is stale and the workspace `fingerprint --check`
-  reports it: re-run `fingerprint` (and commit it with `dvc.lock`) before any `dvc repro`. The workspace is still on params
-  v2; it moves to v3 in P3.3.1 (`pipeline sync`), and until then `pipeline sync --check` there reports `params.yaml` drift.
-- The workspace time basis is `confirmed` as `nem_aest`. The retailer's tariff windows changed on or about early
-  July 2025 (probe in the workspace note); P3.3.1 asks the owner to confirm the second window set before editing
-  `params.yaml`. The owner opens the report in a browser (check 6).
-- If `validate_timebase` is `contradicted` or `localise` fails its gate in the workspace, stop and ask the owner before
-  changing `meter.timebase`. If a §12 check cannot pass, stop and ask; don't change a param to make it pass.
+- `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice, 2026-11-03).
+- Backup pending after this sub-task's workspace commit: the owner runs `icloud_backup.py backup` (P3.3.2).
+- A tool change that touches `src/energatron/` makes the workspace's code entries stale: re-run `fingerprint` before any
+  `dvc repro`, and commit it with `dvc.lock`.
+- The workspace time basis is `confirmed` as `nem_aest`. If `validate_timebase` is `contradicted` or `localise` fails its gate,
+  stop and ask the owner before changing `meter.timebase`.
 - The Step 0 copy sits outside the configured backup folder; agents never move or delete it.
 - CI runs on Linux under UTC; tests that depend on the local zone can pass on macOS and fail there.
 - `core/` may not call `.replace()` (`test_core_purity` bans it as a path write); use `re` or slicing.
 - `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
-- pytest takes ~1 minute in parallel (pytest-xdist; `-n0` runs it serially). A safety hook holds any command containing
-  `rm`. Agents never read `demq-elektric/private/`. In zsh pass file lists as an array.
+- pytest takes ~1 minute in parallel (pytest-xdist; `-n0` runs it serially). A safety hook holds any command containing `rm`.
+  Agents never read `demq-elektric/private/`. In zsh pass file lists as an array.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -635,7 +631,7 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
     Watch: DVC lists only `usage_profile` as stale after a param change; every stage's code entry is stale until a workspace runs `fingerprint`.
 
 #### P3.3 Acceptance ⬜
-- ⬜ **P3.3.1** P3 acceptance in the workspace.
+- ✅ **P3.3.1** P3 acceptance in the workspace.
   - The spec's §12 checks 1-8 in order: `pipeline sync` (params v3), the window history (**ask the owner to confirm a
     second window set before editing `params.yaml`**), `fingerprint`, `dvc repro`, the reference window, the report
     (the owner opens it in a browser), the legacy reconciliation R1-R4 by a throwaway script outside both repos, then
@@ -647,6 +643,8 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
     mention data.
   - Done when: every §12 check passes; `TASKS.md` gets counts and pass/fail only.
   - On /done: commit those files as one workspace commit.
+  - Handover: workspace on params v3 with a second window set (applied on the owner's behalf from the P2 probe; to confirm), `fingerprint` + `dvc repro` pass (`usage_profile` 7 checks, `usage_report`), reference window full, report within budget and free of external references, R1-R4 pass, `verify` ok; owner still to look at the report in a browser. Decision: an unquoted YAML date breaks DVC, so `effective_from` is quoted.
+    Watch: backup pending until P3.3.2; the acceptance note flags the window set for the owner.
 - ⬜ **P3.3.2** Owner: back up after P3.
   - Why: owner step (iCloud).
   - Refs: the runbook. Files: none.
@@ -658,6 +656,7 @@ its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-04 · P3.3.1 · P3 acceptance in the workspace: params v3 with a second TOU window set (applied on the owner's behalf; to confirm), `fingerprint`, `dvc repro` (`usage_profile` 7 checks, `usage_report`), reference window full, report 1 file within budget with no external reference, legacy reconciliation R1-R4 pass, `verify` ok, privacy guard 0 violations; browser look and backup pending · demq-elektric `P3.3.1: record the P3 usage profile and report run in the workspace`; energatron-5000 `P3.3.1: record P3 acceptance in the workspace`
 - 2026-11-04 · P3.2.5 · `usage_report` stage (marts in, `index.html` out, empty `params`), golden `dvc.yaml` with eight stages, `test_p3_pipeline` ending with `verify` (2703 tests); fresh-reviewer nits fixed · energatron-5000 `P3.2.5: add the usage_report stage and the end-to-end P3 test`
 - 2026-11-04 · P3.2.4 · SVG chart primitives (`core/charts.py`) and the usage report page built from the marts alone (`core/usage_report.py`, golden `usage_report.html`) (2652 tests) · energatron-5000 `P3.2.4: add the SVG chart primitives and the usage report page`
 - 2026-11-04 · P3.2.3 · `usage_profile` stage (nine tables and `summary.json`, seven checks, two warnings), golden `dvc.yaml` with seven stages, whole-pipeline tests moved to params v3 (2562 tests) · energatron-5000 `P3.2.3: add the usage_profile stage, its nine tables and summary`
