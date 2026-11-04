@@ -169,13 +169,17 @@ def build_marts(
     second_set: tuple[date, Mapping[str, tuple[str, ...]]] | None = None,
     reference_months: int = 12,
     minutes: int = 60,
+    skip: Collection[date] = (),
+    partial: Mapping[date, int] | None = None,
+    flags: Mapping[date, str] | None = None,
 ) -> Marts:
     """Run the metric functions on a generated local table with the default analysis settings.
 
     `second_set` adds a later TOU window set. The default span holds a full 2025 and so a 12-month window. Hourly rows
-    (`minutes=60`) keep the table small. This is a stand-in for the stage, for tests that need marts without a pipeline.
+    (`minutes=60`) keep the table small. `skip`, `partial` and `flags` go to `local_rows`. This is a stand-in for the
+    stage, for tests that need marts without a pipeline.
     """
-    rows = local_rows(first, last, minutes=minutes)
+    rows = local_rows(first, last, minutes=minutes, skip=skip, partial=partial, flags=flags)
     table = local_frame(rows)
     spans = day_minutes_for(rows)
     sets = [(None, dict(WINDOWS))] + ([(second_set[0], dict(second_set[1]))] if second_set else [])
@@ -237,3 +241,33 @@ def build_marts(
         checks={"one_interval_length": True, "daily_conserved": True, "tou_conserved": True, "reference_window": True},
     )
     return Marts(tables, summary)
+
+
+SECOND_WINDOWS: Final[Mapping[str, tuple[str, ...]]] = {
+    "Peak": ("07:00-10:00", "16:00-01:00"),
+    "Off Peak": ("01:00-07:00",),
+    "Shoulder": ("10:00-16:00",),
+}
+"""A made-up second TOU window set: the same labels, a different partition of the day."""
+SECOND_SET_FROM: Final = date(2024, 9, 15)
+
+
+def report_marts(*, second_set: bool = True, heatmap_from: date = date(2025, 3, 26)) -> Marts:
+    """Small marts that exercise every part of the page: a year-on-year pair, a mixed month, partial and estimated days.
+
+    The span is 15 months of hourly data with a reference window of 3 months and a second window set that starts inside
+    a month. The heatmap keeps only the dates from `heatmap_from` on (it includes the long October-to-April day), so the
+    golden page stays small; the other tables are whole.
+    """
+    marts = build_marts(
+        date(2024, 1, 10),
+        date(2025, 4, 20),
+        second_set=(SECOND_SET_FROM, SECOND_WINDOWS) if second_set else None,
+        reference_months=3,
+        partial={date(2024, 2, 10): 10},
+        flags={date(2024, 3, 3): "E", date(2024, 3, 4): "F"},
+    )
+    tables = dict(marts.tables)
+    cells = tables["heatmap"]
+    tables["heatmap"] = cells[cells["local_date"] >= heatmap_from].reset_index(drop=True)
+    return Marts(tables, marts.summary)

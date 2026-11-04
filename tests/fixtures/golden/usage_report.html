@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Household electricity usage</title>
+<style>:root{color-scheme:light dark;--surface:#fcfcfb;--page:#f9f9f7;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--grid:#e1e0d9;--axis:#c3c2b7;--cx:#898781;--c1:#2a78d6;--c2:#eb6834;--c3:#1baf7a;--c4:#eda100;--q0:#cde2fb;--q1:#9ec5f4;--q2:#6da7ec;--q3:#3987e5;--q4:#256abf;--q5:#184f95;--q6:#0d366b}@media (prefers-color-scheme:dark){:root{--surface:#1a1a19;--page:#0d0d0d;--ink:#f0efec;--ink2:#c3c2b7;--grid:#2c2c2a;--axis:#383835;--c1:#3987e5;--c2:#d95926;--c3:#199e70;--c4:#c98500;--q0:#0d366b;--q1:#184f95;--q2:#256abf;--q3:#3987e5;--q4:#6da7ec;--q5:#9ec5f4;--q6:#cde2fb}}.c1{fill:var(--c1)}.swatch.c1{background:var(--c1)}.c2{fill:var(--c2)}.swatch.c2{background:var(--c2)}.c3{fill:var(--c3)}.swatch.c3{background:var(--c3)}.c4{fill:var(--c4)}.swatch.c4{background:var(--c4)}.cx{fill:var(--cx)}.swatch.cx{background:var(--cx)}.q0{fill:var(--q0)}.swatch.q0{background:var(--q0)}.q1{fill:var(--q1)}.swatch.q1{background:var(--q1)}.q2{fill:var(--q2)}.swatch.q2{background:var(--q2)}.q3{fill:var(--q3)}.swatch.q3{background:var(--q3)}.q4{fill:var(--q4)}.swatch.q4{background:var(--q4)}.q5{fill:var(--q5)}.swatch.q5{background:var(--q5)}.q6{fill:var(--q6)}.swatch.q6{background:var(--q6)}svg.chart{display:block;width:100%;height:auto;background:var(--surface)}.chart text{fill:var(--ink2);font-size:11px;font-family:inherit}.chart .tick{fill:var(--muted);text-anchor:middle}.chart .tick.y{text-anchor:end}.chart .tick.group,.chart .key-label{fill:var(--ink2)}.chart .key-label{text-anchor:start}.chart .toplabel{font-size:10px;text-anchor:middle}.chart .panel-title{font-size:12px;font-weight:600;fill:var(--ink);text-anchor:start}.chart .panel-note{font-size:10px;text-anchor:end}.chart .empty{font-size:13px;text-anchor:middle}.chart .grid{stroke:var(--grid);stroke-width:1}.chart .axis{stroke:var(--axis);stroke-width:1}.chart .partial{fill-opacity:.35}path.hatch.c1{stroke:var(--c1)}path.hatch.c2{stroke:var(--c2)}path.hatch.c3{stroke:var(--c3)}path.hatch.c4{stroke:var(--c4)}path.hatch{fill:none;stroke-width:1}.chart path.line{fill:none;stroke:var(--c1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}.chart path.band{fill:var(--c1);fill-opacity:.12}.chart circle.dot{fill:var(--c1);stroke:var(--surface);stroke-width:2}.chart .hit{fill:transparent}.legend{display:flex;flex-wrap:wrap;gap:4px 16px;list-style:none;margin:8px 0;padding:0;font-size:13px}.swatch{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}table{border-collapse:collapse;font-size:13px;margin:8px 0}caption{text-align:left;color:var(--ink2);padding:4px 0}th,td{border-bottom:1px solid var(--grid);padding:3px 12px 3px 0;text-align:left}td.num{text-align:right;font-variant-numeric:tabular-nums}body{margin:0;background:var(--page);color:var(--ink);font-family:system-ui,-apple-system,'Segoe UI',sans-serif;line-height:1.45}main{max-width:980px;margin:0 auto;padding:16px}h1{font-size:26px;margin:8px 0 4px}h2{font-size:21px;margin:32px 0 4px;padding-top:12px;border-top:1px solid var(--grid)}h3{font-size:16px;margin:24px 0 4px}p,li{font-size:14px;color:var(--ink2)}p.lead{color:var(--ink2)}p.note{font-size:13px}p.caption{font-size:13px;font-weight:600;color:var(--ink);margin:16px 0 2px}.panels{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}details{margin:4px 0 8px}summary{cursor:pointer;font-size:13px;color:var(--ink2)}</style>
+</head>
+<body>
+<main>
+<h1>Household electricity usage</h1>
+<section class="register"><h2>Register E1</h2><h3>Headline</h3><p class="lead">Data from 2024-01-10 to 2025-04-20.</p><p>Reference window: 2025-01 to 2025-03. 90 of 90 days complete (100.0%).</p><table><thead><tr><th>Measure</th><th>Reference window</th></tr></thead><tbody><tr><td>Average daily use (kWh)</td><td class="num">2.52</td></tr><tr><td>Base load (kW)</td><td class="num">0.094</td></tr><tr><td>Peak demand (kW)</td><td class="num">0.132</td></tr><tr><td>Load factor</td><td class="num">0.80</td></tr></tbody></table><table><thead><tr><th>Time-of-use label</th><th>Share of use</th></tr></thead><tbody><tr><td>Off Peak</td><td class="num">24.8%</td></tr><tr><td>Peak</td><td class="num">50.8%</td></tr><tr><td>Shoulder</td><td class="num">24.4%</td></tr></tbody></table><h3>Monthly usage</h3><svg class="chart" viewBox="0 0 720.0 240.0" role="img" aria-labelledby="t-monthly-0 d-monthly-0">
+<title id="t-monthly-0">Energy used by month</title>
+<desc id="d-monthly-0">Energy used in each month, in kWh, for 16 months. Partial months, drawn hatched: 2024-01, 2024-02, 2025-04.</desc>
+<line class="axis" x1="44.0" y1="212.0" x2="712.0" y2="212.0"/>
+<text class="tick y" x="38.0" y="215.5">0</text>
+<line class="grid" x1="44.0" y1="164.5" x2="712.0" y2="164.5"/>
+<text class="tick y" x="38.0" y="168.0">20</text>
+<line class="grid" x1="44.0" y1="117.0" x2="712.0" y2="117.0"/>
+<text class="tick y" x="38.0" y="120.5">40</text>
+<line class="grid" x1="44.0" y1="69.5" x2="712.0" y2="69.5"/>
+<text class="tick y" x="38.0" y="73.0">60</text>
+<line class="grid" x1="44.0" y1="22.0" x2="712.0" y2="22.0"/>
+<text class="tick y" x="38.0" y="25.5">80</text>
+<text class="tick x" x="64.9" y="226.0">2024-01</text>
+<text class="tick x" x="148.4" y="226.0">2024-03</text>
+<text class="tick x" x="231.9" y="226.0">2024-05</text>
+<text class="tick x" x="315.4" y="226.0">2024-07</text>
+<text class="tick x" x="398.9" y="226.0">2024-09</text>
+<text class="tick x" x="482.4" y="226.0">2024-11</text>
+<text class="tick x" x="565.9" y="226.0">2025-01</text>
+<text class="tick x" x="649.4" y="226.0">2025-03</text>
+<path class="bar c1 partial" d="M52.9,212.0 L52.9,84.1 Q52.9,80.1 56.9,80.1 L72.9,80.1 Q76.9,80.1 76.9,84.1 L76.9,212.0 Z"/>
+<path class="hatch c1" d="M52.9,84.1 L56.9,80.1 M52.9,88.1 L60.9,80.1 M52.9,92.1 L64.9,80.1 M52.9,96.1 L68.9,80.1 M52.9,100.1 L72.9,80.1 M52.9,104.1 L76.9,80.1 M52.9,108.1 L76.9,84.1 M52.9,112.1 L76.9,88.1 M52.9,116.1 L76.9,92.1 M52.9,120.1 L76.9,96.1 M52.9,124.1 L76.9,100.1 M52.9,128.1 L76.9,104.1 M52.9,132.1 L76.9,108.1 M52.9,136.1 L76.9,112.1 M52.9,140.1 L76.9,116.1 M52.9,144.1 L76.9,120.1 M52.9,148.1 L76.9,124.1 M52.9,152.1 L76.9,128.1 M52.9,156.1 L76.9,132.1 M52.9,160.1 L76.9,136.1 M52.9,164.1 L76.9,140.1 M52.9,168.1 L76.9,144.1 M52.9,172.1 L76.9,148.1 M52.9,176.1 L76.9,152.1 M52.9,180.1 L76.9,156.1 M52.9,184.1 L76.9,160.1 M52.9,188.1 L76.9,164.1 M52.9,192.1 L76.9,168.1 M52.9,196.1 L76.9,172.1 M52.9,200.1 L76.9,176.1 M52.9,204.1 L76.9,180.1 M52.9,208.1 L76.9,184.1 M53.0,212.0 L76.9,188.1 M57.0,212.0 L76.9,192.1 M61.0,212.0 L76.9,196.1 M65.0,212.0 L76.9,200.1 M69.0,212.0 L76.9,204.1 M73.0,212.0 L76.9,208.1"/>
+<path class="bar c1 partial" d="M94.6,212.0 L94.6,45.9 Q94.6,41.9 98.6,41.9 L114.6,41.9 Q118.6,41.9 118.6,45.9 L118.6,212.0 Z"/>
+<path class="hatch c1" d="M94.6,45.9 L98.6,41.9 M94.6,49.9 L102.6,41.9 M94.6,53.9 L106.6,41.9 M94.6,57.9 L110.6,41.9 M94.6,61.9 L114.6,41.9 M94.6,65.9 L118.6,41.9 M94.6,69.9 L118.6,45.9 M94.6,73.9 L118.6,49.9 M94.6,77.9 L118.6,53.9 M94.6,81.9 L118.6,57.9 M94.6,85.9 L118.6,61.9 M94.6,89.9 L118.6,65.9 M94.6,93.9 L118.6,69.9 M94.6,97.9 L118.6,73.9 M94.6,101.9 L118.6,77.9 M94.6,105.9 L118.6,81.9 M94.6,109.9 L118.6,85.9 M94.6,113.9 L118.6,89.9 M94.6,117.9 L118.6,93.9 M94.6,121.9 L118.6,97.9 M94.6,125.9 L118.6,101.9 M94.6,129.9 L118.6,105.9 M94.6,133.9 L118.6,109.9 M94.6,137.9 L118.6,113.9 M94.6,141.9 L118.6,117.9 M94.6,145.9 L118.6,121.9 M94.6,149.9 L118.6,125.9 M94.6,153.9 L118.6,129.9 M94.6,157.9 L118.6,133.9 M94.6,161.9 L118.6,137.9 M94.6,165.9 L118.6,141.9 M94.6,169.9 L118.6,145.9 M94.6,173.9 L118.6,149.9 M94.6,177.9 L118.6,153.9 M94.6,181.9 L118.6,157.9 M94.6,185.9 L118.6,161.9 M94.6,189.9 L118.6,165.9 M94.6,193.9 L118.6,169.9 M94.6,197.9 L118.6,173.9 M94.6,201.9 L118.6,177.9 M94.6,205.9 L118.6,181.9 M94.6,209.9 L118.6,185.9 M96.5,212.0 L118.6,189.9 M100.5,212.0 L118.6,193.9 M104.5,212.0 L118.6,197.9 M108.5,212.0 L118.6,201.9 M112.5,212.0 L118.6,205.9 M116.5,212.0 L118.6,209.9"/>
+<path class="bar c1" d="M136.4,212.0 L136.4,30.5 Q136.4,26.5 140.4,26.5 L156.4,26.5 Q160.4,26.5 160.4,30.5 L160.4,212.0 Z"/>
+<path class="bar c1" d="M178.1,212.0 L178.1,36.3 Q178.1,32.3 182.1,32.3 L198.1,32.3 Q202.1,32.3 202.1,36.3 L202.1,212.0 Z"/>
+<path class="bar c1" d="M219.9,212.0 L219.9,30.5 Q219.9,26.5 223.9,26.5 L239.9,26.5 Q243.9,26.5 243.9,30.5 L243.9,212.0 Z"/>
+<path class="bar c1" d="M261.6,212.0 L261.6,36.5 Q261.6,32.5 265.6,32.5 L281.6,32.5 Q285.6,32.5 285.6,36.5 L285.6,212.0 Z"/>
+<path class="bar c1" d="M303.4,212.0 L303.4,30.5 Q303.4,26.5 307.4,26.5 L323.4,26.5 Q327.4,26.5 327.4,30.5 L327.4,212.0 Z"/>
+<path class="bar c1" d="M345.1,212.0 L345.1,30.5 Q345.1,26.5 349.1,26.5 L365.1,26.5 Q369.1,26.5 369.1,30.5 L369.1,212.0 Z"/>
+<path class="bar c1" d="M386.9,212.0 L386.9,36.5 Q386.9,32.5 390.9,32.5 L406.9,32.5 Q410.9,32.5 410.9,36.5 L410.9,212.0 Z"/>
+<path class="bar c1" d="M428.6,212.0 L428.6,30.8 Q428.6,26.8 432.6,26.8 L448.6,26.8 Q452.6,26.8 452.6,30.8 L452.6,212.0 Z"/>
+<path class="bar c1" d="M470.4,212.0 L470.4,36.5 Q470.4,32.5 474.4,32.5 L490.4,32.5 Q494.4,32.5 494.4,36.5 L494.4,212.0 Z"/>
+<path class="bar c1" d="M512.1,212.0 L512.1,30.5 Q512.1,26.5 516.1,26.5 L532.1,26.5 Q536.1,26.5 536.1,30.5 L536.1,212.0 Z"/>
+<path class="bar c1" d="M553.9,212.0 L553.9,30.5 Q553.9,26.5 557.9,26.5 L573.9,26.5 Q577.9,26.5 577.9,30.5 L577.9,212.0 Z"/>
+<path class="bar c1" d="M595.6,212.0 L595.6,48.2 Q595.6,44.2 599.6,44.2 L615.6,44.2 Q619.6,44.2 619.6,48.2 L619.6,212.0 Z"/>
+<path class="bar c1" d="M637.4,212.0 L637.4,30.5 Q637.4,26.5 641.4,26.5 L657.4,26.5 Q661.4,26.5 661.4,30.5 L661.4,212.0 Z"/>
+<path class="bar c1 partial" d="M679.1,212.0 L679.1,95.5 Q679.1,91.5 683.1,91.5 L699.1,91.5 Q703.1,91.5 703.1,95.5 L703.1,212.0 Z"/>
+<path class="hatch c1" d="M679.1,95.5 L683.1,91.5 M679.1,99.5 L687.1,91.5 M679.1,103.5 L691.1,91.5 M679.1,107.5 L695.1,91.5 M679.1,111.5 L699.1,91.5 M679.1,115.5 L703.1,91.5 M679.1,119.5 L703.1,95.5 M679.1,123.5 L703.1,99.5 M679.1,127.5 L703.1,103.5 M679.1,131.5 L703.1,107.5 M679.1,135.5 L703.1,111.5 M679.1,139.5 L703.1,115.5 M679.1,143.5 L703.1,119.5 M679.1,147.5 L703.1,123.5 M679.1,151.5 L703.1,127.5 M679.1,155.5 L703.1,131.5 M679.1,159.5 L703.1,135.5 M679.1,163.5 L703.1,139.5 M679.1,167.5 L703.1,143.5 M679.1,171.5 L703.1,147.5 M679.1,175.5 L703.1,151.5 M679.1,179.5 L703.1,155.5 M679.1,183.5 L703.1,159.5 M679.1,187.5 L703.1,163.5 M679.1,191.5 L703.1,167.5 M679.1,195.5 L703.1,171.5 M679.1,199.5 L703.1,175.5 M679.1,203.5 L703.1,179.5 M679.1,207.5 L703.1,183.5 M679.1,211.5 L703.1,187.5 M682.6,212.0 L703.1,191.5 M686.6,212.0 L703.1,195.5 M690.6,212.0 L703.1,199.5 M694.6,212.0 L703.1,203.5 M698.6,212.0 L703.1,207.5 M702.6,212.0 L703.1,211.5"/>
+<rect class="hit" x="44.0" y="22.0" width="41.8" height="190.0"><title>2024-01
+Energy: 55.5 kWh
+Partial month: 22 of 31 days complete</title></rect>
+<rect class="hit" x="85.8" y="22.0" width="41.8" height="190.0"><title>2024-02
+Energy: 71.6 kWh
+Partial month: 28 of 29 days complete</title></rect>
+<rect class="hit" x="127.5" y="22.0" width="41.8" height="190.0"><title>2024-03
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="169.2" y="22.0" width="41.8" height="190.0"><title>2024-04
+Energy: 75.7 kWh</title></rect>
+<rect class="hit" x="211.0" y="22.0" width="41.8" height="190.0"><title>2024-05
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="252.8" y="22.0" width="41.8" height="190.0"><title>2024-06
+Energy: 75.6 kWh</title></rect>
+<rect class="hit" x="294.5" y="22.0" width="41.8" height="190.0"><title>2024-07
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="336.2" y="22.0" width="41.8" height="190.0"><title>2024-08
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="378.0" y="22.0" width="41.8" height="190.0"><title>2024-09
+Energy: 75.6 kWh</title></rect>
+<rect class="hit" x="419.8" y="22.0" width="41.8" height="190.0"><title>2024-10
+Energy: 78.0 kWh</title></rect>
+<rect class="hit" x="461.5" y="22.0" width="41.8" height="190.0"><title>2024-11
+Energy: 75.6 kWh</title></rect>
+<rect class="hit" x="503.2" y="22.0" width="41.8" height="190.0"><title>2024-12
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="545.0" y="22.0" width="41.8" height="190.0"><title>2025-01
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="586.8" y="22.0" width="41.8" height="190.0"><title>2025-02
+Energy: 70.7 kWh</title></rect>
+<rect class="hit" x="628.5" y="22.0" width="41.8" height="190.0"><title>2025-03
+Energy: 78.1 kWh</title></rect>
+<rect class="hit" x="670.2" y="22.0" width="41.8" height="190.0"><title>2025-04
+Energy: 50.7 kWh
+Partial month: 20 of 30 days complete</title></rect>
+</svg><details><summary>Table</summary><table><thead><tr><th>Month</th><th>Energy (kWh)</th><th>Complete days</th><th>Days in month</th></tr></thead><tbody><tr><td>2024-01</td><td class="num">55.5</td><td class="num">22</td><td class="num">31</td></tr><tr><td>2024-02</td><td class="num">71.6</td><td class="num">28</td><td class="num">29</td></tr><tr><td>2024-03</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2024-04</td><td class="num">75.7</td><td class="num">30</td><td class="num">30</td></tr><tr><td>2024-05</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2024-06</td><td class="num">75.6</td><td class="num">30</td><td class="num">30</td></tr><tr><td>2024-07</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2024-08</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2024-09</td><td class="num">75.6</td><td class="num">30</td><td class="num">30</td></tr><tr><td>2024-10</td><td class="num">78.0</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2024-11</td><td class="num">75.6</td><td class="num">30</td><td class="num">30</td></tr><tr><td>2024-12</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2025-01</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2025-02</td><td class="num">70.7</td><td class="num">28</td><td class="num">28</td></tr><tr><td>2025-03</td><td class="num">78.1</td><td class="num">31</td><td class="num">31</td></tr><tr><td>2025-04</td><td class="num">50.7</td><td class="num">20</td><td class="num">30</td></tr></tbody></table></details><h3>Average daily use by month and season</h3><svg class="chart" viewBox="0 0 720.0 240.0" role="img" aria-labelledby="t-average-0 d-average-0">
+<title id="t-average-0">Average daily use by month</title>
+<desc id="d-average-0">Average energy per complete day in each month, in kWh per day, with the season named under the months.</desc>
+<line class="axis" x1="44.0" y1="194.0" x2="712.0" y2="194.0"/>
+<text class="tick y" x="38.0" y="197.5">0</text>
+<line class="grid" x1="44.0" y1="151.0" x2="712.0" y2="151.0"/>
+<text class="tick y" x="38.0" y="154.5">1</text>
+<line class="grid" x1="44.0" y1="108.0" x2="712.0" y2="108.0"/>
+<text class="tick y" x="38.0" y="111.5">2</text>
+<line class="grid" x1="44.0" y1="65.0" x2="712.0" y2="65.0"/>
+<text class="tick y" x="38.0" y="68.5">3</text>
+<line class="grid" x1="44.0" y1="22.0" x2="712.0" y2="22.0"/>
+<text class="tick y" x="38.0" y="25.5">4</text>
+<text class="tick x" x="64.9" y="208.0">2024-01</text>
+<text class="tick x" x="148.4" y="208.0">2024-03</text>
+<text class="tick x" x="231.9" y="208.0">2024-05</text>
+<text class="tick x" x="315.4" y="208.0">2024-07</text>
+<text class="tick x" x="398.9" y="208.0">2024-09</text>
+<text class="tick x" x="482.4" y="208.0">2024-11</text>
+<text class="tick x" x="565.9" y="208.0">2025-01</text>
+<text class="tick x" x="649.4" y="208.0">2025-03</text>
+<line class="grid" x1="46.0" y1="214.0" x2="125.5" y2="214.0"/>
+<text class="tick group" x="85.8" y="226.0">DJF</text>
+<line class="grid" x1="129.5" y1="214.0" x2="250.8" y2="214.0"/>
+<text class="tick group" x="190.1" y="226.0">MAM</text>
+<line class="grid" x1="254.8" y1="214.0" x2="376.0" y2="214.0"/>
+<text class="tick group" x="315.4" y="226.0">JJA</text>
+<line class="grid" x1="380.0" y1="214.0" x2="501.2" y2="214.0"/>
+<text class="tick group" x="440.6" y="226.0">SON</text>
+<line class="grid" x1="505.2" y1="214.0" x2="626.5" y2="214.0"/>
+<text class="tick group" x="565.9" y="226.0">DJF</text>
+<line class="grid" x1="630.5" y1="214.0" x2="710.0" y2="214.0"/>
+<text class="tick group" x="670.2" y="226.0">MAM</text>
+<path class="bar c1" d="M52.9,194.0 L52.9,89.5 Q52.9,85.5 56.9,85.5 L72.9,85.5 Q76.9,85.5 76.9,89.5 L76.9,194.0 Z"/>
+<path class="bar c1" d="M94.6,194.0 L94.6,89.6 Q94.6,85.6 98.6,85.6 L114.6,85.6 Q118.6,85.6 118.6,89.6 L118.6,194.0 Z"/>
+<path class="bar c1" d="M136.4,194.0 L136.4,89.7 Q136.4,85.7 140.4,85.7 L156.4,85.7 Q160.4,85.7 160.4,89.7 L160.4,194.0 Z"/>
+<path class="bar c1" d="M178.1,194.0 L178.1,89.5 Q178.1,85.5 182.1,85.5 L198.1,85.5 Q202.1,85.5 202.1,89.5 L202.1,194.0 Z"/>
+<path class="bar c1" d="M219.9,194.0 L219.9,89.7 Q219.9,85.7 223.9,85.7 L239.9,85.7 Q243.9,85.7 243.9,89.7 L243.9,194.0 Z"/>
+<path class="bar c1" d="M261.6,194.0 L261.6,89.7 Q261.6,85.7 265.6,85.7 L281.6,85.7 Q285.6,85.7 285.6,89.7 L285.6,194.0 Z"/>
+<path class="bar c1" d="M303.4,194.0 L303.4,89.7 Q303.4,85.7 307.4,85.7 L323.4,85.7 Q327.4,85.7 327.4,89.7 L327.4,194.0 Z"/>
+<path class="bar c1" d="M345.1,194.0 L345.1,89.7 Q345.1,85.7 349.1,85.7 L365.1,85.7 Q369.1,85.7 369.1,89.7 L369.1,194.0 Z"/>
+<path class="bar c1" d="M386.9,194.0 L386.9,89.7 Q386.9,85.7 390.9,85.7 L406.9,85.7 Q410.9,85.7 410.9,89.7 L410.9,194.0 Z"/>
+<path class="bar c1" d="M428.6,194.0 L428.6,89.8 Q428.6,85.8 432.6,85.8 L448.6,85.8 Q452.6,85.8 452.6,89.8 L452.6,194.0 Z"/>
+<path class="bar c1" d="M470.4,194.0 L470.4,89.7 Q470.4,85.7 474.4,85.7 L490.4,85.7 Q494.4,85.7 494.4,89.7 L494.4,194.0 Z"/>
+<path class="bar c1" d="M512.1,194.0 L512.1,89.7 Q512.1,85.7 516.1,85.7 L532.1,85.7 Q536.1,85.7 536.1,89.7 L536.1,194.0 Z"/>
+<path class="bar c1" d="M553.9,194.0 L553.9,89.7 Q553.9,85.7 557.9,85.7 L573.9,85.7 Q577.9,85.7 577.9,89.7 L577.9,194.0 Z"/>
+<path class="bar c1" d="M595.6,194.0 L595.6,89.5 Q595.6,85.5 599.6,85.5 L615.6,85.5 Q619.6,85.5 619.6,89.5 L619.6,194.0 Z"/>
+<path class="bar c1" d="M637.4,194.0 L637.4,89.7 Q637.4,85.7 641.4,85.7 L657.4,85.7 Q661.4,85.7 661.4,89.7 L661.4,194.0 Z"/>
+<path class="bar c1" d="M679.1,194.0 L679.1,88.9 Q679.1,84.9 683.1,84.9 L699.1,84.9 Q703.1,84.9 703.1,88.9 L703.1,194.0 Z"/>
+<rect class="hit" x="44.0" y="22.0" width="41.8" height="172.0"><title>2024-01
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="85.8" y="22.0" width="41.8" height="172.0"><title>2024-02
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="127.5" y="22.0" width="41.8" height="172.0"><title>2024-03
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="169.2" y="22.0" width="41.8" height="172.0"><title>2024-04
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="211.0" y="22.0" width="41.8" height="172.0"><title>2024-05
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="252.8" y="22.0" width="41.8" height="172.0"><title>2024-06
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="294.5" y="22.0" width="41.8" height="172.0"><title>2024-07
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="336.2" y="22.0" width="41.8" height="172.0"><title>2024-08
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="378.0" y="22.0" width="41.8" height="172.0"><title>2024-09
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="419.8" y="22.0" width="41.8" height="172.0"><title>2024-10
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="461.5" y="22.0" width="41.8" height="172.0"><title>2024-11
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="503.2" y="22.0" width="41.8" height="172.0"><title>2024-12
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="545.0" y="22.0" width="41.8" height="172.0"><title>2025-01
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="586.8" y="22.0" width="41.8" height="172.0"><title>2025-02
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="628.5" y="22.0" width="41.8" height="172.0"><title>2025-03
+Average per day: 2.52 kWh per day</title></rect>
+<rect class="hit" x="670.2" y="22.0" width="41.8" height="172.0"><title>2025-04
+Average per day: 2.54 kWh per day</title></rect>
+</svg><details><summary>Table</summary><table><thead><tr><th>Month</th><th>Average per day (kWh)</th></tr></thead><tbody><tr><td>2024-01</td><td class="num">2.52</td></tr><tr><td>2024-02</td><td class="num">2.52</td></tr><tr><td>2024-03</td><td class="num">2.52</td></tr><tr><td>2024-04</td><td class="num">2.52</td></tr><tr><td>2024-05</td><td class="num">2.52</td></tr><tr><td>2024-06</td><td class="num">2.52</td></tr><tr><td>2024-07</td><td class="num">2.52</td></tr><tr><td>2024-08</td><td class="num">2.52</td></tr><tr><td>2024-09</td><td class="num">2.52</td></tr><tr><td>2024-10</td><td class="num">2.52</td></tr><tr><td>2024-11</td><td class="num">2.52</td></tr><tr><td>2024-12</td><td class="num">2.52</td></tr><tr><td>2025-01</td><td class="num">2.52</td></tr><tr><td>2025-02</td><td class="num">2.52</td></tr><tr><td>2025-03</td><td class="num">2.52</td></tr><tr><td>2025-04</td><td class="num">2.54</td></tr></tbody></table></details><table><caption>Average daily use by season</caption><thead><tr><th>Season year</th><th>Season</th><th>Complete days</th><th>Energy (kWh)</th><th>Average per day (kWh)</th></tr></thead><tbody><tr><td class="num">2023</td><td>DJF</td><td class="num">50</td><td class="num">126.1</td><td class="num">2.52</td></tr><tr><td class="num">2024</td><td>DJF</td><td class="num">90</td><td class="num">226.9</td><td class="num">2.52</td></tr><tr><td class="num">2024</td><td>MAM</td><td class="num">92</td><td class="num">231.9</td><td class="num">2.52</td></tr><tr><td class="num">2024</td><td>JJA</td><td class="num">92</td><td class="num">231.8</td><td class="num">2.52</td></tr><tr><td class="num">2024</td><td>SON</td><td class="num">91</td><td class="num">229.1</td><td class="num">2.52</td></tr><tr><td class="num">2025</td><td>MAM</td><td class="num">51</td><td class="num">128.8</td><td class="num">2.53</td></tr></tbody></table><h3>Year on year</h3><ul class="legend"><li><span class="swatch cx"></span><span>A year earlier</span></li><li><span class="swatch c1"></span><span>This month</span></li></ul><svg class="chart" viewBox="0 0 720.0 240.0" role="img" aria-labelledby="t-yoy-0 d-yoy-0">
+<title id="t-yoy-0">Average daily use against a year earlier</title>
+<desc id="d-yoy-0">Average energy per complete day in each month beside the same month a year earlier, with the change.</desc>
+<line class="axis" x1="44.0" y1="212.0" x2="712.0" y2="212.0"/>
+<text class="tick y" x="38.0" y="215.5">0</text>
+<line class="grid" x1="44.0" y1="164.5" x2="712.0" y2="164.5"/>
+<text class="tick y" x="38.0" y="168.0">1</text>
+<line class="grid" x1="44.0" y1="117.0" x2="712.0" y2="117.0"/>
+<text class="tick y" x="38.0" y="120.5">2</text>
+<line class="grid" x1="44.0" y1="69.5" x2="712.0" y2="69.5"/>
+<text class="tick y" x="38.0" y="73.0">3</text>
+<line class="grid" x1="44.0" y1="22.0" x2="712.0" y2="22.0"/>
+<text class="tick y" x="38.0" y="25.5">4</text>
+<text class="tick x" x="211.0" y="226.0">2025-02</text>
+<text class="tick x" x="545.0" y="226.0">2025-03</text>
+<path class="bar cx" d="M186.0,212.0 L186.0,96.3 Q186.0,92.3 190.0,92.3 L206.0,92.3 Q210.0,92.3 210.0,96.3 L210.0,212.0 Z"/>
+<path class="bar c1" d="M212.0,212.0 L212.0,96.1 Q212.0,92.1 216.0,92.1 L232.0,92.1 Q236.0,92.1 236.0,96.1 L236.0,212.0 Z"/>
+<text class="toplabel" x="211.0" y="87.1">+0.1%</text>
+<path class="bar cx" d="M520.0,212.0 L520.0,96.3 Q520.0,92.3 524.0,92.3 L540.0,92.3 Q544.0,92.3 544.0,96.3 L544.0,212.0 Z"/>
+<path class="bar c1" d="M546.0,212.0 L546.0,96.3 Q546.0,92.3 550.0,92.3 L566.0,92.3 Q570.0,92.3 570.0,96.3 L570.0,212.0 Z"/>
+<text class="toplabel" x="545.0" y="87.3">0.0%</text>
+<rect class="hit" x="44.0" y="22.0" width="334.0" height="190.0"><title>2025-02
+2024-02: 2.52 kWh per day
+2025-02: 2.52 kWh per day (+0.1%)</title></rect>
+<rect class="hit" x="378.0" y="22.0" width="334.0" height="190.0"><title>2025-03
+2024-03: 2.52 kWh per day
+2025-03: 2.52 kWh per day (0.0%)</title></rect>
+</svg><details><summary>Table</summary><table><thead><tr><th>Month</th><th>Month a year earlier</th><th>Average per day (kWh)</th><th>A year earlier (kWh)</th><th>Change</th></tr></thead><tbody><tr><td>2025-02</td><td>2024-02</td><td class="num">2.52</td><td class="num">2.52</td><td class="num">+0.1%</td></tr><tr><td>2025-03</td><td>2024-03</td><td class="num">2.52</td><td class="num">2.52</td><td class="num">0.0%</td></tr></tbody></table></details><h3>Hourly profile</h3><p class="note">Line: mean energy in each clock hour over the reference window. Band: p10 to p90 of the days (median p50).</p><div class="panels"><svg class="chart" viewBox="0 0 260.0 156.0" role="img" aria-labelledby="t-hourly-0-0 d-hourly-0-0">
+<title id="t-hourly-0-0">DJF · weekday</title>
+<desc id="d-hourly-0-0">Mean energy per clock hour on DJF weekday days, in kWh, with the p10 to p90 band.</desc>
+<text class="panel-title" x="34.0" y="12.0">DJF · weekday</text>
+<line class="axis" x1="34.0" y1="134.0" x2="254.0" y2="134.0"/>
+<text class="tick y" x="28.0" y="137.5">0.00</text>
+<line class="grid" x1="34.0" y1="106.5" x2="254.0" y2="106.5"/>
+<text class="tick y" x="28.0" y="110.0">0.05</text>
+<line class="grid" x1="34.0" y1="79.0" x2="254.0" y2="79.0"/>
+<text class="tick y" x="28.0" y="82.5">0.10</text>
+<line class="grid" x1="34.0" y1="51.5" x2="254.0" y2="51.5"/>
+<text class="tick y" x="28.0" y="55.0">0.15</text>
+<line class="grid" x1="34.0" y1="24.0" x2="254.0" y2="24.0"/>
+<text class="tick y" x="28.0" y="27.5">0.20</text>
+<text class="tick x" x="38.6" y="148.0">0</text>
+<text class="tick x" x="93.6" y="148.0">6</text>
+<text class="tick x" x="148.6" y="148.0">12</text>
+<text class="tick x" x="203.6" y="148.0">18</text>
+<text class="tick x" x="249.4" y="148.0">23</text>
+<path class="band" d="M38.6,83.4 L47.8,77.9 L56.9,72.4 L66.1,66.9 L75.2,61.4 L84.4,83.4 L93.6,77.9 L102.8,72.4 L111.9,66.9 L121.1,61.4 L130.2,83.4 L139.4,77.9 L148.6,72.4 L157.8,66.9 L166.9,61.4 L176.1,83.4 L185.2,77.9 L194.4,72.4 L203.6,66.9 L212.8,61.4 L221.9,83.4 L231.1,77.9 L240.2,72.4 L249.4,66.9 L249.4,73.5 L240.2,79.0 L231.1,84.5 L221.9,90.0 L212.8,68.0 L203.6,73.5 L194.4,79.0 L185.2,84.5 L176.1,90.0 L166.9,68.0 L157.8,73.5 L148.6,79.0 L139.4,84.5 L130.2,90.0 L121.1,68.0 L111.9,73.5 L102.8,79.0 L93.6,84.5 L84.4,90.0 L75.2,68.0 L66.1,73.5 L56.9,79.0 L47.8,84.5 L38.6,90.0 Z"/>
+<path class="line" d="M38.6,86.8 L47.8,81.3 L56.9,75.8 L66.1,70.3 L75.2,64.8 L84.4,86.8 L93.6,81.3 L102.8,75.8 L111.9,70.3 L121.1,64.8 L130.2,86.8 L139.4,81.3 L148.6,75.8 L157.8,70.3 L166.9,64.8 L176.1,86.8 L185.2,81.3 L194.4,75.8 L203.6,70.3 L212.8,64.8 L221.9,86.8 L231.1,81.3 L240.2,75.8 L249.4,70.3"/>
+<rect class="hit" x="34.0" y="24.0" width="9.2" height="110.0"><title>00:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 43 days</title></rect>
+<rect class="hit" x="43.2" y="24.0" width="9.2" height="110.0"><title>01:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 43 days</title></rect>
+<rect class="hit" x="52.3" y="24.0" width="9.2" height="110.0"><title>02:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 43 days</title></rect>
+<rect class="hit" x="61.5" y="24.0" width="9.2" height="110.0"><title>03:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 43 days</title></rect>
+<rect class="hit" x="70.7" y="24.0" width="9.2" height="110.0"><title>04:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 43 days</title></rect>
+<rect class="hit" x="79.8" y="24.0" width="9.2" height="110.0"><title>05:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 43 days</title></rect>
+<rect class="hit" x="89.0" y="24.0" width="9.2" height="110.0"><title>06:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 43 days</title></rect>
+<rect class="hit" x="98.2" y="24.0" width="9.2" height="110.0"><title>07:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 43 days</title></rect>
+<rect class="hit" x="107.3" y="24.0" width="9.2" height="110.0"><title>08:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 43 days</title></rect>
+<rect class="hit" x="116.5" y="24.0" width="9.2" height="110.0"><title>09:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 43 days</title></rect>
+<rect class="hit" x="125.7" y="24.0" width="9.2" height="110.0"><title>10:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 43 days</title></rect>
+<rect class="hit" x="134.8" y="24.0" width="9.2" height="110.0"><title>11:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 43 days</title></rect>
+<rect class="hit" x="144.0" y="24.0" width="9.2" height="110.0"><title>12:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 43 days</title></rect>
+<rect class="hit" x="153.2" y="24.0" width="9.2" height="110.0"><title>13:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 43 days</title></rect>
+<rect class="hit" x="162.3" y="24.0" width="9.2" height="110.0"><title>14:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 43 days</title></rect>
+<rect class="hit" x="171.5" y="24.0" width="9.2" height="110.0"><title>15:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 43 days</title></rect>
+<rect class="hit" x="180.7" y="24.0" width="9.2" height="110.0"><title>16:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 43 days</title></rect>
+<rect class="hit" x="189.8" y="24.0" width="9.2" height="110.0"><title>17:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 43 days</title></rect>
+<rect class="hit" x="199.0" y="24.0" width="9.2" height="110.0"><title>18:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 43 days</title></rect>
+<rect class="hit" x="208.2" y="24.0" width="9.2" height="110.0"><title>19:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 43 days</title></rect>
+<rect class="hit" x="217.3" y="24.0" width="9.2" height="110.0"><title>20:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 43 days</title></rect>
+<rect class="hit" x="226.5" y="24.0" width="9.2" height="110.0"><title>21:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 43 days</title></rect>
+<rect class="hit" x="235.7" y="24.0" width="9.2" height="110.0"><title>22:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 43 days</title></rect>
+<rect class="hit" x="244.8" y="24.0" width="9.2" height="110.0"><title>23:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 43 days</title></rect>
+</svg><svg class="chart" viewBox="0 0 260.0 156.0" role="img" aria-labelledby="t-hourly-0-1 d-hourly-0-1">
+<title id="t-hourly-0-1">DJF · weekend</title>
+<desc id="d-hourly-0-1">Mean energy per clock hour on DJF weekend days, in kWh, with the p10 to p90 band.</desc>
+<text class="panel-title" x="34.0" y="12.0">DJF · weekend</text>
+<line class="axis" x1="34.0" y1="134.0" x2="254.0" y2="134.0"/>
+<text class="tick y" x="28.0" y="137.5">0.00</text>
+<line class="grid" x1="34.0" y1="106.5" x2="254.0" y2="106.5"/>
+<text class="tick y" x="28.0" y="110.0">0.05</text>
+<line class="grid" x1="34.0" y1="79.0" x2="254.0" y2="79.0"/>
+<text class="tick y" x="28.0" y="82.5">0.10</text>
+<line class="grid" x1="34.0" y1="51.5" x2="254.0" y2="51.5"/>
+<text class="tick y" x="28.0" y="55.0">0.15</text>
+<line class="grid" x1="34.0" y1="24.0" x2="254.0" y2="24.0"/>
+<text class="tick y" x="28.0" y="27.5">0.20</text>
+<text class="tick x" x="38.6" y="148.0">0</text>
+<text class="tick x" x="93.6" y="148.0">6</text>
+<text class="tick x" x="148.6" y="148.0">12</text>
+<text class="tick x" x="203.6" y="148.0">18</text>
+<text class="tick x" x="249.4" y="148.0">23</text>
+<path class="band" d="M38.6,84.5 L47.8,79.0 L56.9,73.5 L66.1,68.0 L75.2,62.5 L84.4,84.5 L93.6,79.0 L102.8,73.5 L111.9,68.0 L121.1,62.5 L130.2,84.5 L139.4,79.0 L148.6,73.5 L157.8,68.0 L166.9,62.5 L176.1,84.5 L185.2,79.0 L194.4,73.5 L203.6,68.0 L212.8,62.5 L221.9,84.5 L231.1,79.0 L240.2,73.5 L249.4,68.0 L249.4,72.4 L240.2,77.9 L231.1,83.4 L221.9,88.9 L212.8,66.9 L203.6,72.4 L194.4,77.9 L185.2,83.4 L176.1,88.9 L166.9,66.9 L157.8,72.4 L148.6,77.9 L139.4,83.4 L130.2,88.9 L121.1,66.9 L111.9,72.4 L102.8,77.9 L93.6,83.4 L84.4,88.9 L75.2,66.9 L66.1,72.4 L56.9,77.9 L47.8,83.4 L38.6,88.9 Z"/>
+<path class="line" d="M38.6,86.7 L47.8,81.2 L56.9,75.7 L66.1,70.2 L75.2,64.7 L84.4,86.7 L93.6,81.2 L102.8,75.7 L111.9,70.2 L121.1,64.7 L130.2,86.7 L139.4,81.2 L148.6,75.7 L157.8,70.2 L166.9,64.7 L176.1,86.7 L185.2,81.2 L194.4,75.7 L203.6,70.2 L212.8,64.7 L221.9,86.7 L231.1,81.2 L240.2,75.7 L249.4,70.2"/>
+<rect class="hit" x="34.0" y="24.0" width="9.2" height="110.0"><title>00:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 16 days</title></rect>
+<rect class="hit" x="43.2" y="24.0" width="9.2" height="110.0"><title>01:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 16 days</title></rect>
+<rect class="hit" x="52.3" y="24.0" width="9.2" height="110.0"><title>02:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 16 days</title></rect>
+<rect class="hit" x="61.5" y="24.0" width="9.2" height="110.0"><title>03:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 16 days</title></rect>
+<rect class="hit" x="70.7" y="24.0" width="9.2" height="110.0"><title>04:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 16 days</title></rect>
+<rect class="hit" x="79.8" y="24.0" width="9.2" height="110.0"><title>05:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 16 days</title></rect>
+<rect class="hit" x="89.0" y="24.0" width="9.2" height="110.0"><title>06:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 16 days</title></rect>
+<rect class="hit" x="98.2" y="24.0" width="9.2" height="110.0"><title>07:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 16 days</title></rect>
+<rect class="hit" x="107.3" y="24.0" width="9.2" height="110.0"><title>08:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 16 days</title></rect>
+<rect class="hit" x="116.5" y="24.0" width="9.2" height="110.0"><title>09:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 16 days</title></rect>
+<rect class="hit" x="125.7" y="24.0" width="9.2" height="110.0"><title>10:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 16 days</title></rect>
+<rect class="hit" x="134.8" y="24.0" width="9.2" height="110.0"><title>11:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 16 days</title></rect>
+<rect class="hit" x="144.0" y="24.0" width="9.2" height="110.0"><title>12:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 16 days</title></rect>
+<rect class="hit" x="153.2" y="24.0" width="9.2" height="110.0"><title>13:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 16 days</title></rect>
+<rect class="hit" x="162.3" y="24.0" width="9.2" height="110.0"><title>14:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 16 days</title></rect>
+<rect class="hit" x="171.5" y="24.0" width="9.2" height="110.0"><title>15:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 16 days</title></rect>
+<rect class="hit" x="180.7" y="24.0" width="9.2" height="110.0"><title>16:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 16 days</title></rect>
+<rect class="hit" x="189.8" y="24.0" width="9.2" height="110.0"><title>17:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 16 days</title></rect>
+<rect class="hit" x="199.0" y="24.0" width="9.2" height="110.0"><title>18:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 16 days</title></rect>
+<rect class="hit" x="208.2" y="24.0" width="9.2" height="110.0"><title>19:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 16 days</title></rect>
+<rect class="hit" x="217.3" y="24.0" width="9.2" height="110.0"><title>20:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 16 days</title></rect>
+<rect class="hit" x="226.5" y="24.0" width="9.2" height="110.0"><title>21:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 16 days</title></rect>
+<rect class="hit" x="235.7" y="24.0" width="9.2" height="110.0"><title>22:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 16 days</title></rect>
+<rect class="hit" x="244.8" y="24.0" width="9.2" height="110.0"><title>23:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 16 days</title></rect>
+</svg><svg class="chart" viewBox="0 0 260.0 156.0" role="img" aria-labelledby="t-hourly-0-2 d-hourly-0-2">
+<title id="t-hourly-0-2">MAM · weekday</title>
+<desc id="d-hourly-0-2">Mean energy per clock hour on MAM weekday days, in kWh, with the p10 to p90 band.</desc>
+<text class="panel-title" x="34.0" y="12.0">MAM · weekday</text>
+<line class="axis" x1="34.0" y1="134.0" x2="254.0" y2="134.0"/>
+<text class="tick y" x="28.0" y="137.5">0.00</text>
+<line class="grid" x1="34.0" y1="106.5" x2="254.0" y2="106.5"/>
+<text class="tick y" x="28.0" y="110.0">0.05</text>
+<line class="grid" x1="34.0" y1="79.0" x2="254.0" y2="79.0"/>
+<text class="tick y" x="28.0" y="82.5">0.10</text>
+<line class="grid" x1="34.0" y1="51.5" x2="254.0" y2="51.5"/>
+<text class="tick y" x="28.0" y="55.0">0.15</text>
+<line class="grid" x1="34.0" y1="24.0" x2="254.0" y2="24.0"/>
+<text class="tick y" x="28.0" y="27.5">0.20</text>
+<text class="tick x" x="38.6" y="148.0">0</text>
+<text class="tick x" x="93.6" y="148.0">6</text>
+<text class="tick x" x="148.6" y="148.0">12</text>
+<text class="tick x" x="203.6" y="148.0">18</text>
+<text class="tick x" x="249.4" y="148.0">23</text>
+<path class="band" d="M38.6,83.4 L47.8,77.9 L56.9,72.4 L66.1,66.9 L75.2,61.4 L84.4,83.4 L93.6,77.9 L102.8,72.4 L111.9,66.9 L121.1,61.4 L130.2,83.4 L139.4,77.9 L148.6,72.4 L157.8,66.9 L166.9,61.4 L176.1,83.4 L185.2,77.9 L194.4,72.4 L203.6,66.9 L212.8,61.4 L221.9,83.4 L231.1,77.9 L240.2,72.4 L249.4,66.9 L249.4,73.5 L240.2,79.0 L231.1,84.5 L221.9,90.0 L212.8,68.0 L203.6,73.5 L194.4,79.0 L185.2,84.5 L176.1,90.0 L166.9,68.0 L157.8,73.5 L148.6,79.0 L139.4,84.5 L130.2,90.0 L121.1,68.0 L111.9,73.5 L102.8,79.0 L93.6,84.5 L84.4,90.0 L75.2,68.0 L66.1,73.5 L56.9,79.0 L47.8,84.5 L38.6,90.0 Z"/>
+<path class="line" d="M38.6,86.1 L47.8,80.6 L56.9,75.1 L66.1,69.6 L75.2,64.1 L84.4,86.1 L93.6,80.6 L102.8,75.1 L111.9,69.6 L121.1,64.1 L130.2,86.1 L139.4,80.6 L148.6,75.1 L157.8,69.6 L166.9,64.1 L176.1,86.1 L185.2,80.6 L194.4,75.1 L203.6,69.6 L212.8,64.1 L221.9,86.1 L231.1,80.6 L240.2,75.1 L249.4,69.6"/>
+<rect class="hit" x="34.0" y="24.0" width="9.2" height="110.0"><title>00:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 21 days</title></rect>
+<rect class="hit" x="43.2" y="24.0" width="9.2" height="110.0"><title>01:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 21 days</title></rect>
+<rect class="hit" x="52.3" y="24.0" width="9.2" height="110.0"><title>02:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 21 days</title></rect>
+<rect class="hit" x="61.5" y="24.0" width="9.2" height="110.0"><title>03:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 21 days</title></rect>
+<rect class="hit" x="70.7" y="24.0" width="9.2" height="110.0"><title>04:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 21 days</title></rect>
+<rect class="hit" x="79.8" y="24.0" width="9.2" height="110.0"><title>05:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 21 days</title></rect>
+<rect class="hit" x="89.0" y="24.0" width="9.2" height="110.0"><title>06:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 21 days</title></rect>
+<rect class="hit" x="98.2" y="24.0" width="9.2" height="110.0"><title>07:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 21 days</title></rect>
+<rect class="hit" x="107.3" y="24.0" width="9.2" height="110.0"><title>08:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 21 days</title></rect>
+<rect class="hit" x="116.5" y="24.0" width="9.2" height="110.0"><title>09:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 21 days</title></rect>
+<rect class="hit" x="125.7" y="24.0" width="9.2" height="110.0"><title>10:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 21 days</title></rect>
+<rect class="hit" x="134.8" y="24.0" width="9.2" height="110.0"><title>11:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 21 days</title></rect>
+<rect class="hit" x="144.0" y="24.0" width="9.2" height="110.0"><title>12:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 21 days</title></rect>
+<rect class="hit" x="153.2" y="24.0" width="9.2" height="110.0"><title>13:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 21 days</title></rect>
+<rect class="hit" x="162.3" y="24.0" width="9.2" height="110.0"><title>14:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 21 days</title></rect>
+<rect class="hit" x="171.5" y="24.0" width="9.2" height="110.0"><title>15:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 21 days</title></rect>
+<rect class="hit" x="180.7" y="24.0" width="9.2" height="110.0"><title>16:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 21 days</title></rect>
+<rect class="hit" x="189.8" y="24.0" width="9.2" height="110.0"><title>17:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 21 days</title></rect>
+<rect class="hit" x="199.0" y="24.0" width="9.2" height="110.0"><title>18:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 21 days</title></rect>
+<rect class="hit" x="208.2" y="24.0" width="9.2" height="110.0"><title>19:00 · mean 0.13 kWh · p10 0.12 · p90 0.13 · 21 days</title></rect>
+<rect class="hit" x="217.3" y="24.0" width="9.2" height="110.0"><title>20:00 · mean 0.09 kWh · p10 0.08 · p90 0.09 · 21 days</title></rect>
+<rect class="hit" x="226.5" y="24.0" width="9.2" height="110.0"><title>21:00 · mean 0.10 kWh · p10 0.09 · p90 0.10 · 21 days</title></rect>
+<rect class="hit" x="235.7" y="24.0" width="9.2" height="110.0"><title>22:00 · mean 0.11 kWh · p10 0.10 · p90 0.11 · 21 days</title></rect>
+<rect class="hit" x="244.8" y="24.0" width="9.2" height="110.0"><title>23:00 · mean 0.12 kWh · p10 0.11 · p90 0.12 · 21 days</title></rect>
+</svg><svg class="chart" viewBox="0 0 260.0 156.0" role="img" aria-labelledby="t-hourly-0-3 d-hourly-0-3">
+<title id="t-hourly-0-3">MAM · weekend</title>
+<desc id="d-hourly-0-3">Mean energy per clock hour on MAM weekend days, in kWh, with the p10 to p90 band.</desc>
+<text class="panel-title" x="34.0" y="12.0">MAM · weekend</text>
+<line class="axis" x1="34.0" y1="134.0" x2="254.0" y2="134.0"/>
+<text class="tick y" x="28.0" y="137.5">0.00</text>
+<line class="grid" x1="34.0" y1="106.5" x2="254.0" y2="106.5"/>
+<text class="tick y" x="28.0" y="110.0">0.05</text>
+<line class="grid" x1="34.0" y1="79.0" x2="254.0" y2="79.0"/>
+<text class="tick y" x="28.0" y="82.5">0.10</text>
+<line class="grid" x1="34.0" y1="51.5" x2="254.0" y2="51.5"/>
+<text class="tick y" x="28.0" y="55.0">0.15</text>
+<line class="grid" x1="34.0" y1="24.0" x2="254.0" y2="24.0"/>
+<text class="tick y" x="28.0" y="27.5">0.20</text>
+<text class="tick x" x="38.6" y="148.0">0</text>
+<text class="tick x" x="93.6" y="148.0">6</text>
+<text class="tick x" x="148.6" y="148.0">12</text>
+<text class="tick x" x="203.6" y="148.0">18</text>
+<text class="tick x" x="249.4" y="148.0">23</text>
+<path class="band" d="M38.6,87.8 L47.8,82.3 L56.9,76.8 L66.1,71.3 L75.2,65.8 L84.4,87.8 L93.6,82.3 L102.8,76.8 L111.9,71.3 L121.1,65.8 L130.2,87.8 L139.4,82.3 L148.6,76.8 L157.8,71.3 L166.9,65.8 L176.1,87.8 L185.2,82.3 L194.4,76.8 L203.6,71.3 L212.8,65.8 L221.9,87.8 L231.1,82.3 L240.2,76.8 L249.4,71.3 L249.4,72.4 L240.2,77.9 L231.1,83.4 L221.9,88.9 L212.8,66.9 L203.6,72.4 L194.4,77.9 L185.2,83.4 L176.1,88.9 L166.9,66.9 L157.8,72.4 L148.6,77.9 L139.4,83.4 L130.2,88.9 L121.1,66.9 L111.9,72.4 L102.8,77.9 L93.6,83.4 L84.4,88.9 L75.2,66.9 L66.1,72.4 L56.9,77.9 L47.8,83.4 L38.6,88.9 Z"/>
+<path class="line" d="M38.6,88.3 L47.8,82.8 L56.9,77.3 L66.1,71.8 L75.2,66.3 L84.4,88.3 L93.6,82.8 L102.8,77.3 L111.9,71.8 L121.1,66.3 L130.2,88.3 L139.4,82.8 L148.6,77.3 L157.8,71.8 L166.9,66.3 L176.1,88.3 L185.2,82.8 L194.4,77.3 L203.6,71.8 L212.8,66.3 L221.9,88.3 L231.1,82.8 L240.2,77.3 L249.4,71.8"/>
+<rect class="hit" x="34.0" y="24.0" width="9.2" height="110.0"><title>00:00 · mean 0.08 kWh · p10 0.08 · p90 0.08 · 10 days</title></rect>
+<rect class="hit" x="43.2" y="24.0" width="9.2" height="110.0"><title>01:00 · mean 0.09 kWh · p10 0.09 · p90 0.09 · 10 days</title></rect>
+<rect class="hit" x="52.3" y="24.0" width="9.2" height="110.0"><title>02:00 · mean 0.10 kWh · p10 0.10 · p90 0.10 · 10 days</title></rect>
+<rect class="hit" x="61.5" y="24.0" width="9.2" height="110.0"><title>03:00 · mean 0.11 kWh · p10 0.11 · p90 0.11 · 10 days</title></rect>
+<rect class="hit" x="70.7" y="24.0" width="9.2" height="110.0"><title>04:00 · mean 0.12 kWh · p10 0.12 · p90 0.12 · 10 days</title></rect>
+<rect class="hit" x="79.8" y="24.0" width="9.2" height="110.0"><title>05:00 · mean 0.08 kWh · p10 0.08 · p90 0.08 · 10 days</title></rect>
+<rect class="hit" x="89.0" y="24.0" width="9.2" height="110.0"><title>06:00 · mean 0.09 kWh · p10 0.09 · p90 0.09 · 10 days</title></rect>
+<rect class="hit" x="98.2" y="24.0" width="9.2" height="110.0"><title>07:00 · mean 0.10 kWh · p10 0.10 · p90 0.10 · 10 days</title></rect>
+<rect class="hit" x="107.3" y="24.0" width="9.2" height="110.0"><title>08:00 · mean 0.11 kWh · p10 0.11 · p90 0.11 · 10 days</title></rect>
+<rect class="hit" x="116.5" y="24.0" width="9.2" height="110.0"><title>09:00 · mean 0.12 kWh · p10 0.12 · p90 0.12 · 10 days</title></rect>
+<rect class="hit" x="125.7" y="24.0" width="9.2" height="110.0"><title>10:00 · mean 0.08 kWh · p10 0.08 · p90 0.08 · 10 days</title></rect>
+<rect class="hit" x="134.8" y="24.0" width="9.2" height="110.0"><title>11:00 · mean 0.09 kWh · p10 0.09 · p90 0.09 · 10 days</title></rect>
+<rect class="hit" x="144.0" y="24.0" width="9.2" height="110.0"><title>12:00 · mean 0.10 kWh · p10 0.10 · p90 0.10 · 10 days</title></rect>
+<rect class="hit" x="153.2" y="24.0" width="9.2" height="110.0"><title>13:00 · mean 0.11 kWh · p10 0.11 · p90 0.11 · 10 days</title></rect>
+<rect class="hit" x="162.3" y="24.0" width="9.2" height="110.0"><title>14:00 · mean 0.12 kWh · p10 0.12 · p90 0.12 · 10 days</title></rect>
+<rect class="hit" x="171.5" y="24.0" width="9.2" height="110.0"><title>15:00 · mean 0.08 kWh · p10 0.08 · p90 0.08 · 10 days</title></rect>
+<rect class="hit" x="180.7" y="24.0" width="9.2" height="110.0"><title>16:00 · mean 0.09 kWh · p10 0.09 · p90 0.09 · 10 days</title></rect>
+<rect class="hit" x="189.8" y="24.0" width="9.2" height="110.0"><title>17:00 · mean 0.10 kWh · p10 0.10 · p90 0.10 · 10 days</title></rect>
+<rect class="hit" x="199.0" y="24.0" width="9.2" height="110.0"><title>18:00 · mean 0.11 kWh · p10 0.11 · p90 0.11 · 10 days</title></rect>
+<rect class="hit" x="208.2" y="24.0" width="9.2" height="110.0"><title>19:00 · mean 0.12 kWh · p10 0.12 · p90 0.12 · 10 days</title></rect>
+<rect class="hit" x="217.3" y="24.0" width="9.2" height="110.0"><title>20:00 · mean 0.08 kWh · p10 0.08 · p90 0.08 · 10 days</title></rect>
+<rect class="hit" x="226.5" y="24.0" width="9.2" height="110.0"><title>21:00 · mean 0.09 kWh · p10 0.09 · p90 0.09 · 10 days</title></rect>
+<rect class="hit" x="235.7" y="24.0" width="9.2" height="110.0"><title>22:00 · mean 0.10 kWh · p10 0.10 · p90 0.10 · 10 days</title></rect>
+<rect class="hit" x="244.8" y="24.0" width="9.2" height="110.0"><title>23:00 · mean 0.11 kWh · p10 0.11 · p90 0.11 · 10 days</title></rect>
+</svg></div><h3>Day by hour heatmap</h3><svg class="chart" viewBox="0 0 720.0 240.0" role="img" aria-labelledby="t-heatmap-0 d-heatmap-0">
+<title id="t-heatmap-0">Energy by day and hour</title>
+<desc id="d-heatmap-0">Energy in each clock hour of each day from 2025-03-26 to 2025-04-20, in kWh; a darker cell is more energy. Blank cells are hours with no reading or that do not count: the hour that did not happen or happened twice on a daylight-saving day.</desc>
+<text class="tick y" x="26.0" y="15.0">00</text>
+<text class="tick y" x="26.0" y="63.0">06</text>
+<text class="tick y" x="26.0" y="111.0">12</text>
+<text class="tick y" x="26.0" y="159.0">18</text>
+<text class="tick x" x="30.0" y="212.0">2025-03</text>
+<rect x="30.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-03-26 00:00 · 0.09 kWh</title></rect>
+<rect x="30.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 01:00 · 0.10 kWh</title></rect>
+<rect x="30.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 02:00 · 0.11 kWh</title></rect>
+<rect x="30.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 03:00 · 0.12 kWh</title></rect>
+<rect x="30.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 04:00 · 0.13 kWh</title></rect>
+<rect x="30.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-03-26 05:00 · 0.09 kWh</title></rect>
+<rect x="30.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 06:00 · 0.10 kWh</title></rect>
+<rect x="30.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 07:00 · 0.11 kWh</title></rect>
+<rect x="30.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 08:00 · 0.12 kWh</title></rect>
+<rect x="30.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 09:00 · 0.13 kWh</title></rect>
+<rect x="30.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-03-26 10:00 · 0.09 kWh</title></rect>
+<rect x="30.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 11:00 · 0.10 kWh</title></rect>
+<rect x="30.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 12:00 · 0.11 kWh</title></rect>
+<rect x="30.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 13:00 · 0.12 kWh</title></rect>
+<rect x="30.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 14:00 · 0.13 kWh</title></rect>
+<rect x="30.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-03-26 15:00 · 0.09 kWh</title></rect>
+<rect x="30.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 16:00 · 0.10 kWh</title></rect>
+<rect x="30.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 17:00 · 0.11 kWh</title></rect>
+<rect x="30.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 18:00 · 0.12 kWh</title></rect>
+<rect x="30.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 19:00 · 0.13 kWh</title></rect>
+<rect x="30.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-03-26 20:00 · 0.09 kWh</title></rect>
+<rect x="30.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 21:00 · 0.10 kWh</title></rect>
+<rect x="30.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-03-26 22:00 · 0.11 kWh</title></rect>
+<rect x="30.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-03-26 23:00 · 0.12 kWh</title></rect>
+<rect x="36.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-03-27 00:00 · 0.09 kWh</title></rect>
+<rect x="36.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 01:00 · 0.10 kWh</title></rect>
+<rect x="36.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 02:00 · 0.11 kWh</title></rect>
+<rect x="36.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 03:00 · 0.12 kWh</title></rect>
+<rect x="36.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 04:00 · 0.13 kWh</title></rect>
+<rect x="36.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-03-27 05:00 · 0.09 kWh</title></rect>
+<rect x="36.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 06:00 · 0.10 kWh</title></rect>
+<rect x="36.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 07:00 · 0.11 kWh</title></rect>
+<rect x="36.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 08:00 · 0.12 kWh</title></rect>
+<rect x="36.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 09:00 · 0.13 kWh</title></rect>
+<rect x="36.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-03-27 10:00 · 0.09 kWh</title></rect>
+<rect x="36.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 11:00 · 0.10 kWh</title></rect>
+<rect x="36.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 12:00 · 0.11 kWh</title></rect>
+<rect x="36.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 13:00 · 0.12 kWh</title></rect>
+<rect x="36.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 14:00 · 0.13 kWh</title></rect>
+<rect x="36.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-03-27 15:00 · 0.09 kWh</title></rect>
+<rect x="36.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 16:00 · 0.10 kWh</title></rect>
+<rect x="36.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 17:00 · 0.11 kWh</title></rect>
+<rect x="36.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 18:00 · 0.12 kWh</title></rect>
+<rect x="36.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 19:00 · 0.13 kWh</title></rect>
+<rect x="36.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-03-27 20:00 · 0.09 kWh</title></rect>
+<rect x="36.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 21:00 · 0.10 kWh</title></rect>
+<rect x="36.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-03-27 22:00 · 0.11 kWh</title></rect>
+<rect x="36.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-03-27 23:00 · 0.12 kWh</title></rect>
+<rect x="42.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 00:00 · 0.08 kWh</title></rect>
+<rect x="42.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 01:00 · 0.09 kWh</title></rect>
+<rect x="42.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 02:00 · 0.10 kWh</title></rect>
+<rect x="42.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 03:00 · 0.11 kWh</title></rect>
+<rect x="42.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-03-28 04:00 · 0.12 kWh</title></rect>
+<rect x="42.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 05:00 · 0.08 kWh</title></rect>
+<rect x="42.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 06:00 · 0.09 kWh</title></rect>
+<rect x="42.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 07:00 · 0.10 kWh</title></rect>
+<rect x="42.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 08:00 · 0.11 kWh</title></rect>
+<rect x="42.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-03-28 09:00 · 0.12 kWh</title></rect>
+<rect x="42.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 10:00 · 0.08 kWh</title></rect>
+<rect x="42.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 11:00 · 0.09 kWh</title></rect>
+<rect x="42.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 12:00 · 0.10 kWh</title></rect>
+<rect x="42.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 13:00 · 0.11 kWh</title></rect>
+<rect x="42.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-03-28 14:00 · 0.12 kWh</title></rect>
+<rect x="42.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 15:00 · 0.08 kWh</title></rect>
+<rect x="42.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 16:00 · 0.09 kWh</title></rect>
+<rect x="42.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 17:00 · 0.10 kWh</title></rect>
+<rect x="42.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 18:00 · 0.11 kWh</title></rect>
+<rect x="42.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-03-28 19:00 · 0.12 kWh</title></rect>
+<rect x="42.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 20:00 · 0.08 kWh</title></rect>
+<rect x="42.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-03-28 21:00 · 0.09 kWh</title></rect>
+<rect x="42.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 22:00 · 0.10 kWh</title></rect>
+<rect x="42.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-03-28 23:00 · 0.11 kWh</title></rect>
+<rect x="48.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 00:00 · 0.08 kWh</title></rect>
+<rect x="48.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 01:00 · 0.09 kWh</title></rect>
+<rect x="48.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 02:00 · 0.10 kWh</title></rect>
+<rect x="48.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 03:00 · 0.11 kWh</title></rect>
+<rect x="48.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-03-29 04:00 · 0.12 kWh</title></rect>
+<rect x="48.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 05:00 · 0.08 kWh</title></rect>
+<rect x="48.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 06:00 · 0.09 kWh</title></rect>
+<rect x="48.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 07:00 · 0.10 kWh</title></rect>
+<rect x="48.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 08:00 · 0.11 kWh</title></rect>
+<rect x="48.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-03-29 09:00 · 0.12 kWh</title></rect>
+<rect x="48.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 10:00 · 0.08 kWh</title></rect>
+<rect x="48.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 11:00 · 0.09 kWh</title></rect>
+<rect x="48.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 12:00 · 0.10 kWh</title></rect>
+<rect x="48.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 13:00 · 0.11 kWh</title></rect>
+<rect x="48.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-03-29 14:00 · 0.12 kWh</title></rect>
+<rect x="48.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 15:00 · 0.08 kWh</title></rect>
+<rect x="48.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 16:00 · 0.09 kWh</title></rect>
+<rect x="48.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 17:00 · 0.10 kWh</title></rect>
+<rect x="48.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 18:00 · 0.11 kWh</title></rect>
+<rect x="48.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-03-29 19:00 · 0.12 kWh</title></rect>
+<rect x="48.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 20:00 · 0.08 kWh</title></rect>
+<rect x="48.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-03-29 21:00 · 0.09 kWh</title></rect>
+<rect x="48.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 22:00 · 0.10 kWh</title></rect>
+<rect x="48.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-03-29 23:00 · 0.11 kWh</title></rect>
+<rect x="54.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 00:00 · 0.08 kWh</title></rect>
+<rect x="54.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 01:00 · 0.09 kWh</title></rect>
+<rect x="54.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-03-30 02:00 · 0.10 kWh</title></rect>
+<rect x="54.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 03:00 · 0.11 kWh</title></rect>
+<rect x="54.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 04:00 · 0.12 kWh</title></rect>
+<rect x="54.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 05:00 · 0.08 kWh</title></rect>
+<rect x="54.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 06:00 · 0.09 kWh</title></rect>
+<rect x="54.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-03-30 07:00 · 0.10 kWh</title></rect>
+<rect x="54.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 08:00 · 0.11 kWh</title></rect>
+<rect x="54.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 09:00 · 0.12 kWh</title></rect>
+<rect x="54.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 10:00 · 0.08 kWh</title></rect>
+<rect x="54.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 11:00 · 0.09 kWh</title></rect>
+<rect x="54.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-03-30 12:00 · 0.10 kWh</title></rect>
+<rect x="54.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 13:00 · 0.11 kWh</title></rect>
+<rect x="54.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 14:00 · 0.12 kWh</title></rect>
+<rect x="54.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 15:00 · 0.08 kWh</title></rect>
+<rect x="54.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 16:00 · 0.09 kWh</title></rect>
+<rect x="54.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-03-30 17:00 · 0.10 kWh</title></rect>
+<rect x="54.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 18:00 · 0.11 kWh</title></rect>
+<rect x="54.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 19:00 · 0.12 kWh</title></rect>
+<rect x="54.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 20:00 · 0.08 kWh</title></rect>
+<rect x="54.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-03-30 21:00 · 0.09 kWh</title></rect>
+<rect x="54.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-03-30 22:00 · 0.10 kWh</title></rect>
+<rect x="54.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-03-30 23:00 · 0.11 kWh</title></rect>
+<rect x="60.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-03-31 00:00 · 0.09 kWh</title></rect>
+<rect x="60.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 01:00 · 0.10 kWh</title></rect>
+<rect x="60.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 02:00 · 0.11 kWh</title></rect>
+<rect x="60.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 03:00 · 0.12 kWh</title></rect>
+<rect x="60.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 04:00 · 0.13 kWh</title></rect>
+<rect x="60.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-03-31 05:00 · 0.09 kWh</title></rect>
+<rect x="60.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 06:00 · 0.10 kWh</title></rect>
+<rect x="60.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 07:00 · 0.11 kWh</title></rect>
+<rect x="60.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 08:00 · 0.12 kWh</title></rect>
+<rect x="60.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 09:00 · 0.13 kWh</title></rect>
+<rect x="60.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-03-31 10:00 · 0.09 kWh</title></rect>
+<rect x="60.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 11:00 · 0.10 kWh</title></rect>
+<rect x="60.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 12:00 · 0.11 kWh</title></rect>
+<rect x="60.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 13:00 · 0.12 kWh</title></rect>
+<rect x="60.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 14:00 · 0.13 kWh</title></rect>
+<rect x="60.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-03-31 15:00 · 0.09 kWh</title></rect>
+<rect x="60.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 16:00 · 0.10 kWh</title></rect>
+<rect x="60.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 17:00 · 0.11 kWh</title></rect>
+<rect x="60.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 18:00 · 0.12 kWh</title></rect>
+<rect x="60.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 19:00 · 0.13 kWh</title></rect>
+<rect x="60.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-03-31 20:00 · 0.09 kWh</title></rect>
+<rect x="60.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 21:00 · 0.10 kWh</title></rect>
+<rect x="60.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-03-31 22:00 · 0.11 kWh</title></rect>
+<rect x="60.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-03-31 23:00 · 0.12 kWh</title></rect>
+<rect x="66.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 00:00 · 0.08 kWh</title></rect>
+<rect x="66.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 01:00 · 0.09 kWh</title></rect>
+<rect x="66.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 02:00 · 0.10 kWh</title></rect>
+<rect x="66.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 03:00 · 0.11 kWh</title></rect>
+<rect x="66.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-01 04:00 · 0.12 kWh</title></rect>
+<rect x="66.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 05:00 · 0.08 kWh</title></rect>
+<rect x="66.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 06:00 · 0.09 kWh</title></rect>
+<rect x="66.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 07:00 · 0.10 kWh</title></rect>
+<rect x="66.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 08:00 · 0.11 kWh</title></rect>
+<rect x="66.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-01 09:00 · 0.12 kWh</title></rect>
+<rect x="66.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 10:00 · 0.08 kWh</title></rect>
+<rect x="66.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 11:00 · 0.09 kWh</title></rect>
+<rect x="66.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 12:00 · 0.10 kWh</title></rect>
+<rect x="66.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 13:00 · 0.11 kWh</title></rect>
+<rect x="66.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-01 14:00 · 0.12 kWh</title></rect>
+<rect x="66.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 15:00 · 0.08 kWh</title></rect>
+<rect x="66.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 16:00 · 0.09 kWh</title></rect>
+<rect x="66.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 17:00 · 0.10 kWh</title></rect>
+<rect x="66.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 18:00 · 0.11 kWh</title></rect>
+<rect x="66.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-01 19:00 · 0.12 kWh</title></rect>
+<rect x="66.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 20:00 · 0.08 kWh</title></rect>
+<rect x="66.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-01 21:00 · 0.09 kWh</title></rect>
+<rect x="66.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 22:00 · 0.10 kWh</title></rect>
+<rect x="66.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-04-01 23:00 · 0.11 kWh</title></rect>
+<rect x="72.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 00:00 · 0.08 kWh</title></rect>
+<rect x="72.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 01:00 · 0.09 kWh</title></rect>
+<rect x="72.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-02 02:00 · 0.10 kWh</title></rect>
+<rect x="72.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 03:00 · 0.11 kWh</title></rect>
+<rect x="72.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 04:00 · 0.12 kWh</title></rect>
+<rect x="72.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 05:00 · 0.08 kWh</title></rect>
+<rect x="72.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 06:00 · 0.09 kWh</title></rect>
+<rect x="72.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-02 07:00 · 0.10 kWh</title></rect>
+<rect x="72.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 08:00 · 0.11 kWh</title></rect>
+<rect x="72.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 09:00 · 0.12 kWh</title></rect>
+<rect x="72.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 10:00 · 0.08 kWh</title></rect>
+<rect x="72.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 11:00 · 0.09 kWh</title></rect>
+<rect x="72.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-02 12:00 · 0.10 kWh</title></rect>
+<rect x="72.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 13:00 · 0.11 kWh</title></rect>
+<rect x="72.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 14:00 · 0.12 kWh</title></rect>
+<rect x="72.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 15:00 · 0.08 kWh</title></rect>
+<rect x="72.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 16:00 · 0.09 kWh</title></rect>
+<rect x="72.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-02 17:00 · 0.10 kWh</title></rect>
+<rect x="72.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 18:00 · 0.11 kWh</title></rect>
+<rect x="72.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 19:00 · 0.12 kWh</title></rect>
+<rect x="72.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 20:00 · 0.08 kWh</title></rect>
+<rect x="72.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-02 21:00 · 0.09 kWh</title></rect>
+<rect x="72.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-02 22:00 · 0.10 kWh</title></rect>
+<rect x="72.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-02 23:00 · 0.11 kWh</title></rect>
+<rect x="78.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-03 00:00 · 0.09 kWh</title></rect>
+<rect x="78.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 01:00 · 0.10 kWh</title></rect>
+<rect x="78.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 02:00 · 0.11 kWh</title></rect>
+<rect x="78.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 03:00 · 0.12 kWh</title></rect>
+<rect x="78.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 04:00 · 0.13 kWh</title></rect>
+<rect x="78.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-03 05:00 · 0.09 kWh</title></rect>
+<rect x="78.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 06:00 · 0.10 kWh</title></rect>
+<rect x="78.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 07:00 · 0.11 kWh</title></rect>
+<rect x="78.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 08:00 · 0.12 kWh</title></rect>
+<rect x="78.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 09:00 · 0.13 kWh</title></rect>
+<rect x="78.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-03 10:00 · 0.09 kWh</title></rect>
+<rect x="78.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 11:00 · 0.10 kWh</title></rect>
+<rect x="78.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 12:00 · 0.11 kWh</title></rect>
+<rect x="78.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 13:00 · 0.12 kWh</title></rect>
+<rect x="78.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 14:00 · 0.13 kWh</title></rect>
+<rect x="78.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-03 15:00 · 0.09 kWh</title></rect>
+<rect x="78.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 16:00 · 0.10 kWh</title></rect>
+<rect x="78.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 17:00 · 0.11 kWh</title></rect>
+<rect x="78.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 18:00 · 0.12 kWh</title></rect>
+<rect x="78.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 19:00 · 0.13 kWh</title></rect>
+<rect x="78.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-03 20:00 · 0.09 kWh</title></rect>
+<rect x="78.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 21:00 · 0.10 kWh</title></rect>
+<rect x="78.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-03 22:00 · 0.11 kWh</title></rect>
+<rect x="78.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-03 23:00 · 0.12 kWh</title></rect>
+<rect x="84.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-04 00:00 · 0.09 kWh</title></rect>
+<rect x="84.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 01:00 · 0.10 kWh</title></rect>
+<rect x="84.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 02:00 · 0.11 kWh</title></rect>
+<rect x="84.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 03:00 · 0.12 kWh</title></rect>
+<rect x="84.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 04:00 · 0.13 kWh</title></rect>
+<rect x="84.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-04 05:00 · 0.09 kWh</title></rect>
+<rect x="84.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 06:00 · 0.10 kWh</title></rect>
+<rect x="84.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 07:00 · 0.11 kWh</title></rect>
+<rect x="84.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 08:00 · 0.12 kWh</title></rect>
+<rect x="84.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 09:00 · 0.13 kWh</title></rect>
+<rect x="84.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-04 10:00 · 0.09 kWh</title></rect>
+<rect x="84.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 11:00 · 0.10 kWh</title></rect>
+<rect x="84.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 12:00 · 0.11 kWh</title></rect>
+<rect x="84.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 13:00 · 0.12 kWh</title></rect>
+<rect x="84.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 14:00 · 0.13 kWh</title></rect>
+<rect x="84.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-04 15:00 · 0.09 kWh</title></rect>
+<rect x="84.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 16:00 · 0.10 kWh</title></rect>
+<rect x="84.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 17:00 · 0.11 kWh</title></rect>
+<rect x="84.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 18:00 · 0.12 kWh</title></rect>
+<rect x="84.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 19:00 · 0.13 kWh</title></rect>
+<rect x="84.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-04 20:00 · 0.09 kWh</title></rect>
+<rect x="84.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 21:00 · 0.10 kWh</title></rect>
+<rect x="84.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-04 22:00 · 0.11 kWh</title></rect>
+<rect x="84.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-04 23:00 · 0.12 kWh</title></rect>
+<rect x="90.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-05 00:00 · 0.09 kWh</title></rect>
+<rect x="90.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 01:00 · 0.10 kWh</title></rect>
+<rect x="90.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 02:00 · 0.11 kWh</title></rect>
+<rect x="90.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 03:00 · 0.12 kWh</title></rect>
+<rect x="90.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 04:00 · 0.13 kWh</title></rect>
+<rect x="90.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-05 05:00 · 0.09 kWh</title></rect>
+<rect x="90.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 06:00 · 0.10 kWh</title></rect>
+<rect x="90.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 07:00 · 0.11 kWh</title></rect>
+<rect x="90.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 08:00 · 0.12 kWh</title></rect>
+<rect x="90.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 09:00 · 0.13 kWh</title></rect>
+<rect x="90.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-05 10:00 · 0.09 kWh</title></rect>
+<rect x="90.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 11:00 · 0.10 kWh</title></rect>
+<rect x="90.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 12:00 · 0.11 kWh</title></rect>
+<rect x="90.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 13:00 · 0.12 kWh</title></rect>
+<rect x="90.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 14:00 · 0.13 kWh</title></rect>
+<rect x="90.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-05 15:00 · 0.09 kWh</title></rect>
+<rect x="90.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 16:00 · 0.10 kWh</title></rect>
+<rect x="90.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 17:00 · 0.11 kWh</title></rect>
+<rect x="90.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 18:00 · 0.12 kWh</title></rect>
+<rect x="90.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 19:00 · 0.13 kWh</title></rect>
+<rect x="90.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-05 20:00 · 0.09 kWh</title></rect>
+<rect x="90.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 21:00 · 0.10 kWh</title></rect>
+<rect x="90.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-05 22:00 · 0.11 kWh</title></rect>
+<rect x="90.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-05 23:00 · 0.12 kWh</title></rect>
+<rect x="96.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-06 00:00 · 0.09 kWh</title></rect>
+<rect x="96.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 01:00 · 0.10 kWh</title></rect>
+<rect x="96.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 03:00 · 0.12 kWh</title></rect>
+<rect x="96.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 04:00 · 0.13 kWh</title></rect>
+<rect x="96.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-06 05:00 · 0.09 kWh</title></rect>
+<rect x="96.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 06:00 · 0.10 kWh</title></rect>
+<rect x="96.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 07:00 · 0.11 kWh</title></rect>
+<rect x="96.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 08:00 · 0.12 kWh</title></rect>
+<rect x="96.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 09:00 · 0.13 kWh</title></rect>
+<rect x="96.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-06 10:00 · 0.09 kWh</title></rect>
+<rect x="96.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 11:00 · 0.10 kWh</title></rect>
+<rect x="96.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 12:00 · 0.11 kWh</title></rect>
+<rect x="96.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 13:00 · 0.12 kWh</title></rect>
+<rect x="96.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 14:00 · 0.13 kWh</title></rect>
+<rect x="96.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-06 15:00 · 0.09 kWh</title></rect>
+<rect x="96.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 16:00 · 0.10 kWh</title></rect>
+<rect x="96.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 17:00 · 0.11 kWh</title></rect>
+<rect x="96.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 18:00 · 0.12 kWh</title></rect>
+<rect x="96.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 19:00 · 0.13 kWh</title></rect>
+<rect x="96.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-06 20:00 · 0.09 kWh</title></rect>
+<rect x="96.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 21:00 · 0.10 kWh</title></rect>
+<rect x="96.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-06 22:00 · 0.11 kWh</title></rect>
+<rect x="96.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-06 23:00 · 0.12 kWh</title></rect>
+<rect x="102.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 00:00 · 0.08 kWh</title></rect>
+<rect x="102.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 01:00 · 0.09 kWh</title></rect>
+<rect x="102.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 02:00 · 0.10 kWh</title></rect>
+<rect x="102.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 03:00 · 0.11 kWh</title></rect>
+<rect x="102.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-07 04:00 · 0.12 kWh</title></rect>
+<rect x="102.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 05:00 · 0.08 kWh</title></rect>
+<rect x="102.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 06:00 · 0.09 kWh</title></rect>
+<rect x="102.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 07:00 · 0.10 kWh</title></rect>
+<rect x="102.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 08:00 · 0.11 kWh</title></rect>
+<rect x="102.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-07 09:00 · 0.12 kWh</title></rect>
+<rect x="102.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 10:00 · 0.08 kWh</title></rect>
+<rect x="102.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 11:00 · 0.09 kWh</title></rect>
+<rect x="102.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 12:00 · 0.10 kWh</title></rect>
+<rect x="102.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 13:00 · 0.11 kWh</title></rect>
+<rect x="102.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-07 14:00 · 0.12 kWh</title></rect>
+<rect x="102.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 15:00 · 0.08 kWh</title></rect>
+<rect x="102.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 16:00 · 0.09 kWh</title></rect>
+<rect x="102.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 17:00 · 0.10 kWh</title></rect>
+<rect x="102.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 18:00 · 0.11 kWh</title></rect>
+<rect x="102.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-07 19:00 · 0.12 kWh</title></rect>
+<rect x="102.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 20:00 · 0.08 kWh</title></rect>
+<rect x="102.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-07 21:00 · 0.09 kWh</title></rect>
+<rect x="102.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 22:00 · 0.10 kWh</title></rect>
+<rect x="102.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-04-07 23:00 · 0.11 kWh</title></rect>
+<rect x="108.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 00:00 · 0.08 kWh</title></rect>
+<rect x="108.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 01:00 · 0.09 kWh</title></rect>
+<rect x="108.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 02:00 · 0.10 kWh</title></rect>
+<rect x="108.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 03:00 · 0.11 kWh</title></rect>
+<rect x="108.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-08 04:00 · 0.12 kWh</title></rect>
+<rect x="108.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 05:00 · 0.08 kWh</title></rect>
+<rect x="108.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 06:00 · 0.09 kWh</title></rect>
+<rect x="108.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 07:00 · 0.10 kWh</title></rect>
+<rect x="108.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 08:00 · 0.11 kWh</title></rect>
+<rect x="108.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-08 09:00 · 0.12 kWh</title></rect>
+<rect x="108.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 10:00 · 0.08 kWh</title></rect>
+<rect x="108.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 11:00 · 0.09 kWh</title></rect>
+<rect x="108.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 12:00 · 0.10 kWh</title></rect>
+<rect x="108.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 13:00 · 0.11 kWh</title></rect>
+<rect x="108.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-08 14:00 · 0.12 kWh</title></rect>
+<rect x="108.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 15:00 · 0.08 kWh</title></rect>
+<rect x="108.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 16:00 · 0.09 kWh</title></rect>
+<rect x="108.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 17:00 · 0.10 kWh</title></rect>
+<rect x="108.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 18:00 · 0.11 kWh</title></rect>
+<rect x="108.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-08 19:00 · 0.12 kWh</title></rect>
+<rect x="108.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 20:00 · 0.08 kWh</title></rect>
+<rect x="108.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-08 21:00 · 0.09 kWh</title></rect>
+<rect x="108.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 22:00 · 0.10 kWh</title></rect>
+<rect x="108.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-04-08 23:00 · 0.11 kWh</title></rect>
+<rect x="114.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 00:00 · 0.08 kWh</title></rect>
+<rect x="114.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 01:00 · 0.09 kWh</title></rect>
+<rect x="114.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-09 02:00 · 0.10 kWh</title></rect>
+<rect x="114.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 03:00 · 0.11 kWh</title></rect>
+<rect x="114.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 04:00 · 0.12 kWh</title></rect>
+<rect x="114.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 05:00 · 0.08 kWh</title></rect>
+<rect x="114.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 06:00 · 0.09 kWh</title></rect>
+<rect x="114.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-09 07:00 · 0.10 kWh</title></rect>
+<rect x="114.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 08:00 · 0.11 kWh</title></rect>
+<rect x="114.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 09:00 · 0.12 kWh</title></rect>
+<rect x="114.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 10:00 · 0.08 kWh</title></rect>
+<rect x="114.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 11:00 · 0.09 kWh</title></rect>
+<rect x="114.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-09 12:00 · 0.10 kWh</title></rect>
+<rect x="114.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 13:00 · 0.11 kWh</title></rect>
+<rect x="114.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 14:00 · 0.12 kWh</title></rect>
+<rect x="114.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 15:00 · 0.08 kWh</title></rect>
+<rect x="114.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 16:00 · 0.09 kWh</title></rect>
+<rect x="114.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-09 17:00 · 0.10 kWh</title></rect>
+<rect x="114.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 18:00 · 0.11 kWh</title></rect>
+<rect x="114.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 19:00 · 0.12 kWh</title></rect>
+<rect x="114.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 20:00 · 0.08 kWh</title></rect>
+<rect x="114.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-09 21:00 · 0.09 kWh</title></rect>
+<rect x="114.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-09 22:00 · 0.10 kWh</title></rect>
+<rect x="114.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-09 23:00 · 0.11 kWh</title></rect>
+<rect x="120.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-10 00:00 · 0.09 kWh</title></rect>
+<rect x="120.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 01:00 · 0.10 kWh</title></rect>
+<rect x="120.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 02:00 · 0.11 kWh</title></rect>
+<rect x="120.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 03:00 · 0.12 kWh</title></rect>
+<rect x="120.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 04:00 · 0.13 kWh</title></rect>
+<rect x="120.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-10 05:00 · 0.09 kWh</title></rect>
+<rect x="120.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 06:00 · 0.10 kWh</title></rect>
+<rect x="120.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 07:00 · 0.11 kWh</title></rect>
+<rect x="120.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 08:00 · 0.12 kWh</title></rect>
+<rect x="120.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 09:00 · 0.13 kWh</title></rect>
+<rect x="120.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-10 10:00 · 0.09 kWh</title></rect>
+<rect x="120.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 11:00 · 0.10 kWh</title></rect>
+<rect x="120.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 12:00 · 0.11 kWh</title></rect>
+<rect x="120.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 13:00 · 0.12 kWh</title></rect>
+<rect x="120.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 14:00 · 0.13 kWh</title></rect>
+<rect x="120.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-10 15:00 · 0.09 kWh</title></rect>
+<rect x="120.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 16:00 · 0.10 kWh</title></rect>
+<rect x="120.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 17:00 · 0.11 kWh</title></rect>
+<rect x="120.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 18:00 · 0.12 kWh</title></rect>
+<rect x="120.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 19:00 · 0.13 kWh</title></rect>
+<rect x="120.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-10 20:00 · 0.09 kWh</title></rect>
+<rect x="120.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 21:00 · 0.10 kWh</title></rect>
+<rect x="120.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-10 22:00 · 0.11 kWh</title></rect>
+<rect x="120.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-10 23:00 · 0.12 kWh</title></rect>
+<rect x="126.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-11 00:00 · 0.09 kWh</title></rect>
+<rect x="126.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 01:00 · 0.10 kWh</title></rect>
+<rect x="126.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 02:00 · 0.11 kWh</title></rect>
+<rect x="126.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 03:00 · 0.12 kWh</title></rect>
+<rect x="126.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 04:00 · 0.13 kWh</title></rect>
+<rect x="126.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-11 05:00 · 0.09 kWh</title></rect>
+<rect x="126.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 06:00 · 0.10 kWh</title></rect>
+<rect x="126.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 07:00 · 0.11 kWh</title></rect>
+<rect x="126.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 08:00 · 0.12 kWh</title></rect>
+<rect x="126.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 09:00 · 0.13 kWh</title></rect>
+<rect x="126.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-11 10:00 · 0.09 kWh</title></rect>
+<rect x="126.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 11:00 · 0.10 kWh</title></rect>
+<rect x="126.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 12:00 · 0.11 kWh</title></rect>
+<rect x="126.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 13:00 · 0.12 kWh</title></rect>
+<rect x="126.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 14:00 · 0.13 kWh</title></rect>
+<rect x="126.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-11 15:00 · 0.09 kWh</title></rect>
+<rect x="126.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 16:00 · 0.10 kWh</title></rect>
+<rect x="126.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 17:00 · 0.11 kWh</title></rect>
+<rect x="126.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 18:00 · 0.12 kWh</title></rect>
+<rect x="126.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 19:00 · 0.13 kWh</title></rect>
+<rect x="126.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-11 20:00 · 0.09 kWh</title></rect>
+<rect x="126.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 21:00 · 0.10 kWh</title></rect>
+<rect x="126.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-11 22:00 · 0.11 kWh</title></rect>
+<rect x="126.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-11 23:00 · 0.12 kWh</title></rect>
+<rect x="132.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-12 00:00 · 0.09 kWh</title></rect>
+<rect x="132.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 01:00 · 0.10 kWh</title></rect>
+<rect x="132.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 02:00 · 0.11 kWh</title></rect>
+<rect x="132.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 03:00 · 0.12 kWh</title></rect>
+<rect x="132.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 04:00 · 0.13 kWh</title></rect>
+<rect x="132.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-12 05:00 · 0.09 kWh</title></rect>
+<rect x="132.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 06:00 · 0.10 kWh</title></rect>
+<rect x="132.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 07:00 · 0.11 kWh</title></rect>
+<rect x="132.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 08:00 · 0.12 kWh</title></rect>
+<rect x="132.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 09:00 · 0.13 kWh</title></rect>
+<rect x="132.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-12 10:00 · 0.09 kWh</title></rect>
+<rect x="132.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 11:00 · 0.10 kWh</title></rect>
+<rect x="132.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 12:00 · 0.11 kWh</title></rect>
+<rect x="132.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 13:00 · 0.12 kWh</title></rect>
+<rect x="132.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 14:00 · 0.13 kWh</title></rect>
+<rect x="132.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-12 15:00 · 0.09 kWh</title></rect>
+<rect x="132.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 16:00 · 0.10 kWh</title></rect>
+<rect x="132.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 17:00 · 0.11 kWh</title></rect>
+<rect x="132.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 18:00 · 0.12 kWh</title></rect>
+<rect x="132.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 19:00 · 0.13 kWh</title></rect>
+<rect x="132.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-12 20:00 · 0.09 kWh</title></rect>
+<rect x="132.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 21:00 · 0.10 kWh</title></rect>
+<rect x="132.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-12 22:00 · 0.11 kWh</title></rect>
+<rect x="132.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-12 23:00 · 0.12 kWh</title></rect>
+<rect x="138.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-13 00:00 · 0.09 kWh</title></rect>
+<rect x="138.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 01:00 · 0.10 kWh</title></rect>
+<rect x="138.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 02:00 · 0.11 kWh</title></rect>
+<rect x="138.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 03:00 · 0.12 kWh</title></rect>
+<rect x="138.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 04:00 · 0.13 kWh</title></rect>
+<rect x="138.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-13 05:00 · 0.09 kWh</title></rect>
+<rect x="138.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 06:00 · 0.10 kWh</title></rect>
+<rect x="138.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 07:00 · 0.11 kWh</title></rect>
+<rect x="138.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 08:00 · 0.12 kWh</title></rect>
+<rect x="138.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 09:00 · 0.13 kWh</title></rect>
+<rect x="138.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-13 10:00 · 0.09 kWh</title></rect>
+<rect x="138.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 11:00 · 0.10 kWh</title></rect>
+<rect x="138.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 12:00 · 0.11 kWh</title></rect>
+<rect x="138.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 13:00 · 0.12 kWh</title></rect>
+<rect x="138.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 14:00 · 0.13 kWh</title></rect>
+<rect x="138.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-13 15:00 · 0.09 kWh</title></rect>
+<rect x="138.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 16:00 · 0.10 kWh</title></rect>
+<rect x="138.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 17:00 · 0.11 kWh</title></rect>
+<rect x="138.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 18:00 · 0.12 kWh</title></rect>
+<rect x="138.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 19:00 · 0.13 kWh</title></rect>
+<rect x="138.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-13 20:00 · 0.09 kWh</title></rect>
+<rect x="138.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 21:00 · 0.10 kWh</title></rect>
+<rect x="138.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-13 22:00 · 0.11 kWh</title></rect>
+<rect x="138.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-13 23:00 · 0.12 kWh</title></rect>
+<rect x="144.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 00:00 · 0.08 kWh</title></rect>
+<rect x="144.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 01:00 · 0.09 kWh</title></rect>
+<rect x="144.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 02:00 · 0.10 kWh</title></rect>
+<rect x="144.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 03:00 · 0.11 kWh</title></rect>
+<rect x="144.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-14 04:00 · 0.12 kWh</title></rect>
+<rect x="144.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 05:00 · 0.08 kWh</title></rect>
+<rect x="144.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 06:00 · 0.09 kWh</title></rect>
+<rect x="144.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 07:00 · 0.10 kWh</title></rect>
+<rect x="144.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 08:00 · 0.11 kWh</title></rect>
+<rect x="144.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-14 09:00 · 0.12 kWh</title></rect>
+<rect x="144.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 10:00 · 0.08 kWh</title></rect>
+<rect x="144.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 11:00 · 0.09 kWh</title></rect>
+<rect x="144.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 12:00 · 0.10 kWh</title></rect>
+<rect x="144.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 13:00 · 0.11 kWh</title></rect>
+<rect x="144.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-14 14:00 · 0.12 kWh</title></rect>
+<rect x="144.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 15:00 · 0.08 kWh</title></rect>
+<rect x="144.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 16:00 · 0.09 kWh</title></rect>
+<rect x="144.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 17:00 · 0.10 kWh</title></rect>
+<rect x="144.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 18:00 · 0.11 kWh</title></rect>
+<rect x="144.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-14 19:00 · 0.12 kWh</title></rect>
+<rect x="144.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 20:00 · 0.08 kWh</title></rect>
+<rect x="144.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-14 21:00 · 0.09 kWh</title></rect>
+<rect x="144.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 22:00 · 0.10 kWh</title></rect>
+<rect x="144.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-04-14 23:00 · 0.11 kWh</title></rect>
+<rect x="150.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 00:00 · 0.08 kWh</title></rect>
+<rect x="150.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 01:00 · 0.09 kWh</title></rect>
+<rect x="150.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 02:00 · 0.10 kWh</title></rect>
+<rect x="150.0" y="32.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 03:00 · 0.11 kWh</title></rect>
+<rect x="150.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-15 04:00 · 0.12 kWh</title></rect>
+<rect x="150.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 05:00 · 0.08 kWh</title></rect>
+<rect x="150.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 06:00 · 0.09 kWh</title></rect>
+<rect x="150.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 07:00 · 0.10 kWh</title></rect>
+<rect x="150.0" y="72.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 08:00 · 0.11 kWh</title></rect>
+<rect x="150.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-15 09:00 · 0.12 kWh</title></rect>
+<rect x="150.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 10:00 · 0.08 kWh</title></rect>
+<rect x="150.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 11:00 · 0.09 kWh</title></rect>
+<rect x="150.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 12:00 · 0.10 kWh</title></rect>
+<rect x="150.0" y="112.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 13:00 · 0.11 kWh</title></rect>
+<rect x="150.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-15 14:00 · 0.12 kWh</title></rect>
+<rect x="150.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 15:00 · 0.08 kWh</title></rect>
+<rect x="150.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 16:00 · 0.09 kWh</title></rect>
+<rect x="150.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 17:00 · 0.10 kWh</title></rect>
+<rect x="150.0" y="152.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 18:00 · 0.11 kWh</title></rect>
+<rect x="150.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-15 19:00 · 0.12 kWh</title></rect>
+<rect x="150.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 20:00 · 0.08 kWh</title></rect>
+<rect x="150.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-15 21:00 · 0.09 kWh</title></rect>
+<rect x="150.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 22:00 · 0.10 kWh</title></rect>
+<rect x="150.0" y="192.0" width="6.0" height="8.0" class="q5"><title>2025-04-15 23:00 · 0.11 kWh</title></rect>
+<rect x="156.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 00:00 · 0.08 kWh</title></rect>
+<rect x="156.0" y="16.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 01:00 · 0.09 kWh</title></rect>
+<rect x="156.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-16 02:00 · 0.10 kWh</title></rect>
+<rect x="156.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 03:00 · 0.11 kWh</title></rect>
+<rect x="156.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 04:00 · 0.12 kWh</title></rect>
+<rect x="156.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 05:00 · 0.08 kWh</title></rect>
+<rect x="156.0" y="56.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 06:00 · 0.09 kWh</title></rect>
+<rect x="156.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-16 07:00 · 0.10 kWh</title></rect>
+<rect x="156.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 08:00 · 0.11 kWh</title></rect>
+<rect x="156.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 09:00 · 0.12 kWh</title></rect>
+<rect x="156.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 10:00 · 0.08 kWh</title></rect>
+<rect x="156.0" y="96.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 11:00 · 0.09 kWh</title></rect>
+<rect x="156.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-16 12:00 · 0.10 kWh</title></rect>
+<rect x="156.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 13:00 · 0.11 kWh</title></rect>
+<rect x="156.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 14:00 · 0.12 kWh</title></rect>
+<rect x="156.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 15:00 · 0.08 kWh</title></rect>
+<rect x="156.0" y="136.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 16:00 · 0.09 kWh</title></rect>
+<rect x="156.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-16 17:00 · 0.10 kWh</title></rect>
+<rect x="156.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 18:00 · 0.11 kWh</title></rect>
+<rect x="156.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 19:00 · 0.12 kWh</title></rect>
+<rect x="156.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 20:00 · 0.08 kWh</title></rect>
+<rect x="156.0" y="176.0" width="6.0" height="8.0" class="q4"><title>2025-04-16 21:00 · 0.09 kWh</title></rect>
+<rect x="156.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-16 22:00 · 0.10 kWh</title></rect>
+<rect x="156.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-16 23:00 · 0.11 kWh</title></rect>
+<rect x="162.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-17 00:00 · 0.09 kWh</title></rect>
+<rect x="162.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 01:00 · 0.10 kWh</title></rect>
+<rect x="162.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 02:00 · 0.11 kWh</title></rect>
+<rect x="162.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 03:00 · 0.12 kWh</title></rect>
+<rect x="162.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 04:00 · 0.13 kWh</title></rect>
+<rect x="162.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-17 05:00 · 0.09 kWh</title></rect>
+<rect x="162.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 06:00 · 0.10 kWh</title></rect>
+<rect x="162.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 07:00 · 0.11 kWh</title></rect>
+<rect x="162.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 08:00 · 0.12 kWh</title></rect>
+<rect x="162.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 09:00 · 0.13 kWh</title></rect>
+<rect x="162.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-17 10:00 · 0.09 kWh</title></rect>
+<rect x="162.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 11:00 · 0.10 kWh</title></rect>
+<rect x="162.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 12:00 · 0.11 kWh</title></rect>
+<rect x="162.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 13:00 · 0.12 kWh</title></rect>
+<rect x="162.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 14:00 · 0.13 kWh</title></rect>
+<rect x="162.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-17 15:00 · 0.09 kWh</title></rect>
+<rect x="162.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 16:00 · 0.10 kWh</title></rect>
+<rect x="162.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 17:00 · 0.11 kWh</title></rect>
+<rect x="162.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 18:00 · 0.12 kWh</title></rect>
+<rect x="162.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 19:00 · 0.13 kWh</title></rect>
+<rect x="162.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-17 20:00 · 0.09 kWh</title></rect>
+<rect x="162.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 21:00 · 0.10 kWh</title></rect>
+<rect x="162.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-17 22:00 · 0.11 kWh</title></rect>
+<rect x="162.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-17 23:00 · 0.12 kWh</title></rect>
+<rect x="168.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-18 00:00 · 0.09 kWh</title></rect>
+<rect x="168.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 01:00 · 0.10 kWh</title></rect>
+<rect x="168.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 02:00 · 0.11 kWh</title></rect>
+<rect x="168.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 03:00 · 0.12 kWh</title></rect>
+<rect x="168.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 04:00 · 0.13 kWh</title></rect>
+<rect x="168.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-18 05:00 · 0.09 kWh</title></rect>
+<rect x="168.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 06:00 · 0.10 kWh</title></rect>
+<rect x="168.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 07:00 · 0.11 kWh</title></rect>
+<rect x="168.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 08:00 · 0.12 kWh</title></rect>
+<rect x="168.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 09:00 · 0.13 kWh</title></rect>
+<rect x="168.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-18 10:00 · 0.09 kWh</title></rect>
+<rect x="168.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 11:00 · 0.10 kWh</title></rect>
+<rect x="168.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 12:00 · 0.11 kWh</title></rect>
+<rect x="168.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 13:00 · 0.12 kWh</title></rect>
+<rect x="168.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 14:00 · 0.13 kWh</title></rect>
+<rect x="168.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-18 15:00 · 0.09 kWh</title></rect>
+<rect x="168.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 16:00 · 0.10 kWh</title></rect>
+<rect x="168.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 17:00 · 0.11 kWh</title></rect>
+<rect x="168.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 18:00 · 0.12 kWh</title></rect>
+<rect x="168.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 19:00 · 0.13 kWh</title></rect>
+<rect x="168.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-18 20:00 · 0.09 kWh</title></rect>
+<rect x="168.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 21:00 · 0.10 kWh</title></rect>
+<rect x="168.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-18 22:00 · 0.11 kWh</title></rect>
+<rect x="168.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-18 23:00 · 0.12 kWh</title></rect>
+<rect x="174.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-19 00:00 · 0.09 kWh</title></rect>
+<rect x="174.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 01:00 · 0.10 kWh</title></rect>
+<rect x="174.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 02:00 · 0.11 kWh</title></rect>
+<rect x="174.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 03:00 · 0.12 kWh</title></rect>
+<rect x="174.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 04:00 · 0.13 kWh</title></rect>
+<rect x="174.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-19 05:00 · 0.09 kWh</title></rect>
+<rect x="174.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 06:00 · 0.10 kWh</title></rect>
+<rect x="174.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 07:00 · 0.11 kWh</title></rect>
+<rect x="174.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 08:00 · 0.12 kWh</title></rect>
+<rect x="174.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 09:00 · 0.13 kWh</title></rect>
+<rect x="174.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-19 10:00 · 0.09 kWh</title></rect>
+<rect x="174.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 11:00 · 0.10 kWh</title></rect>
+<rect x="174.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 12:00 · 0.11 kWh</title></rect>
+<rect x="174.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 13:00 · 0.12 kWh</title></rect>
+<rect x="174.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 14:00 · 0.13 kWh</title></rect>
+<rect x="174.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-19 15:00 · 0.09 kWh</title></rect>
+<rect x="174.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 16:00 · 0.10 kWh</title></rect>
+<rect x="174.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 17:00 · 0.11 kWh</title></rect>
+<rect x="174.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 18:00 · 0.12 kWh</title></rect>
+<rect x="174.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 19:00 · 0.13 kWh</title></rect>
+<rect x="174.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-19 20:00 · 0.09 kWh</title></rect>
+<rect x="174.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 21:00 · 0.10 kWh</title></rect>
+<rect x="174.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-19 22:00 · 0.11 kWh</title></rect>
+<rect x="174.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-19 23:00 · 0.12 kWh</title></rect>
+<rect x="180.0" y="8.0" width="6.0" height="8.0" class="q4"><title>2025-04-20 00:00 · 0.09 kWh</title></rect>
+<rect x="180.0" y="16.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 01:00 · 0.10 kWh</title></rect>
+<rect x="180.0" y="24.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 02:00 · 0.11 kWh</title></rect>
+<rect x="180.0" y="32.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 03:00 · 0.12 kWh</title></rect>
+<rect x="180.0" y="40.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 04:00 · 0.13 kWh</title></rect>
+<rect x="180.0" y="48.0" width="6.0" height="8.0" class="q4"><title>2025-04-20 05:00 · 0.09 kWh</title></rect>
+<rect x="180.0" y="56.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 06:00 · 0.10 kWh</title></rect>
+<rect x="180.0" y="64.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 07:00 · 0.11 kWh</title></rect>
+<rect x="180.0" y="72.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 08:00 · 0.12 kWh</title></rect>
+<rect x="180.0" y="80.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 09:00 · 0.13 kWh</title></rect>
+<rect x="180.0" y="88.0" width="6.0" height="8.0" class="q4"><title>2025-04-20 10:00 · 0.09 kWh</title></rect>
+<rect x="180.0" y="96.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 11:00 · 0.10 kWh</title></rect>
+<rect x="180.0" y="104.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 12:00 · 0.11 kWh</title></rect>
+<rect x="180.0" y="112.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 13:00 · 0.12 kWh</title></rect>
+<rect x="180.0" y="120.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 14:00 · 0.13 kWh</title></rect>
+<rect x="180.0" y="128.0" width="6.0" height="8.0" class="q4"><title>2025-04-20 15:00 · 0.09 kWh</title></rect>
+<rect x="180.0" y="136.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 16:00 · 0.10 kWh</title></rect>
+<rect x="180.0" y="144.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 17:00 · 0.11 kWh</title></rect>
+<rect x="180.0" y="152.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 18:00 · 0.12 kWh</title></rect>
+<rect x="180.0" y="160.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 19:00 · 0.13 kWh</title></rect>
+<rect x="180.0" y="168.0" width="6.0" height="8.0" class="q4"><title>2025-04-20 20:00 · 0.09 kWh</title></rect>
+<rect x="180.0" y="176.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 21:00 · 0.10 kWh</title></rect>
+<rect x="180.0" y="184.0" width="6.0" height="8.0" class="q5"><title>2025-04-20 22:00 · 0.11 kWh</title></rect>
+<rect x="180.0" y="192.0" width="6.0" height="8.0" class="q6"><title>2025-04-20 23:00 · 0.12 kWh</title></rect>
+<text class="tick key-label" x="30.0" y="231.0">0</text>
+<rect class="key q0" x="46.0" y="222.0" width="16.0" height="10.0"/>
+<rect class="key q1" x="64.0" y="222.0" width="16.0" height="10.0"/>
+<rect class="key q2" x="82.0" y="222.0" width="16.0" height="10.0"/>
+<rect class="key q3" x="100.0" y="222.0" width="16.0" height="10.0"/>
+<rect class="key q4" x="118.0" y="222.0" width="16.0" height="10.0"/>
+<rect class="key q5" x="136.0" y="222.0" width="16.0" height="10.0"/>
+<rect class="key q6" x="154.0" y="222.0" width="16.0" height="10.0"/>
+<text class="tick key-label" x="176.0" y="231.0">0.13 kWh</text>
+</svg><h3>Time-of-use split</h3><ul class="legend"><li><span class="swatch c1"></span><span>Off Peak</span></li><li><span class="swatch c2"></span><span>Peak</span></li><li><span class="swatch c3"></span><span>Shoulder</span></li></ul><svg class="chart" viewBox="0 0 720.0 240.0" role="img" aria-labelledby="t-tou-0 d-tou-0">
+<title id="t-tou-0">Share of energy by time-of-use label</title>
+<desc id="d-tou-0">Each month&#x27;s energy split by time-of-use label, as a share of the month. Months marked * span two window sets.</desc>
+<line class="axis" x1="44.0" y1="212.0" x2="712.0" y2="212.0"/>
+<text class="tick y" x="38.0" y="215.5">0%</text>
+<line class="grid" x1="44.0" y1="164.5" x2="712.0" y2="164.5"/>
+<text class="tick y" x="38.0" y="168.0">25%</text>
+<line class="grid" x1="44.0" y1="117.0" x2="712.0" y2="117.0"/>
+<text class="tick y" x="38.0" y="120.5">50%</text>
+<line class="grid" x1="44.0" y1="69.5" x2="712.0" y2="69.5"/>
+<text class="tick y" x="38.0" y="73.0">75%</text>
+<line class="grid" x1="44.0" y1="22.0" x2="712.0" y2="22.0"/>
+<text class="tick y" x="38.0" y="25.5">100%</text>
+<text class="tick x" x="64.9" y="226.0">2024-01</text>
+<text class="tick x" x="148.4" y="226.0">2024-03</text>
+<text class="tick x" x="231.9" y="226.0">2024-05</text>
+<text class="tick x" x="315.4" y="226.0">2024-07</text>
+<text class="tick x" x="398.9" y="226.0">2024-09*</text>
+<text class="tick x" x="482.4" y="226.0">2024-11</text>
+<text class="tick x" x="565.9" y="226.0">2025-01</text>
+<text class="tick x" x="649.4" y="226.0">2025-03</text>
+<path class="bar c1" d="M52.9,212.0 L52.9,172.1 L76.9,172.1 L76.9,212.0 Z"/>
+<path class="bar c2" d="M52.9,170.1 L52.9,61.9 L76.9,61.9 L76.9,170.1 Z"/>
+<path class="bar c3" d="M52.9,59.9 L52.9,26.0 Q52.9,22.0 56.9,22.0 L72.9,22.0 Q76.9,22.0 76.9,26.0 L76.9,59.9 Z"/>
+<path class="bar c1" d="M94.6,212.0 L94.6,171.3 L118.6,171.3 L118.6,212.0 Z"/>
+<path class="bar c2" d="M94.6,169.3 L94.6,61.3 L118.6,61.3 L118.6,169.3 Z"/>
+<path class="bar c3" d="M94.6,59.3 L94.6,26.0 Q94.6,22.0 98.6,22.0 L114.6,22.0 Q118.6,22.0 118.6,26.0 L118.6,59.3 Z"/>
+<path class="bar c1" d="M136.4,212.0 L136.4,172.1 L160.4,172.1 L160.4,212.0 Z"/>
+<path class="bar c2" d="M136.4,170.1 L136.4,61.9 L160.4,61.9 L160.4,170.1 Z"/>
+<path class="bar c3" d="M136.4,59.9 L136.4,26.0 Q136.4,22.0 140.4,22.0 L156.4,22.0 Q160.4,22.0 160.4,26.0 L160.4,59.9 Z"/>
+<path class="bar c1" d="M178.1,212.0 L178.1,171.9 L202.1,171.9 L202.1,212.0 Z"/>
+<path class="bar c2" d="M178.1,169.9 L178.1,61.8 L202.1,61.8 L202.1,169.9 Z"/>
+<path class="bar c3" d="M178.1,59.8 L178.1,26.0 Q178.1,22.0 182.1,22.0 L198.1,22.0 Q202.1,22.0 202.1,26.0 L202.1,59.8 Z"/>
+<path class="bar c1" d="M219.9,212.0 L219.9,172.1 L243.9,172.1 L243.9,212.0 Z"/>
+<path class="bar c2" d="M219.9,170.1 L219.9,61.9 L243.9,61.9 L243.9,170.1 Z"/>
+<path class="bar c3" d="M219.9,59.9 L219.9,26.0 Q219.9,22.0 223.9,22.0 L239.9,22.0 Q243.9,22.0 243.9,26.0 L243.9,59.9 Z"/>
+<path class="bar c1" d="M261.6,212.0 L261.6,172.1 L285.6,172.1 L285.6,212.0 Z"/>
+<path class="bar c2" d="M261.6,170.1 L261.6,61.9 L285.6,61.9 L285.6,170.1 Z"/>
+<path class="bar c3" d="M261.6,59.9 L261.6,26.0 Q261.6,22.0 265.6,22.0 L281.6,22.0 Q285.6,22.0 285.6,26.0 L285.6,59.9 Z"/>
+<path class="bar c1" d="M303.4,212.0 L303.4,172.1 L327.4,172.1 L327.4,212.0 Z"/>
+<path class="bar c2" d="M303.4,170.1 L303.4,61.9 L327.4,61.9 L327.4,170.1 Z"/>
+<path class="bar c3" d="M303.4,59.9 L303.4,26.0 Q303.4,22.0 307.4,22.0 L323.4,22.0 Q327.4,22.0 327.4,26.0 L327.4,59.9 Z"/>
+<path class="bar c1" d="M345.1,212.0 L345.1,172.1 L369.1,172.1 L369.1,212.0 Z"/>
+<path class="bar c2" d="M345.1,170.1 L345.1,61.9 L369.1,61.9 L369.1,170.1 Z"/>
+<path class="bar c3" d="M345.1,59.9 L345.1,26.0 Q345.1,22.0 349.1,22.0 L365.1,22.0 Q369.1,22.0 369.1,26.0 L369.1,59.9 Z"/>
+<path class="bar c1" d="M386.9,212.0 L386.9,168.3 L410.9,168.3 L410.9,212.0 Z"/>
+<path class="bar c2" d="M386.9,166.3 L386.9,65.3 L410.9,65.3 L410.9,166.3 Z"/>
+<path class="bar c3" d="M386.9,63.3 L386.9,26.0 Q386.9,22.0 390.9,22.0 L406.9,22.0 Q410.9,22.0 410.9,26.0 L410.9,63.3 Z"/>
+<path class="bar c1" d="M428.6,212.0 L428.6,165.1 L452.6,165.1 L452.6,212.0 Z"/>
+<path class="bar c2" d="M428.6,163.1 L428.6,68.4 L452.6,68.4 L452.6,163.1 Z"/>
+<path class="bar c3" d="M428.6,66.4 L428.6,26.0 Q428.6,22.0 432.6,22.0 L448.6,22.0 Q452.6,22.0 452.6,26.0 L452.6,66.4 Z"/>
+<path class="bar c1" d="M470.4,212.0 L470.4,164.9 L494.4,164.9 L494.4,212.0 Z"/>
+<path class="bar c2" d="M470.4,162.9 L470.4,68.4 L494.4,68.4 L494.4,162.9 Z"/>
+<path class="bar c3" d="M470.4,66.4 L470.4,26.0 Q470.4,22.0 474.4,22.0 L490.4,22.0 Q494.4,22.0 494.4,26.0 L494.4,66.4 Z"/>
+<path class="bar c1" d="M512.1,212.0 L512.1,164.9 L536.1,164.9 L536.1,212.0 Z"/>
+<path class="bar c2" d="M512.1,162.9 L512.1,68.4 L536.1,68.4 L536.1,162.9 Z"/>
+<path class="bar c3" d="M512.1,66.4 L512.1,26.0 Q512.1,22.0 516.1,22.0 L532.1,22.0 Q536.1,22.0 536.1,26.0 L536.1,66.4 Z"/>
+<path class="bar c1" d="M553.9,212.0 L553.9,164.9 L577.9,164.9 L577.9,212.0 Z"/>
+<path class="bar c2" d="M553.9,162.9 L553.9,68.4 L577.9,68.4 L577.9,162.9 Z"/>
+<path class="bar c3" d="M553.9,66.4 L553.9,26.0 Q553.9,22.0 557.9,22.0 L573.9,22.0 Q577.9,22.0 577.9,26.0 L577.9,66.4 Z"/>
+<path class="bar c1" d="M595.6,212.0 L595.6,164.9 L619.6,164.9 L619.6,212.0 Z"/>
+<path class="bar c2" d="M595.6,162.9 L595.6,68.4 L619.6,68.4 L619.6,162.9 Z"/>
+<path class="bar c3" d="M595.6,66.4 L595.6,26.0 Q595.6,22.0 599.6,22.0 L615.6,22.0 Q619.6,22.0 619.6,26.0 L619.6,66.4 Z"/>
+<path class="bar c1" d="M637.4,212.0 L637.4,164.9 L661.4,164.9 L661.4,212.0 Z"/>
+<path class="bar c2" d="M637.4,162.9 L637.4,68.4 L661.4,68.4 L661.4,162.9 Z"/>
+<path class="bar c3" d="M637.4,66.4 L637.4,26.0 Q637.4,22.0 641.4,22.0 L657.4,22.0 Q661.4,22.0 661.4,26.0 L661.4,66.4 Z"/>
+<path class="bar c1" d="M679.1,212.0 L679.1,164.6 L703.1,164.6 L703.1,212.0 Z"/>
+<path class="bar c2" d="M679.1,162.6 L679.1,68.3 L703.1,68.3 L703.1,162.6 Z"/>
+<path class="bar c3" d="M679.1,66.3 L679.1,26.0 Q679.1,22.0 683.1,22.0 L699.1,22.0 Q703.1,22.0 703.1,26.0 L703.1,66.3 Z"/>
+<rect class="hit" x="44.0" y="22.0" width="41.8" height="190.0"><title>2024-01
+Off Peak: 21.0% · 11.7 kWh
+Peak: 58.0% · 32.2 kWh
+Shoulder: 21.0% · 11.7 kWh</title></rect>
+<rect class="hit" x="85.8" y="22.0" width="41.8" height="190.0"><title>2024-02
+Off Peak: 21.4% · 15.4 kWh
+Peak: 57.9% · 41.5 kWh
+Shoulder: 20.7% · 14.8 kWh</title></rect>
+<rect class="hit" x="127.5" y="22.0" width="41.8" height="190.0"><title>2024-03
+Off Peak: 21.0% · 16.4 kWh
+Peak: 58.0% · 45.3 kWh
+Shoulder: 21.0% · 16.4 kWh</title></rect>
+<rect class="hit" x="169.2" y="22.0" width="41.8" height="190.0"><title>2024-04
+Off Peak: 21.1% · 16.0 kWh
+Peak: 57.9% · 43.8 kWh
+Shoulder: 21.0% · 15.9 kWh</title></rect>
+<rect class="hit" x="211.0" y="22.0" width="41.8" height="190.0"><title>2024-05
+Off Peak: 21.0% · 16.4 kWh
+Peak: 58.0% · 45.3 kWh
+Shoulder: 21.0% · 16.4 kWh</title></rect>
+<rect class="hit" x="252.8" y="22.0" width="41.8" height="190.0"><title>2024-06
+Off Peak: 21.0% · 15.9 kWh
+Peak: 58.0% · 43.8 kWh
+Shoulder: 21.0% · 15.9 kWh</title></rect>
+<rect class="hit" x="294.5" y="22.0" width="41.8" height="190.0"><title>2024-07
+Off Peak: 21.0% · 16.4 kWh
+Peak: 58.0% · 45.3 kWh
+Shoulder: 21.0% · 16.4 kWh</title></rect>
+<rect class="hit" x="336.2" y="22.0" width="41.8" height="190.0"><title>2024-08
+Off Peak: 21.0% · 16.4 kWh
+Peak: 58.0% · 45.3 kWh
+Shoulder: 21.0% · 16.4 kWh</title></rect>
+<rect class="hit" x="378.0" y="22.0" width="41.8" height="190.0"><title>2024-09*
+Off Peak: 23.0% · 17.4 kWh
+Peak: 54.2% · 40.9 kWh
+Shoulder: 22.8% · 17.2 kWh
+The month spans two window sets</title></rect>
+<rect class="hit" x="419.8" y="22.0" width="41.8" height="190.0"><title>2024-10
+Off Peak: 24.7% · 19.3 kWh
+Peak: 50.9% · 39.7 kWh
+Shoulder: 24.4% · 19.1 kWh</title></rect>
+<rect class="hit" x="461.5" y="22.0" width="41.8" height="190.0"><title>2024-11
+Off Peak: 24.8% · 18.7 kWh
+Peak: 50.8% · 38.4 kWh
+Shoulder: 24.4% · 18.4 kWh</title></rect>
+<rect class="hit" x="503.2" y="22.0" width="41.8" height="190.0"><title>2024-12
+Off Peak: 24.8% · 19.4 kWh
+Peak: 50.8% · 39.7 kWh
+Shoulder: 24.4% · 19.1 kWh</title></rect>
+<rect class="hit" x="545.0" y="22.0" width="41.8" height="190.0"><title>2025-01
+Off Peak: 24.8% · 19.4 kWh
+Peak: 50.8% · 39.7 kWh
+Shoulder: 24.4% · 19.1 kWh</title></rect>
+<rect class="hit" x="586.8" y="22.0" width="41.8" height="190.0"><title>2025-02
+Off Peak: 24.8% · 17.5 kWh
+Peak: 50.8% · 35.9 kWh
+Shoulder: 24.4% · 17.2 kWh</title></rect>
+<rect class="hit" x="628.5" y="22.0" width="41.8" height="190.0"><title>2025-03
+Off Peak: 24.8% · 19.4 kWh
+Peak: 50.8% · 39.7 kWh
+Shoulder: 24.4% · 19.1 kWh</title></rect>
+<rect class="hit" x="670.2" y="22.0" width="41.8" height="190.0"><title>2025-04
+Off Peak: 25.0% · 12.7 kWh
+Peak: 50.7% · 25.7 kWh
+Shoulder: 24.4% · 12.4 kWh</title></rect>
+</svg><p class="note">* The month spans two window sets; its split mixes both.</p><details><summary>Table</summary><table><thead><tr><th>Month</th><th>Label</th><th>Energy (kWh)</th><th>Share</th><th>Spans two window sets</th></tr></thead><tbody><tr><td>2024-01</td><td>Off Peak</td><td class="num">11.7</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-01</td><td>Peak</td><td class="num">32.2</td><td class="num">58.0%</td><td>no</td></tr><tr><td>2024-01</td><td>Shoulder</td><td class="num">11.7</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-02</td><td>Off Peak</td><td class="num">15.4</td><td class="num">21.4%</td><td>no</td></tr><tr><td>2024-02</td><td>Peak</td><td class="num">41.5</td><td class="num">57.9%</td><td>no</td></tr><tr><td>2024-02</td><td>Shoulder</td><td class="num">14.8</td><td class="num">20.7%</td><td>no</td></tr><tr><td>2024-03</td><td>Off Peak</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-03</td><td>Peak</td><td class="num">45.3</td><td class="num">58.0%</td><td>no</td></tr><tr><td>2024-03</td><td>Shoulder</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-04</td><td>Off Peak</td><td class="num">16.0</td><td class="num">21.1%</td><td>no</td></tr><tr><td>2024-04</td><td>Peak</td><td class="num">43.8</td><td class="num">57.9%</td><td>no</td></tr><tr><td>2024-04</td><td>Shoulder</td><td class="num">15.9</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-05</td><td>Off Peak</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-05</td><td>Peak</td><td class="num">45.3</td><td class="num">58.0%</td><td>no</td></tr><tr><td>2024-05</td><td>Shoulder</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-06</td><td>Off Peak</td><td class="num">15.9</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-06</td><td>Peak</td><td class="num">43.8</td><td class="num">58.0%</td><td>no</td></tr><tr><td>2024-06</td><td>Shoulder</td><td class="num">15.9</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-07</td><td>Off Peak</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-07</td><td>Peak</td><td class="num">45.3</td><td class="num">58.0%</td><td>no</td></tr><tr><td>2024-07</td><td>Shoulder</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-08</td><td>Off Peak</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-08</td><td>Peak</td><td class="num">45.3</td><td class="num">58.0%</td><td>no</td></tr><tr><td>2024-08</td><td>Shoulder</td><td class="num">16.4</td><td class="num">21.0%</td><td>no</td></tr><tr><td>2024-09</td><td>Off Peak</td><td class="num">17.4</td><td class="num">23.0%</td><td>yes</td></tr><tr><td>2024-09</td><td>Peak</td><td class="num">40.9</td><td class="num">54.2%</td><td>yes</td></tr><tr><td>2024-09</td><td>Shoulder</td><td class="num">17.2</td><td class="num">22.8%</td><td>yes</td></tr><tr><td>2024-10</td><td>Off Peak</td><td class="num">19.3</td><td class="num">24.7%</td><td>no</td></tr><tr><td>2024-10</td><td>Peak</td><td class="num">39.7</td><td class="num">50.9%</td><td>no</td></tr><tr><td>2024-10</td><td>Shoulder</td><td class="num">19.1</td><td class="num">24.4%</td><td>no</td></tr><tr><td>2024-11</td><td>Off Peak</td><td class="num">18.7</td><td class="num">24.8%</td><td>no</td></tr><tr><td>2024-11</td><td>Peak</td><td class="num">38.4</td><td class="num">50.8%</td><td>no</td></tr><tr><td>2024-11</td><td>Shoulder</td><td class="num">18.4</td><td class="num">24.4%</td><td>no</td></tr><tr><td>2024-12</td><td>Off Peak</td><td class="num">19.4</td><td class="num">24.8%</td><td>no</td></tr><tr><td>2024-12</td><td>Peak</td><td class="num">39.7</td><td class="num">50.8%</td><td>no</td></tr><tr><td>2024-12</td><td>Shoulder</td><td class="num">19.1</td><td class="num">24.4%</td><td>no</td></tr><tr><td>2025-01</td><td>Off Peak</td><td class="num">19.4</td><td class="num">24.8%</td><td>no</td></tr><tr><td>2025-01</td><td>Peak</td><td class="num">39.7</td><td class="num">50.8%</td><td>no</td></tr><tr><td>2025-01</td><td>Shoulder</td><td class="num">19.1</td><td class="num">24.4%</td><td>no</td></tr><tr><td>2025-02</td><td>Off Peak</td><td class="num">17.5</td><td class="num">24.8%</td><td>no</td></tr><tr><td>2025-02</td><td>Peak</td><td class="num">35.9</td><td class="num">50.8%</td><td>no</td></tr><tr><td>2025-02</td><td>Shoulder</td><td class="num">17.2</td><td class="num">24.4%</td><td>no</td></tr><tr><td>2025-03</td><td>Off Peak</td><td class="num">19.4</td><td class="num">24.8%</td><td>no</td></tr><tr><td>2025-03</td><td>Peak</td><td class="num">39.7</td><td class="num">50.8%</td><td>no</td></tr><tr><td>2025-03</td><td>Shoulder</td><td class="num">19.1</td><td class="num">24.4%</td><td>no</td></tr><tr><td>2025-04</td><td>Off Peak</td><td class="num">12.7</td><td class="num">25.0%</td><td>no</td></tr><tr><td>2025-04</td><td>Peak</td><td class="num">25.7</td><td class="num">50.7%</td><td>no</td></tr><tr><td>2025-04</td><td>Shoulder</td><td class="num">12.4</td><td class="num">24.4%</td><td>no</td></tr></tbody></table></details><p>The split uses these window sets, each from its date:</p><ul><li>Window set 1, effective from the start of the data: Off Peak 01:00-06:00; Peak 06:00-10:00, 15:00-01:00; Shoulder 10:00-15:00</li><li>Window set 2, effective from 2024-09-15: Off Peak 01:00-07:00; Peak 07:00-10:00, 16:00-01:00; Shoulder 10:00-16:00</li></ul><h3>Base load, peak demand and load factor</h3><p class="caption">Base load by month (kW)</p><svg class="chart" viewBox="0 0 720.0 200.0" role="img" aria-labelledby="t-base-0 d-base-0">
+<title id="t-base-0">Base load by month</title>
+<desc id="d-base-0">The month&#x27;s low-use level in kW: a percentile of the energy in the overnight window.</desc>
+<line class="axis" x1="44.0" y1="172.0" x2="712.0" y2="172.0"/>
+<text class="tick y" x="38.0" y="175.5">0.000</text>
+<line class="grid" x1="44.0" y1="132.0" x2="712.0" y2="132.0"/>
+<text class="tick y" x="38.0" y="135.5">0.025</text>
+<line class="grid" x1="44.0" y1="92.0" x2="712.0" y2="92.0"/>
+<text class="tick y" x="38.0" y="95.5">0.050</text>
+<line class="grid" x1="44.0" y1="52.0" x2="712.0" y2="52.0"/>
+<text class="tick y" x="38.0" y="55.5">0.075</text>
+<line class="grid" x1="44.0" y1="12.0" x2="712.0" y2="12.0"/>
+<text class="tick y" x="38.0" y="15.5">0.100</text>
+<text class="tick x" x="64.9" y="186.0">2024-01</text>
+<text class="tick x" x="148.4" y="186.0">2024-03</text>
+<text class="tick x" x="231.9" y="186.0">2024-05</text>
+<text class="tick x" x="315.4" y="186.0">2024-07</text>
+<text class="tick x" x="398.9" y="186.0">2024-09</text>
+<text class="tick x" x="482.4" y="186.0">2024-11</text>
+<text class="tick x" x="565.9" y="186.0">2025-01</text>
+<text class="tick x" x="649.4" y="186.0">2025-03</text>
+<path class="line" d="M64.9,19.4 L106.6,21.6 L148.4,21.6 L190.1,21.6 L231.9,21.6 L273.6,21.6 L315.4,21.6 L357.1,21.6 L398.9,21.6 L440.6,21.6 L482.4,21.6 L524.1,21.6 L565.9,21.6 L607.6,21.3 L649.4,21.6 L691.1,18.4"/>
+<circle class="dot" cx="691.1" cy="18.4" r="4.0"/>
+<circle class="hit" cx="64.9" cy="19.4" r="10.0"><title>2024-01 · 0.095 kW</title></circle>
+<circle class="hit" cx="106.6" cy="21.6" r="10.0"><title>2024-02 · 0.094 kW</title></circle>
+<circle class="hit" cx="148.4" cy="21.6" r="10.0"><title>2024-03 · 0.094 kW</title></circle>
+<circle class="hit" cx="190.1" cy="21.6" r="10.0"><title>2024-04 · 0.094 kW</title></circle>
+<circle class="hit" cx="231.9" cy="21.6" r="10.0"><title>2024-05 · 0.094 kW</title></circle>
+<circle class="hit" cx="273.6" cy="21.6" r="10.0"><title>2024-06 · 0.094 kW</title></circle>
+<circle class="hit" cx="315.4" cy="21.6" r="10.0"><title>2024-07 · 0.094 kW</title></circle>
+<circle class="hit" cx="357.1" cy="21.6" r="10.0"><title>2024-08 · 0.094 kW</title></circle>
+<circle class="hit" cx="398.9" cy="21.6" r="10.0"><title>2024-09 · 0.094 kW</title></circle>
+<circle class="hit" cx="440.6" cy="21.6" r="10.0"><title>2024-10 · 0.094 kW</title></circle>
+<circle class="hit" cx="482.4" cy="21.6" r="10.0"><title>2024-11 · 0.094 kW</title></circle>
+<circle class="hit" cx="524.1" cy="21.6" r="10.0"><title>2024-12 · 0.094 kW</title></circle>
+<circle class="hit" cx="565.9" cy="21.6" r="10.0"><title>2025-01 · 0.094 kW</title></circle>
+<circle class="hit" cx="607.6" cy="21.3" r="10.0"><title>2025-02 · 0.094 kW</title></circle>
+<circle class="hit" cx="649.4" cy="21.6" r="10.0"><title>2025-03 · 0.094 kW</title></circle>
+<circle class="hit" cx="691.1" cy="18.4" r="10.0"><title>2025-04 · 0.096 kW</title></circle>
+</svg><p class="caption">Peak demand by month (kW)</p><svg class="chart" viewBox="0 0 720.0 200.0" role="img" aria-labelledby="t-peak-0 d-peak-0">
+<title id="t-peak-0">Peak demand by month</title>
+<desc id="d-peak-0">The month&#x27;s highest block of use in kW. A tooltip names the time of the peak.</desc>
+<line class="axis" x1="44.0" y1="172.0" x2="712.0" y2="172.0"/>
+<text class="tick y" x="38.0" y="175.5">0.00</text>
+<line class="grid" x1="44.0" y1="132.0" x2="712.0" y2="132.0"/>
+<text class="tick y" x="38.0" y="135.5">0.05</text>
+<line class="grid" x1="44.0" y1="92.0" x2="712.0" y2="92.0"/>
+<text class="tick y" x="38.0" y="95.5">0.10</text>
+<line class="grid" x1="44.0" y1="52.0" x2="712.0" y2="52.0"/>
+<text class="tick y" x="38.0" y="55.5">0.15</text>
+<line class="grid" x1="44.0" y1="12.0" x2="712.0" y2="12.0"/>
+<text class="tick y" x="38.0" y="15.5">0.20</text>
+<text class="tick x" x="64.9" y="186.0">2024-01</text>
+<text class="tick x" x="148.4" y="186.0">2024-03</text>
+<text class="tick x" x="231.9" y="186.0">2024-05</text>
+<text class="tick x" x="315.4" y="186.0">2024-07</text>
+<text class="tick x" x="398.9" y="186.0">2024-09</text>
+<text class="tick x" x="482.4" y="186.0">2024-11</text>
+<text class="tick x" x="565.9" y="186.0">2025-01</text>
+<text class="tick x" x="649.4" y="186.0">2025-03</text>
+<path class="line" d="M64.9,66.4 L106.6,66.4 L148.4,66.4 L190.1,66.4 L231.9,66.4 L273.6,66.4 L315.4,66.4 L357.1,66.4 L398.9,66.4 L440.6,66.4 L482.4,66.4 L524.1,66.4 L565.9,66.4 L607.6,66.4 L649.4,66.4 L691.1,66.4"/>
+<circle class="dot" cx="691.1" cy="66.4" r="4.0"/>
+<circle class="hit" cx="64.9" cy="66.4" r="10.0"><title>2024-01 · 0.132 kW · at 2024-01-13 04:00</title></circle>
+<circle class="hit" cx="106.6" cy="66.4" r="10.0"><title>2024-02 · 0.132 kW · at 2024-02-06 04:00</title></circle>
+<circle class="hit" cx="148.4" cy="66.4" r="10.0"><title>2024-03 · 0.132 kW · at 2024-03-06 04:00</title></circle>
+<circle class="hit" cx="190.1" cy="66.4" r="10.0"><title>2024-04 · 0.132 kW · at 2024-04-06 04:00</title></circle>
+<circle class="hit" cx="231.9" cy="66.4" r="10.0"><title>2024-05 · 0.132 kW · at 2024-05-06 04:00</title></circle>
+<circle class="hit" cx="273.6" cy="66.4" r="10.0"><title>2024-06 · 0.132 kW · at 2024-06-06 04:00</title></circle>
+<circle class="hit" cx="315.4" cy="66.4" r="10.0"><title>2024-07 · 0.132 kW · at 2024-07-06 04:00</title></circle>
+<circle class="hit" cx="357.1" cy="66.4" r="10.0"><title>2024-08 · 0.132 kW · at 2024-08-06 04:00</title></circle>
+<circle class="hit" cx="398.9" cy="66.4" r="10.0"><title>2024-09 · 0.132 kW · at 2024-09-06 04:00</title></circle>
+<circle class="hit" cx="440.6" cy="66.4" r="10.0"><title>2024-10 · 0.132 kW · at 2024-10-06 04:00</title></circle>
+<circle class="hit" cx="482.4" cy="66.4" r="10.0"><title>2024-11 · 0.132 kW · at 2024-11-06 04:00</title></circle>
+<circle class="hit" cx="524.1" cy="66.4" r="10.0"><title>2024-12 · 0.132 kW · at 2024-12-06 04:00</title></circle>
+<circle class="hit" cx="565.9" cy="66.4" r="10.0"><title>2025-01 · 0.132 kW · at 2025-01-06 04:00</title></circle>
+<circle class="hit" cx="607.6" cy="66.4" r="10.0"><title>2025-02 · 0.132 kW · at 2025-02-06 04:00</title></circle>
+<circle class="hit" cx="649.4" cy="66.4" r="10.0"><title>2025-03 · 0.132 kW · at 2025-03-06 04:00</title></circle>
+<circle class="hit" cx="691.1" cy="66.4" r="10.0"><title>2025-04 · 0.132 kW · at 2025-04-06 04:00</title></circle>
+</svg><p class="caption">Load factor by month</p><svg class="chart" viewBox="0 0 720.0 200.0" role="img" aria-labelledby="t-load-0 d-load-0">
+<title id="t-load-0">Load factor by month</title>
+<desc id="d-load-0">Average demand divided by peak demand, from 0 to 1.</desc>
+<line class="axis" x1="44.0" y1="172.0" x2="712.0" y2="172.0"/>
+<text class="tick y" x="38.0" y="175.5">0.00</text>
+<line class="grid" x1="44.0" y1="132.0" x2="712.0" y2="132.0"/>
+<text class="tick y" x="38.0" y="135.5">0.25</text>
+<line class="grid" x1="44.0" y1="92.0" x2="712.0" y2="92.0"/>
+<text class="tick y" x="38.0" y="95.5">0.50</text>
+<line class="grid" x1="44.0" y1="52.0" x2="712.0" y2="52.0"/>
+<text class="tick y" x="38.0" y="55.5">0.75</text>
+<line class="grid" x1="44.0" y1="12.0" x2="712.0" y2="12.0"/>
+<text class="tick y" x="38.0" y="15.5">1.00</text>
+<text class="tick x" x="64.9" y="186.0">2024-01</text>
+<text class="tick x" x="148.4" y="186.0">2024-03</text>
+<text class="tick x" x="231.9" y="186.0">2024-05</text>
+<text class="tick x" x="315.4" y="186.0">2024-07</text>
+<text class="tick x" x="398.9" y="186.0">2024-09</text>
+<text class="tick x" x="482.4" y="186.0">2024-11</text>
+<text class="tick x" x="565.9" y="186.0">2025-01</text>
+<text class="tick x" x="649.4" y="186.0">2025-03</text>
+<path class="line" d="M64.9,44.5 L106.6,44.7 L148.4,44.8 L190.1,44.8 L231.9,44.8 L273.6,44.8 L315.4,44.8 L357.1,44.8 L398.9,44.8 L440.6,44.8 L482.4,44.8 L524.1,44.8 L565.9,44.8 L607.6,44.5 L649.4,44.8 L691.1,44.1"/>
+<circle class="dot" cx="691.1" cy="44.1" r="4.0"/>
+<circle class="hit" cx="64.9" cy="44.5" r="10.0"><title>2024-01 · 0.80</title></circle>
+<circle class="hit" cx="106.6" cy="44.7" r="10.0"><title>2024-02 · 0.80</title></circle>
+<circle class="hit" cx="148.4" cy="44.8" r="10.0"><title>2024-03 · 0.80</title></circle>
+<circle class="hit" cx="190.1" cy="44.8" r="10.0"><title>2024-04 · 0.80</title></circle>
+<circle class="hit" cx="231.9" cy="44.8" r="10.0"><title>2024-05 · 0.80</title></circle>
+<circle class="hit" cx="273.6" cy="44.8" r="10.0"><title>2024-06 · 0.80</title></circle>
+<circle class="hit" cx="315.4" cy="44.8" r="10.0"><title>2024-07 · 0.80</title></circle>
+<circle class="hit" cx="357.1" cy="44.8" r="10.0"><title>2024-08 · 0.80</title></circle>
+<circle class="hit" cx="398.9" cy="44.8" r="10.0"><title>2024-09 · 0.80</title></circle>
+<circle class="hit" cx="440.6" cy="44.8" r="10.0"><title>2024-10 · 0.80</title></circle>
+<circle class="hit" cx="482.4" cy="44.8" r="10.0"><title>2024-11 · 0.80</title></circle>
+<circle class="hit" cx="524.1" cy="44.8" r="10.0"><title>2024-12 · 0.80</title></circle>
+<circle class="hit" cx="565.9" cy="44.8" r="10.0"><title>2025-01 · 0.80</title></circle>
+<circle class="hit" cx="607.6" cy="44.5" r="10.0"><title>2025-02 · 0.80</title></circle>
+<circle class="hit" cx="649.4" cy="44.8" r="10.0"><title>2025-03 · 0.80</title></circle>
+<circle class="hit" cx="691.1" cy="44.1" r="10.0"><title>2025-04 · 0.80</title></circle>
+</svg><details><summary>Table</summary><table><thead><tr><th>Month</th><th>Base load (kW)</th><th>Peak demand (kW)</th><th>Peak at</th><th>Load factor</th></tr></thead><tbody><tr><td>2024-01</td><td class="num">0.095</td><td class="num">0.132</td><td>2024-01-13 04:00</td><td class="num">0.80</td></tr><tr><td>2024-02</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-02-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-03</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-03-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-04</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-04-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-05</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-05-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-06</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-06-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-07</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-07-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-08</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-08-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-09</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-09-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-10</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-10-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-11</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-11-06 04:00</td><td class="num">0.80</td></tr><tr><td>2024-12</td><td class="num">0.094</td><td class="num">0.132</td><td>2024-12-06 04:00</td><td class="num">0.80</td></tr><tr><td>2025-01</td><td class="num">0.094</td><td class="num">0.132</td><td>2025-01-06 04:00</td><td class="num">0.80</td></tr><tr><td>2025-02</td><td class="num">0.094</td><td class="num">0.132</td><td>2025-02-06 04:00</td><td class="num">0.80</td></tr><tr><td>2025-03</td><td class="num">0.094</td><td class="num">0.132</td><td>2025-03-06 04:00</td><td class="num">0.80</td></tr><tr><td>2025-04</td><td class="num">0.096</td><td class="num">0.132</td><td>2025-04-06 04:00</td><td class="num">0.80</td></tr></tbody></table></details><h3>Data quality</h3><ul class="legend"><li><span class="swatch c1"></span><span>actual</span></li><li><span class="swatch c2"></span><span>estimated</span></li><li><span class="swatch c3"></span><span>substituted</span></li><li><span class="swatch cx"></span><span>other</span></li></ul><svg class="chart" viewBox="0 0 720.0 240.0" role="img" aria-labelledby="t-quality-0 d-quality-0">
+<title id="t-quality-0">Reading quality by month</title>
+<desc id="d-quality-0">Each month&#x27;s readings by quality class, as a share of the month&#x27;s intervals.</desc>
+<line class="axis" x1="44.0" y1="212.0" x2="712.0" y2="212.0"/>
+<text class="tick y" x="38.0" y="215.5">0%</text>
+<line class="grid" x1="44.0" y1="164.5" x2="712.0" y2="164.5"/>
+<text class="tick y" x="38.0" y="168.0">25%</text>
+<line class="grid" x1="44.0" y1="117.0" x2="712.0" y2="117.0"/>
+<text class="tick y" x="38.0" y="120.5">50%</text>
+<line class="grid" x1="44.0" y1="69.5" x2="712.0" y2="69.5"/>
+<text class="tick y" x="38.0" y="73.0">75%</text>
+<line class="grid" x1="44.0" y1="22.0" x2="712.0" y2="22.0"/>
+<text class="tick y" x="38.0" y="25.5">100%</text>
+<text class="tick x" x="64.9" y="226.0">2024-01</text>
+<text class="tick x" x="148.4" y="226.0">2024-03</text>
+<text class="tick x" x="231.9" y="226.0">2024-05</text>
+<text class="tick x" x="315.4" y="226.0">2024-07</text>
+<text class="tick x" x="398.9" y="226.0">2024-09</text>
+<text class="tick x" x="482.4" y="226.0">2024-11</text>
+<text class="tick x" x="565.9" y="226.0">2025-01</text>
+<text class="tick x" x="649.4" y="226.0">2025-03</text>
+<path class="bar c1" d="M52.9,212.0 L52.9,26.0 Q52.9,22.0 56.9,22.0 L72.9,22.0 Q76.9,22.0 76.9,26.0 L76.9,212.0 Z"/>
+<path class="bar c1" d="M94.6,212.0 L94.6,26.0 Q94.6,22.0 98.6,22.0 L114.6,22.0 Q118.6,22.0 118.6,26.0 L118.6,212.0 Z"/>
+<path class="bar c1" d="M136.4,212.0 L136.4,34.3 L160.4,34.3 L160.4,212.0 Z"/>
+<path class="bar c2" d="M136.4,32.3 L136.4,28.1 L160.4,28.1 L160.4,32.3 Z"/>
+<path class="bar c3" d="M136.4,26.1 L136.4,26.0 Q136.4,22.0 140.4,22.0 L156.4,22.0 Q160.4,22.0 160.4,26.0 L160.4,26.1 Z"/>
+<path class="bar c1" d="M178.1,212.0 L178.1,26.0 Q178.1,22.0 182.1,22.0 L198.1,22.0 Q202.1,22.0 202.1,26.0 L202.1,212.0 Z"/>
+<path class="bar c1" d="M219.9,212.0 L219.9,26.0 Q219.9,22.0 223.9,22.0 L239.9,22.0 Q243.9,22.0 243.9,26.0 L243.9,212.0 Z"/>
+<path class="bar c1" d="M261.6,212.0 L261.6,26.0 Q261.6,22.0 265.6,22.0 L281.6,22.0 Q285.6,22.0 285.6,26.0 L285.6,212.0 Z"/>
+<path class="bar c1" d="M303.4,212.0 L303.4,26.0 Q303.4,22.0 307.4,22.0 L323.4,22.0 Q327.4,22.0 327.4,26.0 L327.4,212.0 Z"/>
+<path class="bar c1" d="M345.1,212.0 L345.1,26.0 Q345.1,22.0 349.1,22.0 L365.1,22.0 Q369.1,22.0 369.1,26.0 L369.1,212.0 Z"/>
+<path class="bar c1" d="M386.9,212.0 L386.9,26.0 Q386.9,22.0 390.9,22.0 L406.9,22.0 Q410.9,22.0 410.9,26.0 L410.9,212.0 Z"/>
+<path class="bar c1" d="M428.6,212.0 L428.6,26.0 Q428.6,22.0 432.6,22.0 L448.6,22.0 Q452.6,22.0 452.6,26.0 L452.6,212.0 Z"/>
+<path class="bar c1" d="M470.4,212.0 L470.4,26.0 Q470.4,22.0 474.4,22.0 L490.4,22.0 Q494.4,22.0 494.4,26.0 L494.4,212.0 Z"/>
+<path class="bar c1" d="M512.1,212.0 L512.1,26.0 Q512.1,22.0 516.1,22.0 L532.1,22.0 Q536.1,22.0 536.1,26.0 L536.1,212.0 Z"/>
+<path class="bar c1" d="M553.9,212.0 L553.9,26.0 Q553.9,22.0 557.9,22.0 L573.9,22.0 Q577.9,22.0 577.9,26.0 L577.9,212.0 Z"/>
+<path class="bar c1" d="M595.6,212.0 L595.6,26.0 Q595.6,22.0 599.6,22.0 L615.6,22.0 Q619.6,22.0 619.6,26.0 L619.6,212.0 Z"/>
+<path class="bar c1" d="M637.4,212.0 L637.4,26.0 Q637.4,22.0 641.4,22.0 L657.4,22.0 Q661.4,22.0 661.4,26.0 L661.4,212.0 Z"/>
+<path class="bar c1" d="M679.1,212.0 L679.1,26.0 Q679.1,22.0 683.1,22.0 L699.1,22.0 Q703.1,22.0 703.1,26.0 L703.1,212.0 Z"/>
+<rect class="hit" x="44.0" y="22.0" width="41.8" height="190.0"><title>2024-01
+actual: 100.0% of intervals · 55.5 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="85.8" y="22.0" width="41.8" height="190.0"><title>2024-02
+actual: 100.0% of intervals · 71.6 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="127.5" y="22.0" width="41.8" height="190.0"><title>2024-03
+actual: 93.5% of intervals · 73.0 kWh
+estimated: 3.2% of intervals · 2.5 kWh
+substituted: 3.2% of intervals · 2.6 kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="169.2" y="22.0" width="41.8" height="190.0"><title>2024-04
+actual: 100.0% of intervals · 75.7 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="211.0" y="22.0" width="41.8" height="190.0"><title>2024-05
+actual: 100.0% of intervals · 78.1 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="252.8" y="22.0" width="41.8" height="190.0"><title>2024-06
+actual: 100.0% of intervals · 75.6 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="294.5" y="22.0" width="41.8" height="190.0"><title>2024-07
+actual: 100.0% of intervals · 78.1 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="336.2" y="22.0" width="41.8" height="190.0"><title>2024-08
+actual: 100.0% of intervals · 78.1 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="378.0" y="22.0" width="41.8" height="190.0"><title>2024-09
+actual: 100.0% of intervals · 75.6 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="419.8" y="22.0" width="41.8" height="190.0"><title>2024-10
+actual: 100.0% of intervals · 78.0 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="461.5" y="22.0" width="41.8" height="190.0"><title>2024-11
+actual: 100.0% of intervals · 75.6 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="503.2" y="22.0" width="41.8" height="190.0"><title>2024-12
+actual: 100.0% of intervals · 78.1 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="545.0" y="22.0" width="41.8" height="190.0"><title>2025-01
+actual: 100.0% of intervals · 78.1 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="586.8" y="22.0" width="41.8" height="190.0"><title>2025-02
+actual: 100.0% of intervals · 70.7 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="628.5" y="22.0" width="41.8" height="190.0"><title>2025-03
+actual: 100.0% of intervals · 78.1 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+<rect class="hit" x="670.2" y="22.0" width="41.8" height="190.0"><title>2025-04
+actual: 100.0% of intervals · 50.7 kWh
+estimated: – of intervals · – kWh
+substituted: – of intervals · – kWh
+other: – of intervals · – kWh</title></rect>
+</svg><details><summary>Table</summary><table><thead><tr><th>Month</th><th>Class</th><th>Intervals</th><th>Share of intervals</th><th>Energy (kWh)</th></tr></thead><tbody><tr><td>2024-01</td><td>actual</td><td class="num">528</td><td class="num">100.0%</td><td class="num">55.5</td></tr><tr><td>2024-02</td><td>actual</td><td class="num">682</td><td class="num">100.0%</td><td class="num">71.6</td></tr><tr><td>2024-03</td><td>actual</td><td class="num">696</td><td class="num">93.5%</td><td class="num">73.0</td></tr><tr><td>2024-03</td><td>estimated</td><td class="num">24</td><td class="num">3.2%</td><td class="num">2.5</td></tr><tr><td>2024-03</td><td>substituted</td><td class="num">24</td><td class="num">3.2%</td><td class="num">2.6</td></tr><tr><td>2024-04</td><td>actual</td><td class="num">721</td><td class="num">100.0%</td><td class="num">75.7</td></tr><tr><td>2024-05</td><td>actual</td><td class="num">744</td><td class="num">100.0%</td><td class="num">78.1</td></tr><tr><td>2024-06</td><td>actual</td><td class="num">720</td><td class="num">100.0%</td><td class="num">75.6</td></tr><tr><td>2024-07</td><td>actual</td><td class="num">744</td><td class="num">100.0%</td><td class="num">78.1</td></tr><tr><td>2024-08</td><td>actual</td><td class="num">744</td><td class="num">100.0%</td><td class="num">78.1</td></tr><tr><td>2024-09</td><td>actual</td><td class="num">720</td><td class="num">100.0%</td><td class="num">75.6</td></tr><tr><td>2024-10</td><td>actual</td><td class="num">743</td><td class="num">100.0%</td><td class="num">78.0</td></tr><tr><td>2024-11</td><td>actual</td><td class="num">720</td><td class="num">100.0%</td><td class="num">75.6</td></tr><tr><td>2024-12</td><td>actual</td><td class="num">744</td><td class="num">100.0%</td><td class="num">78.1</td></tr><tr><td>2025-01</td><td>actual</td><td class="num">744</td><td class="num">100.0%</td><td class="num">78.1</td></tr><tr><td>2025-02</td><td>actual</td><td class="num">672</td><td class="num">100.0%</td><td class="num">70.7</td></tr><tr><td>2025-03</td><td>actual</td><td class="num">744</td><td class="num">100.0%</td><td class="num">78.1</td></tr><tr><td>2025-04</td><td>actual</td><td class="num">481</td><td class="num">100.0%</td><td class="num">50.7</td></tr></tbody></table></details><p class="caption">Complete days by month</p><svg class="chart" viewBox="0 0 720.0 200.0" role="img" aria-labelledby="t-coverage-0 d-coverage-0">
+<title id="t-coverage-0">Complete days by month</title>
+<desc id="d-coverage-0">The share of each month&#x27;s days that have every interval, from 0 to 1.</desc>
+<line class="axis" x1="44.0" y1="172.0" x2="712.0" y2="172.0"/>
+<text class="tick y" x="38.0" y="175.5">0.00</text>
+<line class="grid" x1="44.0" y1="132.0" x2="712.0" y2="132.0"/>
+<text class="tick y" x="38.0" y="135.5">0.25</text>
+<line class="grid" x1="44.0" y1="92.0" x2="712.0" y2="92.0"/>
+<text class="tick y" x="38.0" y="95.5">0.50</text>
+<line class="grid" x1="44.0" y1="52.0" x2="712.0" y2="52.0"/>
+<text class="tick y" x="38.0" y="55.5">0.75</text>
+<line class="grid" x1="44.0" y1="12.0" x2="712.0" y2="12.0"/>
+<text class="tick y" x="38.0" y="15.5">1.00</text>
+<text class="tick x" x="64.9" y="186.0">2024-01</text>
+<text class="tick x" x="148.4" y="186.0">2024-03</text>
+<text class="tick x" x="231.9" y="186.0">2024-05</text>
+<text class="tick x" x="315.4" y="186.0">2024-07</text>
+<text class="tick x" x="398.9" y="186.0">2024-09</text>
+<text class="tick x" x="482.4" y="186.0">2024-11</text>
+<text class="tick x" x="565.9" y="186.0">2025-01</text>
+<text class="tick x" x="649.4" y="186.0">2025-03</text>
+<path class="line" d="M64.9,58.5 L106.6,17.5 L148.4,12.0 L190.1,12.0 L231.9,12.0 L273.6,12.0 L315.4,12.0 L357.1,12.0 L398.9,12.0 L440.6,12.0 L482.4,12.0 L524.1,12.0 L565.9,12.0 L607.6,12.0 L649.4,12.0 L691.1,65.3"/>
+<circle class="dot" cx="691.1" cy="65.3" r="4.0"/>
+<circle class="hit" cx="64.9" cy="58.5" r="10.0"><title>2024-01 · 0.71</title></circle>
+<circle class="hit" cx="106.6" cy="17.5" r="10.0"><title>2024-02 · 0.97</title></circle>
+<circle class="hit" cx="148.4" cy="12.0" r="10.0"><title>2024-03 · 1.00</title></circle>
+<circle class="hit" cx="190.1" cy="12.0" r="10.0"><title>2024-04 · 1.00</title></circle>
+<circle class="hit" cx="231.9" cy="12.0" r="10.0"><title>2024-05 · 1.00</title></circle>
+<circle class="hit" cx="273.6" cy="12.0" r="10.0"><title>2024-06 · 1.00</title></circle>
+<circle class="hit" cx="315.4" cy="12.0" r="10.0"><title>2024-07 · 1.00</title></circle>
+<circle class="hit" cx="357.1" cy="12.0" r="10.0"><title>2024-08 · 1.00</title></circle>
+<circle class="hit" cx="398.9" cy="12.0" r="10.0"><title>2024-09 · 1.00</title></circle>
+<circle class="hit" cx="440.6" cy="12.0" r="10.0"><title>2024-10 · 1.00</title></circle>
+<circle class="hit" cx="482.4" cy="12.0" r="10.0"><title>2024-11 · 1.00</title></circle>
+<circle class="hit" cx="524.1" cy="12.0" r="10.0"><title>2024-12 · 1.00</title></circle>
+<circle class="hit" cx="565.9" cy="12.0" r="10.0"><title>2025-01 · 1.00</title></circle>
+<circle class="hit" cx="607.6" cy="12.0" r="10.0"><title>2025-02 · 1.00</title></circle>
+<circle class="hit" cx="649.4" cy="12.0" r="10.0"><title>2025-03 · 1.00</title></circle>
+<circle class="hit" cx="691.1" cy="65.3" r="10.0"><title>2025-04 · 0.67</title></circle>
+</svg><p class="note">The data holds 1 short and 2 long local days (daylight-saving changes); hourly figures leave out an hour that did not happen or happened twice.</p></section>
+</main>
+</body>
+</html>
