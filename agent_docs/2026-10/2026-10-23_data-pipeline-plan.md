@@ -53,6 +53,13 @@
   band percentiles, base-load window, demand block, date-ranged TOU window sets, the first copied from the
   region profile by `pipeline sync`); `sensitivity` moves to P6; the metric definitions made concrete
   (§9.1, §9.2, §10.3, §14.1, §15).
+  2026-11-04 rev 12 — P4 offers and electricity engine spec (`2026-11-04_p4-offers-electricity-engine-spec.md`)
+  approved, and its §15 edits applied: `offer_cdr_index` is the per-batch fetch log and defines which plans are current;
+  `offer_manual` is YAML in the CDR contract shape (its PDF evidence waits for P6); retailers are CDR base URIs from the
+  region profile, not brand slugs; `normalise_offers`, `cost_elec` and `backtest` as the spec's §8–§10 (no private
+  config in `normalise_offers`; `backtest` reads retailer reads and transactions, and its tolerance breaches warn);
+  `params` v4 (`offers`, `pricing`, `backtest`, `validation.backtest`); the CDR support table, monthly calendar billing
+  periods, the GST convention and `Decimal` cents (§8.2, §9.1, §9.2, §10.4, §10.5, §10.9, §14.1, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -417,8 +424,8 @@ in the tool repo; anything that mentions your own data stays in the workspace.
 | `elec_bill`, `gas_bill` | Bill PDF | Manual | PDF creation date (P1); the issue date once P5 adds text extraction |
 | `gas_bill_record` | YAML transcription of one gas bill (references the PDF's dataset ID) | Manual, scaffolded by CLI | Issue date |
 | `offer_cdr` | Plan-detail JSON from the AER CDR API | `energatron fetch-offers` | Plan `lastUpdated` |
-| `offer_cdr_index` | Plan-list response per brand, plus the fetch log | `energatron fetch-offers` | `fetched_at` |
-| `offer_manual` | YAML for offers not in CDR (phone or retention quote, promo), plus the Basic Plan Information Document (BPID) or fact-sheet PDF | Manual | Quote or publish date |
+| `offer_cdr_index` | The fetch log of one batch: every list page verbatim (base64) and what was selected (P4 spec §3.3) | `energatron fetch-offers` | `fetched_at` |
+| `offer_manual` | YAML for offers not in CDR (bill, phone or retention quote, promo), in the CDR contract shape (P4 spec §5.3); the BPID or fact-sheet PDF evidence waits for P6 | Manual | `published` (quote, publish or bill date) |
 
 ### 8.3 Catalog
 
@@ -492,11 +499,11 @@ raw/sapn_interval ─► parse_nem12 ─► merge_interval ─┬─► validate
                                                      └─► localise ◄── validate_timebase's report (gate)
                                                               └─► usage_profile ───────────────┐
                                                               │                                  │
-raw/offer_cdr + raw/offer_manual + offer_rules*       ─► normalise_offers ─┬─► cost_elec ◄───────┤
+raw/offer_cdr(+_index) + raw/offer_manual + offer_rules* ─► normalise_offers ─┬─► cost_elec ◄────┤
                                                               │            └─► cost_gas ◄──┐     │
 raw/gas_bill + raw/gas_bill_record ─► gas_bills ─► gas_profile ────────────────────────────┘     │
                                                                                                  │
-raw/retailer_txn + raw/elec_bill + gas_bills + costs ─► backtest                                 │
+raw/retailer_txn + raw/retailer_usage + marts/offers ─► backtest (P5 adds gas_bills)            │
 cost_elec + cost_gas + offer_rules*       + private/config ─► bundles ─► recommend ◄─────────────┘
                                                                              └─► reports/recommendations/
 ```
@@ -533,10 +540,10 @@ directories.
 | `usage_report` | `marts/usage_profile/` (no params) | `reports/usage/` (`index.html`) | A deterministic, self-contained HTML (inline SVG, no script, no network asset) built from the marts alone (P3 spec §9) |
 | `gas_bills` | `raw/gas_bill`, `raw/gas_bill_record` | `interim/gas_bills/` | Each bill's total recomputes within ±$0.05 |
 | `gas_profile` | `interim/gas_bills/` | `marts/gas_profile/` | Periods contiguous; read types flagged |
-| `normalise_offers` | `raw/offer_cdr`, `raw/offer_manual`, `config/offer_rules.local`, `private/config.toml`, params `offers.*` | `marts/offers/` (`tariffs.parquet`, `exclusions.json`) | TOU windows partition the day; unsupported features listed |
-| `cost_elec` | `marts/offers`, `interim/elec_interval_local/`, params `pricing.*` | `marts/costs/elec/` | Line items sum to totals |
+| `normalise_offers` | `raw/offer_cdr`, `raw/offer_cdr_index`, `raw/offer_manual` (each with its catalog), `config/offer_rules.local`, package `offer_rules/`, params `offers`, `pricing.gst_rate` (no private config) | `marts/offers/` (`tariffs.json`, `offers.parquet`, `summary.json`) | Blobs match the catalog; snapshot IDs recompute; rules valid; every current offer normalised, approximate or excluded with a reason; seasons and TOU windows partition (P4 spec §8) |
+| `cost_elec` | `marts/offers`, `interim/elec_interval_local/`, `marts/usage_profile` (its reference window), params `pricing` | `marts/costs/elec/` | One consumption register; window present; line items sum to totals; energy conserved (P4 spec §9) |
 | `cost_gas` | `marts/offers`, `interim/gas_bills/` | `marts/costs/gas/` | Same |
-| `backtest` | costs, `raw/retailer_txn`, `raw/elec_bill`, `interim/gas_bills/` | `reports/validation/backtest/` | Within ±`validation.backtest_tolerance_pct` |
+| `backtest` | `marts/offers`, `interim/elec_interval_local/`, `raw/retailer_usage`, `raw/retailer_txn`, params `pricing`, `backtest`, `validation.backtest` (P5 adds gas) | `reports/validation/backtest/` | Configured tariffs resolve; line items sum; outside ±`validation.backtest.tolerance_pct` is a warning (P4 spec §10) |
 | `bundles` | `marts/costs/*`, `config/offer_rules.local` | `marts/costs/bundles/` | Eligibility rules applied |
 | `recommend` | `marts/costs/*`, `marts/usage_profile`, `private/config.toml`, params | `reports/recommendations/` (`REC-*.json`, `.html`) | Deterministic ID; every cited ID resolves |
 
@@ -546,7 +553,7 @@ version 1 holds no keys; each block below arrives with its phase's spec as a new
 
 ```yaml
 kind: params
-schema_version: 3
+schema_version: 4
 meter:
   timebase: nem_aest            # confirmed by validate_timebase (see §10.2)
   local_tz: Australia/Adelaide  # copied from the region profile by pipeline sync
@@ -563,12 +570,18 @@ analysis:                       # P3 spec §4.1; the plan's `sensitivity` return
       - effective_from: null
         windows: {Peak: [...], Off Peak: [...], Shoulder: [...]}
 offers:
-  brands: [globird, agl, origin, raa, energyaustralia, …]   # AER CDR brand slugs
-  distributors: {electricity: "SA Power Networks", gas: "AGN Metro/Barossa/Peterborough"}
+  retailers: [globird, agl, origin, energy-locals, …]   # CDR base URIs, copied from the region profile (P4 spec §4)
+  distributor: SA Power Networks  # copied from the region profile; P5 adds the gas distributor
   customer_type: RESIDENTIAL
+  fuel_types: [ELECTRICITY]
+  unmet_eligibility: [EXISTING_SOLAR, EXISTING_BATTERY]
+  controlled_load: false
 pricing:
   assume_conditions_met: [PAY_ON_TIME, DIRECT_DEBIT]
-  gst_rate: 0.10
+  gst_rate: "0.10"
+  demand_minutes: 30
+backtest:
+  tariffs: []                   # [{offer: <offer snapshot id>, from: "YYYY-MM-DD", to: "YYYY-MM-DD" | null}]
 validation:
   meter: {total_tolerance_kwh: 0.01}
   timebase:
@@ -577,7 +590,7 @@ validation:
     register_tolerance_pct: 0.1
     total_tolerance_kwh: 0.05
     min_fit_periods: 3
-  backtest_tolerance_pct: 1.0
+  backtest: {tolerance_pct: 1.0, invoice_window_days: 14}
 ```
 
 `config/private.example.toml` (committed; the real `private/config.toml` is DVC-tracked):
@@ -722,13 +735,17 @@ report. The list below is the intent.*
   `solarFeedInTariff[]` and `eligibility[]`.
 - Gas plans use block rates (`volume` per `P1D`) and seasonal periods.
 
-**`energatron fetch-offers`**
-1. For each brand in `offers.brands`, fetch the plan list. Seed the brand list from the AER's published
-   base-URI list.
-2. Filter **locally**: distributor, postcode from private config, RESIDENTIAL, currently effective.
-3. Fetch the details and land each detail JSON verbatim (`offer_cdr`), together with the list response and a
-   fetch log (URL, headers, status, `fetched_at`) as `offer_cdr_index`.
-4. Unchanged plans dedupe by hash, so a repeated fetch only adds plans that changed.
+**`energatron fetch-offers`** (P4 spec §3)
+1. For each CDR base URI in `offers.retailers` (copied from the region profile, seeded from the AER's published
+   base-URI list), fetch the plan list. A base URI is not a brand: several brands can share one (RAA Energy is served
+   from `energy-locals`), and an unknown base returns zero plans.
+2. Filter **locally**, in this order, counting each reason: fuel, customer type, distributor, postcode from private
+   config, currently effective.
+3. Fetch the details of selected plans whose `lastUpdated` differs from the newest landed snapshot (`--all` fetches
+   every one) and land each detail JSON verbatim (`offer_cdr`), together with one fetch log per batch (`offer_cdr_index`:
+   every list page verbatim, the selection), in one `land` commit.
+4. Unchanged plans dedupe by snapshot ID, so a repeated fetch only adds plans that changed. The latest fetch log per
+   base defines which plans are current.
 
 **Human cross-check:** retailer pages such as GloBird's "All tariffs – residential" list the same plans and link
 to Energy Made Easy Basic Plan Information pages. For example, GLOHOME Flexible Rate SAPN is `GLO1202240MRE` on
@@ -750,28 +767,29 @@ snapshot (e.g. "daily supply +3c, peak −1c").
 
 ### 10.5 Tariff model and cost engine
 
-**Model**
+**Model** (P4 spec §5, §7: the support table, the engine rules)
 - A pydantic `Tariff` model is mapped from CDR `electricityContract` / `gasContract` and from `offer_manual`.
-- It carries an `unsupported: list[str]` field. Offers are **never silently mispriced**: an offer with an
-  unsupported feature is either ranked with an "approximate" flag or excluded with the reason recorded.
+- Offers are **never silently mispriced**: every CDR feature is supported, an approximation (the tariff's
+  `approximations`, still ranked with an "approximate" flag) or an exclusion reason, by the P4 spec's §5.2 table.
 
 **Supported in v1**
 - daily supply; single rate with blocks
 - TOU: day sets, windows, seasonal `tariffPeriod`s including periods that wrap the year end (e.g. `10-01` →
   `05-31`)
-- controlled load (not used at this premises today); demand charges (max kW in window per billing period)
-- FiT (no export today)
+- demand charges (max kW in window per day or billing period); controlled-load plan variants are excluded while the
+  household has no controlled-load register (`offers.controlled_load`)
+- FiT: not priced (no export today)
 - conditional and guaranteed discounts (`percentOfBill`, `percentOfUsage`, `fixedAmount`); fees (membership,
   paper bill); one-off credits
 
 **Engine behaviour**
-- **Billing periods:** simulate monthly periods (per CDR `billFrequency`), so block allowances, demand charges
-  and periodic fees are applied per period, as on real bills.
+- **Billing periods:** calendar months of the reference window (CDR `billFrequency` is not simulated), so block
+  allowances, demand charges and periodic fees are applied per period, as on real bills.
 - **Windows:** convert CDR inclusive end-minutes to half-open intervals, and check that each offer's windows
   cover every minute of every day exactly once.
-- **Money:** use `Decimal` and round line items to cents.
-- **GST:** CDR prices appear to be GST-exclusive (GloBird's CDR peak rate is lower than its advertised
-  GST-inclusive rate). **Verify against one BPID**, then encode as a single tested convention.
+- **Money:** use `Decimal` and round each line item to cents (`ROUND_HALF_UP`).
+- **GST:** the CDR standard states supply, usage and demand prices exclude GST; fees and fixed credits are taken as
+  published (GST-inclusive). **Verify against one BPID** (P4 acceptance), encoded as two tested constants.
 - **Conditional discounts:** applied per `pricing.assume_conditions_met`; reports always show both "with" and
   "without".
 
@@ -820,11 +838,13 @@ snapshot (e.g. "daily supply +3c, peak −1c").
 
 ### 10.9 Backtesting (engine credibility)
 
-- Land historical retailer bills (the transactions export plus invoice PDFs) and the tariff that applied at the
-  time, as an `offer_manual` snapshot. The rates in the legacy notebooks are a starting point, but they are
-  undated and unsourced.
+- Land the tariff that applied at the time as an `offer_manual` snapshot and name it, with its meter-date range, in
+  `backtest.tariffs`. The rates in the legacy notebooks are another retailer's and undated, so the owner supplies
+  them from a bill.
+- Billing periods come from the retailer usage export's reads (P2 spec §9.3); invoices come from the transactions
+  export, matched to a period by date (P4 spec §10).
 - `backtest` computes engine(historical tariff, metered usage for the bill period) and compares it with the
-  actual invoice; target ±1%, reported per bill. Gas gets the same treatment.
+  actual invoice; target ±1%, reported per bill, a breach warns. Gas gets the same treatment.
 - This also confirms the time-basis and GST conventions independently.
 
 ---
@@ -927,7 +947,7 @@ Everything else waits until it's needed.
 | **Layered package: pure core → services → adapters** | The CLI, agent tools and a web API all become thin wrappers over the same use cases, so no logic is duplicated or trapped in the CLI | Discipline only |
 | **Stage logic independent of DVC** | Stages are plain functions (`run_stage(spec, inputs, params, outputs, *, code, recorded_code)`; every output is a directory with `_provenance.json`); `dvc.yaml` just calls `energatron stage <name>`. A web app can run the same functions from a job queue, and DVC stays replaceable | None |
 | **Storage behind two small interfaces** | `Catalog` (v1: JSONL files) and `BlobStore` (v1: local files under DVC). A hosted version can swap in Postgres and S3 without touching the core | A few lines |
-| **No region-specific values in code** | Distributor names, the time zone and TOU windows (which `pipeline sync` copies into `params.yaml`), network-tariff mapping and CDR brand list live in region profiles; the registry decides which parser recognises a file. The meter-file formats P2 reads are core modules, not registry plugins, until a second format arrives. The first TOU window set of `analysis` is copied from the profile the same way (P3). SA is just the first profile | None |
+| **No region-specific values in code** | Distributor names, the time zone and TOU windows (which `pipeline sync` copies into `params.yaml`), network-tariff mapping and the CDR retailer base-URI list (also copied into `params.yaml`, P4) live in region profiles; the registry decides which parser recognises a file. The meter-file formats P2 reads are core modules, not registry plugins, until a second format arrives. The first TOU window set of `analysis` is copied from the profile the same way (P3). SA is just the first profile | None |
 | **`kind` and `schema_version` on every persisted artifact** (Parquet carries both as metadata) | Other people's workspaces will lag behind the latest package; `energatron migrate` upgrades them | Two fields per schema |
 | **Machine-readable CLI** | Every command supports `--json`, has stable exit codes and never prompts when not attached to a terminal. Agents can drive it today, and the web API reuses the same response models | Small |
 | **Per-user privacy defaults** | `energatron init` creates `private/config.toml`, derives the denylist from it and installs the hooks, so others get the guardrails automatically | Part of P0/P8 |
@@ -1063,7 +1083,7 @@ added without refactoring the core.
 | **P1 Landing & catalog** | `energatron land` with detectors for `sapn_interval`, `sapn_summary`, `retailer_usage`, `retailer_txn`, PDFs and offers; IDs; catalogs; idempotency; `dvc add`; `catalog_index`; `energatron pipeline sync`, `stage`, `fingerprint` (P1 spec) | Both current SAPN files and all legacy SAPN/retailer files are landed (one dataset per distinct file); the legacy duplicate is detected by hash; re-landing is a no-op |
 | **P2 Meter pipeline** | `parse_nem12`, `merge_interval`, `validate_meter`, `validate_timebase`, `localise` | Interval counts correct; monthly totals match SAPN SUMMARY; merge conflicts reported; time-basis hypothesis chosen with evidence; DST tests pass |
 | **P3 Usage profile** | Metrics + HTML usage report | Report builds from marts; TOU daily averages reconcile with the legacy notebook for the same window, with differences explained by the time-basis and merge fixes (made concrete as R1–R4 in the P3 spec §12) |
-| **P4 Offers + electricity engine** | CDR client, `fetch-offers`, `offer_manual` schema, normaliser, offer rules, engine, `backtest`, offer diff | Every current SAPN residential plan from configured brands either normalises or is excluded with a reason; GST convention verified against a BPID; backtest within ±1% (or deviations explained) |
+| **P4 Offers + electricity engine** | CDR client, `fetch-offers`, `offer_manual` schema, normaliser, offer rules, engine, `backtest`, offer diff | Every current SAPN residential plan from configured retailers either normalises (or is approximate) or is excluded with a reason; GST convention verified against a BPID; backtest within ±1% (or deviations explained), made concrete as the P4 spec §13 |
 | **P5 Gas** | Gas bill landing + YAML scaffold, `gas_bills`, `gas_profile`, gas offer normalisation, gas engine | Every bill recomputes within ±$0.05 from its own line items; engine reproduces bills on the plan in force at the time within ±1% |
 | **P6 Bundles, recommendation, decisions** | Bundle rules, ranking, sensitivity, REC JSON + HTML, `energatron run`, `energatron decide`, outcomes report | The recommendation cites offer snapshot IDs, dataset IDs, run ID and commit; a clean-checkout re-run reproduces the same recommendation ID; decision entries link back |
 | **P7 Operations** | README runbooks; optional weekly launchd `fetch-offers`, with a notification when a cheaper plan appears; quarterly restore-drill reminder (the drill ends with `energatron verify`) | One full cycle (new SAPN download → recommendation) completed using only the README |

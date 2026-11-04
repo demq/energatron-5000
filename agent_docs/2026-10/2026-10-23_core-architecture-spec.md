@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -11,6 +11,9 @@
   2026-11-03 rev 4 (P3.1.1): the additive changes the P3 spec (`2026-11-03_p3-usage-profile-spec.md`) §15 lists:
   the usage core modules, `local_day_minutes`, the two P3 warnings and a stage with no params, edited in place
   (listed in §1)
+  2026-11-04 rev 5 (P4.1.1): the additive changes the P4 spec (`2026-11-04_p4-offers-electricity-engine-spec.md`)
+  §15 lists: the offer and engine modules, the CDR provider's header allow-list and paging, the four P4 warnings and
+  the money rounding rule, edited in place (listed in §1)
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -92,6 +95,15 @@ with it:
 - §9.1: a stage may declare no params (`params=()`); the P3 integration test confirms the runner, `prepare_stage`
   and the emitter accept it.
 
+**Rev 5 (2026-11-04), edited in place.** The P4 spec (§15 there) adds to this spec; nothing is redefined:
+- §2: `core/` gains `tariff.py`, `cdr_tariff.py`, `offer_rules.py`, `engine.py`, `retailer_txn.py` and
+  `models/costs.py` (`ranking.py` moves to P6); `services/` gains `fetch_offers.py`, `offer_diff.py` and the stages
+  `normalise_offers`, `cost_elec` and `backtest`; `adapters/` gains `offers/cdr.py` and the parsers `cdr_index.py`
+  and `offer_manual.py`.
+- §4.6: `Fetched` unchanged; the CDR provider's header allow-list, paging and errors.
+- §7: the four P4 warnings.
+- §12: the money rounding rule.
+
 ---
 
 ## 2. Package layout
@@ -121,7 +133,8 @@ src/energatron/
 │   ├── text.py          decode, lines, csv_rows, is_decimal, parse_datetime, fail (from _common.py) P2
 │   ├── nem12.py  sapn_summary.py  retailer_usage.py  timebase.py  models/meter.py                 P2
 │   ├── usage.py  charts.py  usage_report.py  models/usage.py                                      P3
-│   └── tariff.py  engine.py  ranking.py                                                           P4+
+│   ├── tariff.py  cdr_tariff.py  offer_rules.py  engine.py  retailer_txn.py  models/costs.py      P4
+│   └── ranking.py                                                                                 P6
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
 ├── services/                use cases; local file I/O only at paths passed in
@@ -133,7 +146,8 @@ src/energatron/
 │   ├── stages/registry.py   STAGES, get_stage(); imports every stage module, imported by none     P1
 │   ├── stages/catalog_index.py                                                                    P1
 │   ├── verify.py            verify() (§11.4)                                                      P1
-│   └── fetch_offers.py  run.py  compare.py  explain.py  decide.py  migrate.py                    P4+
+│   ├── fetch_offers.py  offer_diff.py  stages/{normalise_offers,cost_elec,backtest}.py            P4
+│   └── run.py  compare.py  explain.py  decide.py  migrate.py                                     P6+
 ├── adapters/
 │   ├── wiring.py            composition root: build_context() (P0), code_fingerprint() (P1)       P0
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
@@ -141,7 +155,7 @@ src/energatron/
 │   ├── sources/             registry.py, plus one module per source type                          P1
 │   ├── vcs/                 git_dvc.py                                                            P0
 │   ├── pipeline/            dvc_runner.py, fingerprint.py, closure.py (§11)                       P1
-│   ├── offers/              cdr.py                                                                P4
+│   ├── offers/              cdr.py (CdrProvider); sources/ gains cdr_index.py, offer_manual.py    P4
 │   └── cli/                 app.py, output.py (envelope, redaction), commands/                    P0
 ├── regions/                 package data: sa.yaml                                                 P1
 ├── offer_rules/             package data: curated public offer rules                              P4
@@ -515,6 +529,9 @@ class Fetched(BaseModel):             # core/models/offers.py
 ```
 
 - Providers never filter or interpret anything; `services/fetch_offers.py` does. Bodies are landed verbatim.
+- `Fetched` is unchanged by P4. The CDR provider's response-header allow-list (`content-type`, `date`, `etag`,
+  `last-modified`, `x-v`, `x-fapi-interaction-id`), its paging (`links.next`, at most 50 pages) and its errors are
+  fixed by the P4 spec §3.1.
 - Network failures raise `E_NETWORK`. HTTP status codes of 400 and above raise `E_NETWORK` with `status` in
   `details`.
 
@@ -704,6 +721,8 @@ class EnergatronError(Exception):
   - Warnings added in P2: `W_MERGE_SAME_UPDATE`, `W_METER_GAPS`, `W_METER_UNVALIDATED`,
     `W_TIMEBASE_UNCONFIRMED`, `W_TIMEBASE_UNEXPLAINED` (P2 spec §12).
   - Warnings added in P3: `W_USAGE_MIXED_WINDOWS`, `W_USAGE_PARTIAL_DAYS` (P3 spec §11).
+  - Warnings added in P4: `W_FETCH_FAILED`, `W_OFFERS_MISSING_SNAPSHOT`, `W_BACKTEST_OUTSIDE_TOLERANCE`,
+    `W_BACKTEST_NO_TARIFF` (P4 spec §12).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
@@ -1272,7 +1291,9 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
   - local conversions use zone objects from `StageRun.zone()`, read from the `tzdata` distribution, with the
     time zone from `params.yaml` (`meter.local_tz`)
   - naive datetimes appear only where a source carries no zone; the P1 spec lists those per source type
-- **Money:** `Decimal`, never `float`. The rounding rules come with the P4 spec.
+- **Money:** `Decimal`, never `float`. Each line item is rounded to cents with `ROUND_HALF_UP`; totals are sums of
+  rounded lines; GST is one rounded line per billing period (P4 spec §7.4, §7.8). Parquet stores money as
+  `decimal128(18, 2)` and rates and quantities as `decimal128(18, 6)`.
 - **Energy:** kWh as float64 in Parquet.
 - **Dependencies:**
   - core: pydantic, pandas, numpy

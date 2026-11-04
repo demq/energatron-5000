@@ -97,75 +97,50 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P3.3.2
-- Last commit: energatron-5000 `P3.3.2: close P3 after the owner's backup`; demq-elektric `P3.3.1: record the P3 usage profile and report run in the workspace` (unchanged; backed up)
-- Checks: workspace `verify` ok (8 stages), `dvc status` clean, `pipeline sync --check` and `fingerprint --check` current, workspace
-  privacy guard `--tracked` 0 violations; tool repo unchanged since P3.2.5 (`TZ=UTC pytest -q` 2703 passed); privacy guard
-  `--figures` on `TASKS.md` 0 violations
+- Last done: P4.1.1
+- Last commit: energatron-5000 `P4.1.1: approve the P4 offers and electricity engine spec and apply plan rev 12 and D1 rev 5`
+- Checks: privacy guard `--figures` on the spec, plan, D1 and `TASKS.md` 0 violations; no code changed
 - Review: none
-- Next: none ⬜. P3 is done; plan §15 says P4 (offers + electricity engine) comes next and starts with its own spec
-  sub-task, which has to be added first. Still waiting on the owner: the browser look at the report (§12 check 5) and a
-  yes or a correction for the second TOU window set (§12 check 2)
+- Next: P4.2.1 (foundations: `Params` v4, `RegionProfile` v3, `pipeline sync` for the offer fields)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2 list below. The
-  P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
-  (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`) are approved.
-- P0, P1 and P2 are done and accepted in the workspace. All P3 build sub-tasks are done (eight stages, params v3), and P3.3.1
-  ran the acceptance in the workspace: checks 1-4 and 6-7 pass (R1-R4 pass), check 5 passes except the owner's look at the
-  report in a browser. P3.3.2 (the owner's backup) is done: `backup --status` shows `refs_backed_up: true`, 0 commits behind.
-  P3 is ✅ and archived (`agent_docs/2026-11/2026-11-04_tasks-archive-p3.md`).
+- P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
+  approved (Q1-Q8 as recommended, given on the owner's standing instruction to review and accept each step); plan rev 12
+  and D1 rev 5 hold its §15 edits. P4.2.1-P4.2.9, P4.3.1 and P4.3.2 follow its §2 order.
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
-  files (`backup.bundle_dir` in `.energatron/local.toml`, the `icloud` remote URL in `.dvc/config.local`);
-  `icloud_backup.py` follows `local.toml`. A new machine needs both entries set again.
+  files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- No ⬜ sub-task is left. Plan §15 says the next phase is P4 (offers + electricity engine), which starts with its own spec
-  sub-task (add it to this file, then `/next`). Read the plan's P4 section and the P3 spec's §15 hand-offs first.
-- The acceptance results are in `demq-elektric/agent_docs/2026-11/2026-11-04_p3-acceptance-usage-profile.md` (it holds data
-  figures, so nothing from it is copied into the tool repo).
+- The P4 spec §2 (order), §4 (params v4, region profile v3), §12 (kinds, warnings); D1 rev 5 §5 and §7.
+- `core/models/params.py`, `core/models/region.py`, `services/pipeline_sync.py`: the P2/P3 fill pattern for region
+  fields (`REGION_FIELDS`, `null` until `pipeline sync`).
 
 **Facts**
-- Owner decisions on the P3 spec (2026-11-03): Q1-Q11 as recommended. Retailer plan details (TOU windows, dates, rates) are
-  not private; only the household's usage and identifiers are.
-- The workspace `params.yaml` holds two TOU window sets: the region profile's and a second from the retailer's change in early
-  July 2025 (evidence: the P2 probe, exact to the third decimal). The agent applied it on the owner's behalf in P3.3.1 after the
-  owner skipped the confirmation dialog and said to carry on; the workspace note flags it for the owner to confirm or change.
-- A `params.yaml` date must be quoted (`effective_from: "2025-07-04"`): DVC refuses an unquoted YAML date, though
-  `pipeline sync --check` accepts it. A tool follow-up could make `Params` or `pipeline sync` catch this; not scheduled.
-- Real-data results: the reference window is the last 12 whole months with full coverage; the report is under 3 MB for one
-  register (budget 4 MB); `W_USAGE_MIXED_WINDOWS` fires for the month holding the change; the legacy notebook method matches
-  the pipeline exactly on meter-clock data (R1, R2).
-- `tests/integration/_scratch.make_scratch` copies a template repo made once per test process. Any test that runs every stage
-  needs data that confirms a basis and `params` v3 with a `reference_months` the fixture fills (5 for the raw zone).
-- The hourly JSON in the legacy folder stays unlanded.
+- CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
+  `energy-locals`, which lists no current SAPN residential plan (2026-11-04).
+- The CDR standard says supply, usage and demand prices exclude GST; fees are taken as published (GST-inclusive).
+  Energy Made Easy's BPID page renders GST-inclusive prices in the browser from the same numbers.
+- No `elec_bill` PDF is landed; the backtest's tariff comes from an owner-written `offer_manual` (P4.3.2).
+- The inbox holds a gas bill PDF (P5 material; not landed, `land` needs `--source`).
+- A `params.yaml` date must be quoted: DVC refuses an unquoted YAML date.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing except the tool repo on
   `/done push`; no global installs.
 
 **Open questions for the owner**
-- Open the report (`demq-elektric/data/reports/usage/index.html`) in a browser: does it read correctly? (§12 check 5)
-- Confirm or correct the second TOU window set in the workspace `params.yaml` (start 2025-07-04; Peak 06:00-10:00 and
-  16:00-00:00, Off Peak 00:00-06:00, Shoulder 10:00-16:00). If it changes, run `dvc repro` and commit the result in the workspace.
-- Add `demand_minutes` to `UsageSummary` (still v1, no migration) so the report's headline names the peak demand's block
-  length? Until answered the headline says "Peak demand (kW)" only.
-- The size budget holds per register; two consumption registers would reach about 6 MB. Accept that, or thin the heatmap
-  tooltips? (The real workspace has one register.)
+- From P3: the browser look at the usage report (§12 check 5), and a yes or a correction for the second TOU window set.
+- From P3: add `demand_minutes` to `UsageSummary`? The report's size budget with two registers?
 
 **Watch out**
-- `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected (owner's choice, 2026-11-03).
-- The workspace is fully backed up as of its P3.3.1 commit. Any later workspace commit makes a backup pending again.
-- A tool change that touches `src/energatron/` makes the workspace's code entries stale: re-run `fingerprint` before any
+- `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected.
+- A tool change touching `src/energatron/` makes the workspace's code entries stale: re-run `fingerprint` before any
   `dvc repro`, and commit it with `dvc.lock`.
-- The workspace time basis is `confirmed` as `nem_aest`. If `validate_timebase` is `contradicted` or `localise` fails its gate,
-  stop and ask the owner before changing `meter.timebase`.
-- The Step 0 copy sits outside the configured backup folder; agents never move or delete it.
 - CI runs on Linux under UTC; tests that depend on the local zone can pass on macOS and fail there.
 - `core/` may not call `.replace()` (`test_core_purity` bans it as a path write); use `re` or slicing.
 - `TASKS.md` gets counts and pass/fail only; never an identifier or a kWh or $ figure.
-- pytest takes ~1 minute in parallel (pytest-xdist; `-n0` runs it serially). A safety hook holds any command containing `rm`.
+- pytest takes ~1 minute in parallel (`-n0` runs it serially). A safety hook holds any command containing `rm`.
   Agents never read `demq-elektric/private/`. In zsh pass file lists as an array.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
@@ -535,12 +510,126 @@ verdict, with no waiver of hand-over decision #11.
 
 Archived verbatim in `agent_docs/2026-11/2026-11-04_tasks-archive-p3.md`: P3.1.1, P3.2.1–P3.2.5, P3.3.1–P3.3.2, all ✅.
 
+### P4: Offers + electricity engine 🔄
+
+Built from the P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`, "the P4 spec") in its §2
+order; D1 rev 5 binds all code. The spec's decisions (approved 2026-11-04 on the owner's standing instruction, Q1-Q8 as
+recommended): retailers are CDR base URIs from the region profile; the latest fetch log per base defines current plans;
+controlled-load variants and annual-period block rates are excluded; monthly calendar billing periods; backtest breaches
+warn; the historical tariff comes from the owner; no new dependency.
+- P4.2.1 changes every stage's code entry (`Params` v4); re-run `fingerprint` in a workspace before any `dvc repro`.
+- Each stage sub-task adds its stage to `STAGES`, the golden `tests/fixtures/golden/dvc.yaml` and the fixture workspace.
+- Retailer plan details (rates, windows, dates) are public; only the household's usage and identifiers are private.
+
+#### P4.1 P4 spec ✅
+- ✅ **P4.1.1** Draft the P4 offers and electricity engine spec, `agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`.
+  - Covers the CDR client and `fetch-offers`, `offer_manual`, the `Tariff` model and CDR mapping, offer rules,
+    `normalise_offers`, the engine, `cost_elec`, `backtest`, the offer diff, `params` v4 and the region profile, the
+    tests, plan §15's P4 acceptance made concrete, an order of work.
+  - Refs: plan §8.2, §8.4, §9.1-9.2, §10.4-10.5, §10.8-10.9, §13, §15, §16 Q4-Q7; D1 rev 4 §4.6, §4.8, §5, §6, §9-§11,
+    §12; D3 §5.7; the P2 spec §9.3; the P3 spec §8, §14.
+  - Files: the new spec.
+  - Done when: the owner approves it.
+  - Handover: P4 spec approved 2026-11-04 (Q1-Q8 as recommended, on the owner's standing instruction); `/done` applied plan rev 12 and D1 rev 5 (spec §15) and rewrote P4.2-P4.3 from spec §2. Decision: CDR base URIs, not brand slugs (RAA Energy is served from `energy-locals`, with no current SAPN plan).
+    Watch: no historical tariff exists for the backtest until the owner writes an `offer_manual` (P4.3.2).
+
+#### P4.2 Build ⬜
+- ⬜ **P4.2.1** Foundations: `Params` v4, `RegionProfile` v3, `pipeline sync` for the offer fields, the P4 warnings.
+  - `core/models/params.py` v4 (`offers`, `pricing`, `backtest`, `validation.backtest`, the v3 to v4 migration with
+    `null` region fields, `Params.defaults(profile)`); `core/models/region.py` v3 and `regions/sa.yaml` v3
+    (`distributor`, `cdr_retailers`), `build_context()` refusing unset values; `pipeline sync` fills `offers.retailers`
+    and `offers.distributor`, reports `null` as drift, creates `config/offer_rules.local/README.md`; the four P4
+    warnings; golden schemas; `params_v4_text` in `tests/fixtures/params_text.py`.
+  - Refs: the P4 spec §4, §12; D1 rev 5 §5, §7; the P3 spec §4.3 (the same fill pattern).
+  - Files: `src/energatron/core/{errors.py,models/params.py,models/region.py}`, `src/energatron/regions/sa.yaml`,
+    `src/energatron/services/pipeline_sync.py`, `src/energatron/adapters/wiring.py`, `tests/unit/core/test_{params,region}.py`,
+    `tests/unit/services/test_pipeline_sync.py`, `tests/architecture/test_no_region_values.py`,
+    `tests/fixtures/{params_text.py,schemas/}`.
+  - Done when: the standard checks pass; the golden v3 `params` and v2 `region_profile` documents upgrade and validate;
+    a stage reading a `null` `offers.retailers` fails with `E_INVALID_INPUT`.
+- ⬜ **P4.2.2** Tariff model and CDR mapping.
+  - `core/tariff.py` (`Tariff` and parts, partition checks, inclusive-to-half-open windows, the two GST constants),
+    `core/cdr_tariff.py` (`map_cdr` → `Tariff` or `Excluded`, every row of spec §5.2), `tests/fixtures/make_cdr.py`.
+  - Refs: the P4 spec §1 (CDR facts), §5.1, §5.2, §14.
+  - Files: `src/energatron/core/{tariff.py,cdr_tariff.py}`, `tests/fixtures/make_cdr.py`,
+    `tests/unit/core/test_{tariff,cdr_tariff}.py`, `tests/unit/fixtures/test_generators.py`.
+  - Done when: the standard checks pass; one test per row of spec §5.2's table.
+- ⬜ **P4.2.3** Offer sources and rules: the fetch log, `offer_manual`, `offer_rule`.
+  - `core/models/offers.py` (`OfferFetchLog`, `OfferManual`); parsers `adapters/sources/{cdr_index,offer_manual}.py`
+    and `regions/sa.yaml` listing them; `core/offer_rules.py` (model, loading from two directories, matching, effects);
+    curated `src/energatron/offer_rules/wholesale-pass-through.yaml`; `make_offer_manual` and a fetch-log generator.
+  - Refs: the P4 spec §3.3, §5.3, §6; D3 §5.7, §6.
+  - Files: `src/energatron/core/{models/offers.py,offer_rules.py}`, `src/energatron/adapters/sources/`,
+    `src/energatron/regions/sa.yaml`, `src/energatron/offer_rules/`, `tests/fixtures/make_cdr.py`,
+    `tests/unit/core/test_offer_rules.py`, `tests/unit/adapters/sources/`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; `offer_cdr` never detects a fetch log and `cdr_index` never detects a plan.
+- ⬜ **P4.2.4** CDR client and `energatron fetch-offers`.
+  - `adapters/offers/cdr.py` (`CdrProvider`), wired into `ServiceContext.offers`; `services/fetch_offers.py` and the
+    command; `fetch_offers_result` v1.
+  - Refs: the P4 spec §3.1, §3.2; D1 rev 5 §4.6, §8.6; D3 §7.
+  - Files: `src/energatron/adapters/{offers/cdr.py,wiring.py,cli/}`, `src/energatron/services/fetch_offers.py`,
+    `tests/unit/adapters/test_cdr_provider.py`, `tests/unit/services/test_fetch_offers.py`,
+    `tests/unit/adapters/test_locking.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; the tests of spec §14 (adapters, services) pass against a local HTTP server.
+- ⬜ **P4.2.5** `normalise_offers`.
+  - The stage, its three outputs and six checks, `W_OFFERS_MISSING_SNAPSHOT`, the golden `dvc.yaml`, the fixture workspace.
+  - Refs: the P4 spec §6, §8, §14.
+  - Files: `src/energatron/services/stages/{normalise_offers,registry}.py`, `src/energatron/core/models/costs.py`,
+    `tests/unit/services/stages/test_normalise_offers.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
+    `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; every check passes and fails in its test.
+- ⬜ **P4.2.6** The engine.
+  - `core/engine.py` (spec §7), the oracle additions in `tests/fixtures/oracle.py`, property tests.
+  - Refs: the P4 spec §7, §14.
+  - Files: `src/energatron/core/engine.py`, `tests/fixtures/oracle.py`, `tests/unit/core/test_engine{,_properties}.py`.
+  - Done when: the standard checks pass; the engine equals the oracle on the fixtures; spec §7.9 holds.
+- ⬜ **P4.2.7** `cost_elec`.
+  - The stage, its three outputs and four checks, the cost table kinds, the golden `dvc.yaml`, the fixture workspace.
+  - Refs: the P4 spec §9; the P3 spec §8 (`usage_summary`).
+  - Files: `src/energatron/services/stages/{cost_elec,registry}.py`, `src/energatron/core/models/costs.py`,
+    `tests/unit/services/stages/test_cost_elec.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
+    `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; every check passes and fails in its test.
+- ⬜ **P4.2.8** `backtest`.
+  - `core/retailer_txn.py`, the stage, its outputs, checks and two warnings, a transactions generator, the golden
+    `dvc.yaml`, the fixture workspace.
+  - Refs: the P4 spec §10; the P2 spec §9.3.
+  - Files: `src/energatron/core/retailer_txn.py`, `src/energatron/services/stages/{backtest,registry}.py`,
+    `tests/unit/core/test_retailer_txn.py`, `tests/unit/services/stages/test_backtest.py`,
+    `tests/fixtures/{make_sources.py,pipeline_workspace.py,golden/dvc.yaml}`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; a generated invoice equal to the engine's bill is `within`, one 2% off is
+    `outside` and warns.
+- ⬜ **P4.2.9** `energatron offers diff` and the end-to-end P4 test.
+  - `services/offer_diff.py`, the command, `offer_diff_result` v1; `tests/integration/test_p4_pipeline.py` (land,
+    `fetch-offers` against a local HTTP server, `dvc repro`, `offers diff`, `verify`).
+  - Refs: the P4 spec §11, §14; D1 rev 5 §11.4.
+  - Files: `src/energatron/services/offer_diff.py`, `src/energatron/adapters/cli/`,
+    `tests/unit/services/test_offer_diff.py`, `tests/integration/test_p4_pipeline.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; the end-to-end test passes.
+
+#### P4.3 Acceptance ⬜
+- ⬜ **P4.3.1** P4 acceptance in the workspace.
+  - The spec's §13 checks 1-8, in order. If the GST check fails, stop and ask the owner.
+  - Refs: the P4 spec §13; plan §15 (P4).
+  - Files (`demq-elektric/`): `dvc.yaml`, `dvc.lock`, `params.yaml`, `.energatron/code_fingerprint.json`,
+    `config/offer_rules.local/README.md`, new `data/*/.gitignore` files; the `land` commit is `fetch-offers`' own; a
+    dated note in `agent_docs/` for results that mention data.
+  - Done when: checks 1-5, 7 and 8 pass; check 6 passes or waits on P4.3.2; `TASKS.md` gets counts and pass/fail only.
+  - On /done: commit those files as one workspace commit.
+- ⬜ **P4.3.2** Owner: the historical tariff, then back up after P4.
+  - Why: owner step (the tariff in force comes from the owner's bills; iCloud).
+  - The owner writes an `offer_manual` YAML for the plan in force, lands it, sets `backtest.tariffs`, runs `dvc repro`
+    (spec §13 check 6, and check 4 if the agent couldn't render the BPID); then `icloud_backup.py backup`.
+  - Refs: the P4 spec §5.3, §10, §13; the runbook.
+  - Done when: the backtest is within ±1% or its deviations are explained in the workspace note, and `backup --status`
+    shows `refs_backed_up: true`.
+
 ### Later (plan §15)
-P4 offers + electricity engine · P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts with
-its own spec sub-task.
+P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-04 · P4.1.1 · P4 offers and electricity engine spec approved (Q1-Q8 as recommended, on the owner's standing instruction); plan rev 12 and D1 rev 5 applied from its §15; P4.2-P4.3 rewritten from its order of work (P4.2.1-P4.2.9, P4.3.1, P4.3.2) · energatron-5000 `P4.1.1: approve the P4 offers and electricity engine spec and apply plan rev 12 and D1 rev 5`
 - 2026-11-04 · P3.3.2 · owner backup done (`backup --status`: `refs_backed_up` true, 0 commits behind); P3.3 and P3 ticked, P3 archived · energatron-5000 `P3.3.2: close P3 after the owner's backup`
 - 2026-11-04 · P3.3.1 · P3 acceptance in the workspace: params v3 with a second TOU window set (applied on the owner's behalf; to confirm), `fingerprint`, `dvc repro` (`usage_profile` 7 checks, `usage_report`), reference window full, report 1 file within budget with no external reference, legacy reconciliation R1-R4 pass, `verify` ok, privacy guard 0 violations; browser look and backup pending · demq-elektric `P3.3.1: record the P3 usage profile and report run in the workspace`; energatron-5000 `P3.3.1: record P3 acceptance in the workspace`
 - 2026-11-04 · P3.2.5 · `usage_report` stage (marts in, `index.html` out, empty `params`), golden `dvc.yaml` with eight stages, `test_p3_pipeline` ending with `verify` (2703 tests); fresh-reviewer nits fixed · energatron-5000 `P3.2.5: add the usage_report stage and the end-to-end P3 test`
