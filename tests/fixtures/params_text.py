@@ -6,7 +6,9 @@ migration; `region=True` fills them the way `pipeline sync` would, with the fixt
 `params_v3_text` adds the `analysis` block, optionally with a second TOU window set.
 """
 
+import re
 from collections.abc import Mapping, Sequence
+from pathlib import Path
 from typing import Final
 
 import yaml
@@ -105,3 +107,11 @@ def params_v3_text(
         sets += f'      - {{effective_from: "{start}", windows: {text}}}\n'
     analysis = _V3_ANALYSIS.format(reference_months=reference_months, coverage_threshold=coverage_threshold, sets=sets)
     return base.replace("schema_version: 2", "schema_version: 3", 1) + analysis
+
+
+def set_reference_months(params_file: Path, months: int) -> None:
+    """Set `analysis.reference_months` in a synced `params.yaml`: the defaults ask for a year, a fixture has fewer."""
+    text = params_file.read_text(encoding="utf-8")
+    changed = re.sub(r"(?m)^  reference_months: [0-9]+$", f"  reference_months: {months}", text)
+    assert changed != text, "no analysis.reference_months to change"
+    params_file.write_text(changed, encoding="utf-8")

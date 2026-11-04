@@ -68,11 +68,12 @@ def parse_windows(windows: Mapping[str, Sequence[str]]) -> dict[str, tuple[Windo
     windows_partition_the_day(windows, field=_WINDOWS_FIELD)
     parsed: dict[str, tuple[Window, ...]] = {}
     for label, texts in windows.items():
-        parsed[label] = tuple(_window(text) for text in texts)
+        parsed[label] = tuple(parse_window(text) for text in texts)
     return parsed
 
 
-def _window(text: str) -> Window:
+def parse_window(text: str) -> Window:
+    """One `HH:MM-HH:MM` window; a malformed one → `ValueError`. It need not partition the day (see `parse_windows`)."""
     minutes = window_minutes(text)
     start = minutes[0]
     end = (minutes[-1] + 1) % _MINUTES_PER_DAY

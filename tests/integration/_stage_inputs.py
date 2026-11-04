@@ -15,10 +15,12 @@ from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
 from energatron.services.stages.registry import STAGES
 from energatron.services.stages.runner import prepare_stage, run_stage
-from tests.fixtures.params_text import params_v2_text
+from tests.fixtures.params_text import params_v3_text
 from tests.fixtures.pipeline_workspace import build_raw_zone
 
-PARAMS_YAML: Final = params_v2_text(region=True)
+REFERENCE_MONTHS: Final = 5
+"""The fixture raw zone covers May to September: five whole local months, so five fit the reference window."""
+PARAMS_YAML: Final = params_v3_text(region=True, reference_months=REFERENCE_MONTHS)
 """The zone and windows are filled, as `pipeline sync` leaves them: `validate_timebase` refuses `null` ones."""
 _SOURCE_TS: Final = datetime(2026, 1, 2, 3, 4, 5)
 
@@ -98,6 +100,12 @@ def _localise(root: Path) -> None:
     _run_upstream(root, "validate_timebase")
 
 
+def _usage_profile(root: Path) -> None:
+    """Everything `localise` needs, run: `usage_profile` reads its table."""
+    _localise(root)
+    _run_upstream(root, "localise")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -105,6 +113,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "validate_meter": _validate_meter,
     "validate_timebase": _validate_timebase,
     "localise": _localise,
+    "usage_profile": _usage_profile,
 }
 
 

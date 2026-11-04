@@ -97,12 +97,12 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P3.2.2
-- Last commit: energatron-5000 `P3.2.2: add the usage metric functions, the usage table kinds and their test oracle`
-- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2522
-  passed in ~53 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
+- Last done: P3.2.3
+- Last commit: energatron-5000 `P3.2.3: add the usage_profile stage, its nine tables and summary`
+- Checks: `ruff check`, `ruff format --check` clean; `pyright` 0 errors; `lint-imports` 5 kept; `TZ=UTC pytest -q` 2562
+  passed in ~56 s (parallel); `pre-commit` on the changed files passed; privacy guard `--figures` 0 violations
 - Review: none
-- Next: P3.2.3 (`usage_profile` stage, its nine tables and `summary.json`)
+- Next: P3.2.4 (charts and the report page)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,16 +110,17 @@ Then clear the context and type `/next`.
 - Spec stage done (archived in `agent_docs/2026-10/`); D1-D3 approved (D1 rev 4), plan rev 11, D4 = the P0-P2
   list below. The P2 spec (`agent_docs/2026-10/2026-10-30_p2-meter-pipeline-spec.md`) and the P3 spec
   (`agent_docs/2026-11/2026-11-03_p3-usage-profile-spec.md`) are approved.
-- P0, P1 and P2 are done and accepted in the workspace. P3.2.1 (`Params` v3, `local_day_minutes`, P3 warning codes) and
-  P3.2.2 (the metric functions, table kinds and `UsageSummary`) are done. P3.2.3 is the next ⬜.
+- P0, P1 and P2 are done and accepted in the workspace. P3.2.1 (`Params` v3, `local_day_minutes`, P3 warning codes),
+  P3.2.2 (the metric functions, table kinds and `UsageSummary`) and P3.2.3 (the `usage_profile` stage) are done. P3.2.4
+  (charts and the report page, pure `core/`) is the next ⬜.
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files (`backup.bundle_dir` in `.energatron/local.toml`, the `icloud` remote URL in `.dvc/config.local`);
   `icloud_backup.py` follows `local.toml`. A new machine needs both entries set again.
 
-**Read first** (for P3.2.3)
-- The P3 spec §8, §10, §13.3, plus §5 and §7 for the checks. Then `core/usage.py` and `core/models/usage.py`, an existing
-  stage such as `services/stages/localise.py` with `services/stages/tables.py` (`load_table`), `registry.py`, and
-  `tests/fixtures/{pipeline_workspace.py,params_text.py,golden/dvc.yaml}`.
+**Read first** (for P3.2.4)
+- The P3 spec §9 and §13.1 (`test_charts`, `test_usage_report`), and the `dataviz` skill before any chart code. Then
+  `core/models/usage.py` (the nine kinds and `UsageSummary`), `services/stages/tables.py` (the `USAGE_*_SCHEMA` the report
+  reads) and `tests/fixtures/usage_marts.py` (`build_marts`, `local_rows`).
 - P3.3.1 also reads the P2 acceptance note `demq-elektric/agent_docs/2026-11/2026-11-02_p2-acceptance-meter-pipeline.md`
   (it mentions data, so nothing from it is copied into the tool repo).
 
@@ -133,18 +134,24 @@ Then clear the context and type `/next`.
   `monthly`, `reference_window` (→ `ReferenceWindow`), `seasonal`, `yoy`, `hourly_profile`, `heatmap`, `tou_split`
   (→ `TouSplit(daily, unlabelled)`), `tou_monthly`, `base_load`, `peak_demand`, `quality_monthly`, plus the stage helpers
   `window_avg_daily_kwh`, `window_tou_shares`, `dst_day_counts`. `core/models/usage.py` has the nine Parquet kinds (name,
-  version, columns, sort key) and `UsageSummary` (`usage_summary` v1). The shape of `UsageSummary` is my reading of §8;
-  P3.2.3 may adjust it while it is v1 (update the golden `schemas/usage_summary/v1.json`).
+  version, columns, sort key) and `UsageSummary` (`usage_summary` v1, unchanged by P3.2.3).
 - Test helpers: `tests/fixtures/usage_marts.py` (`local_rows`, `local_frame`, `day_minutes_for`, `build_marts`) and the
-  oracle's local-table half in `oracle.py`. The second-window-set, 14-month and short workspace variants of
-  `pipeline_workspace.py` / `params_text.py` (§13.2) were deferred to P3.2.3, where the stage tests need them.
+  oracle's local-table half in `oracle.py`.
   `monthly` has a row for every month from a register's first to its last, including empty months.
 - Built in P3.2.1: `AnalysisParams` (`reference_months`, `coverage_threshold`, `seasons`, `weekend`, `band_percentiles`,
   `base_load` with `start`/`end` aliased `from`/`to`, `demand_minutes`, `tou.window_sets`); `WindowSet(effective_from:
   date | None, windows)`; a stage that declares `analysis` gets `E_INVALID_INPUT` while the first set is `null`.
   `AnalysisParams.defaults(windows)`; `params_v3_text(...)` in `tests/fixtures/params_text.py` takes a second set.
-- Planned in P3: `core/charts.py`, `core/usage_report.py`; stages `usage_profile` and `usage_report` registered after
-  `localise` (eight stages); marts in `data/marts/usage_profile/`, report in `data/reports/usage/index.html`.
+- Built in P3.2.3: stage `usage_profile` (`services/stages/usage_profile.py`; input `data/interim/elec_interval_local`,
+  params `meter.local_tz` + `analysis`, output `data/marts/usage_profile/` with nine tables + `summary.json`). Checks in
+  order: `one_interval_length` (failing stops the stage with only provenance written), `daily_conserved`, `keys_unique`,
+  `tou_conserved`, `windows_resolved`, `reference_window`, `profile_cells`; warnings `W_USAGE_MIXED_WINDOWS`,
+  `W_USAGE_PARTIAL_DAYS` (counts missing as well as partial days). Refuses with `E_INVALID_INPUT` when there is no
+  consumption register or a row was never placed on the local clock. The usage schemas and `LOCAL_SCHEMA` are in
+  `services/stages/tables.py`; `core/timebase.parse_window` is public. `usage_marts.write_local_table` writes a local
+  table directly (the long and short fixtures); `params_text.set_reference_months` edits `reference_months`.
+- Planned in P3: `core/charts.py`, `core/usage_report.py`; stage `usage_report` registered after `usage_profile` (eight
+  stages); report in `data/reports/usage/index.html`.
 - Built in P2: `Params` v2, `StageRun.zone(key)` (tzdata, never the system database), readers in `core/`,
   `core/timebase.py`; stages `parse_nem12`, `merge_interval`, `validate_meter`, `validate_timebase`, `localise`. Shared
   schemas and `load_table` in `services/stages/tables.py` (a stage may not import another stage). Stage modules must
@@ -614,13 +621,15 @@ threshold; daylight-saving days stay out of hourly metrics; `validate_timebase` 
     properties of spec §13.1 hold.
   - Handover: `core/usage.py` holds every §5 metric as a pure function, `core/models/usage.py` the nine table kinds and `UsageSummary` (`usage_summary` v1), and the oracle gained its local-table half; all functions equal the oracle across both DST changes and the §13.1 properties hold (2522 tests). Decision: repeated-hour peak blocks are keyed by clock block plus `utc_offset_minutes`, and `monthly` includes empty months.
     Watch: the `pipeline_workspace.py`/`params_text.py` variants moved to P3.2.3, and `UsageSummary`'s shape is mine, so P3.2.3 may adjust it while it is v1.
-- ⬜ **P3.2.3** `usage_profile`.
+- ✅ **P3.2.3** `usage_profile`.
   - The stage, its nine tables and `summary.json`, its checks and warnings, the golden `dvc.yaml` and the fixture
     workspace.
   - Refs: the P3 spec §8, §10, §13.3 (`test_usage_profile`).
   - Files: `src/energatron/services/stages/{usage_profile,registry}.py`, `tests/unit/services/stages/test_usage_profile.py`,
     `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; every check passes and fails in its test; no identifier column in any table.
+  - Handover: `usage_profile` is registered right after `localise` (seven stages): it writes the nine tables and `summary.json` to `data/marts/usage_profile/`, runs the seven §8 checks and both warnings, and equals the oracle on generated tables and the fixture raw zone (2562 tests). Decision: the usage schemas and `LOCAL_SCHEMA` live in `services/stages/tables.py` (a stage may not import another), and `one_interval_length` failing stops the stage before any table is written.
+    Watch: every whole-pipeline test now needs `params` v3 with a `reference_months` the fixture fills (`set_reference_months`; 5 for the raw zone), and the workspace needs v3 plus a fresh `fingerprint` before `dvc repro`.
 - ⬜ **P3.2.4** Charts and the report page.
   - `core/charts.py` (SVG primitives, number formatter), `core/usage_report.py` (`render(marts)`), and the golden
     `tests/fixtures/golden/usage_report.html`. Read the `dataviz` guidance before writing chart code.
@@ -662,6 +671,7 @@ its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-04 · P3.2.3 · `usage_profile` stage (nine tables and `summary.json`, seven checks, two warnings), golden `dvc.yaml` with seven stages, whole-pipeline tests moved to params v3 (2562 tests) · energatron-5000 `P3.2.3: add the usage_profile stage, its nine tables and summary`
 - 2026-11-04 · P3.2.2 · Usage metric functions (`core/usage.py`), nine table kinds and `UsageSummary` v1 (`core/models/usage.py`), the oracle's local-table half and `build_marts` (2522 tests) · energatron-5000 `P3.2.2: add the usage metric functions, the usage table kinds and their test oracle`
 - 2026-11-03 · P3.2.1 · `Params` v3 (`analysis` block, date-ranged TOU window sets, v2 to v3 migration), `pipeline sync` fills the first window set, `local_day_minutes` moved to `core/timebase.py`, two P3 warning codes (2463 tests) · energatron-5000 `P3.2.1: add Params v3, the first TOU window set in pipeline sync and local_day_minutes`
 - 2026-11-03 · P3.1.1 · P3 usage profile spec approved (owner: Q1-Q11 as recommended; retailer plan details are not private); plan rev 11 and D1 rev 4 applied from its §15; P3.2-P3.3 rewritten from its order of work (P3.2.1-P3.2.5, P3.3.1, P3.3.2) · energatron-5000 `P3.1.1: approve the P3 usage profile spec and apply plan rev 11 and D1 rev 4`

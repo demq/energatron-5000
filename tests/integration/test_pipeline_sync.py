@@ -16,8 +16,10 @@ import pytest
 
 from energatron.adapters.cli.app import main
 from energatron.core.models.catalog import SourceType
+from tests.fixtures.params_text import set_reference_months
 from tests.fixtures.pipeline_workspace import build_raw_zone
 from tests.integration._scratch import Scratch, dvc, git, make_scratch
+from tests.integration._stage_inputs import REFERENCE_MONTHS
 
 pytestmark = pytest.mark.integration
 
@@ -77,6 +79,7 @@ def test_sync_writes_the_golden_dvc_yaml_and_dvc_repro_runs_catalog_index(
     assert git(scratch.root, "log", "--oneline", "--all") == ""  # no commit
 
     assert envelope(capsys, "pipeline", "sync", "--check", "--json")[0] == 0
+    set_reference_months(scratch.root / "params.yaml", REFERENCE_MONTHS)  # the fixture covers five whole months
     build_raw_zone(
         scratch.root
     )  # `localise` builds nothing unless the time basis is confirmed, so the pipeline needs data

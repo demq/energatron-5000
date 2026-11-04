@@ -6,13 +6,15 @@ take. `build_marts` runs the metric functions on such a table and returns the
 tables and a `UsageSummary` for the page tests, so the renderer tests need no pipeline.
 """
 
-from collections.abc import Callable, Collection, Mapping
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from typing import Final
 
 import pandas as pd
 
+from energatron.core.models.meter import LOCAL_KIND, LOCAL_SORT, LOCAL_VERSION
 from energatron.core.models.params import AnalysisParams
 from energatron.core.models.usage import DstDays, SuffixSummary, UsageSummary, WindowSetUsed
 from energatron.core.timebase import Window, parse_windows
@@ -33,6 +35,8 @@ from energatron.core.usage import (
     window_tou_shares,
     yoy,
 )
+from energatron.services.files import write_parquet
+from energatron.services.stages.tables import LOCAL_SCHEMA
 from tests.fixtures import oracle
 from tests.fixtures.oracle import LocalInterval
 from tests.fixtures.pipeline_workspace import WINDOWS
@@ -96,6 +100,41 @@ def local_frame(rows: list[LocalInterval]) -> pd.DataFrame:
             "quality_flag": pd.Series([row.flag for row in rows], dtype="str"),
         }
     )
+
+
+LOCAL_DIR: Final = Path("data") / "interim" / "elec_interval_local"
+"""Where `usage_profile` reads the local table, relative to the workspace root."""
+_NEM_OFFSET: Final = timedelta(hours=10)
+
+
+def write_local_table(root: Path, rows: Sequence[LocalInterval], *, dataset_id: str = "synthetic") -> Path:
+    """Write `rows` as the `elec_interval_local` table `localise` would leave, at its default place under `root`.
+
+    The UTC instant is the local time minus the row's offset and the meter clock is UTC+10 (the `nem_aest` basis).
+    """
+    utc = [row.local_start - timedelta(minutes=row.utc_offset) for row in rows]
+    meter = [instant + _NEM_OFFSET for instant in utc]
+    frame = pd.DataFrame(
+        {
+            "suffix": pd.Series([row.suffix for row in rows], dtype="str"),
+            "utc_start": pd.Series(utc, dtype="datetime64[us]").dt.tz_localize("UTC"),
+            "local_start": pd.Series([row.local_start for row in rows], dtype="datetime64[us]"),
+            "local_date": pd.Series([row.local_start.date() for row in rows], dtype="object"),
+            "utc_offset_minutes": pd.Series([row.utc_offset for row in rows], dtype="int16"),
+            "meter_start": pd.Series(meter, dtype="datetime64[us]"),
+            "meter_date": pd.Series([stamp.date() for stamp in meter], dtype="object"),
+            "interval_minutes": pd.Series([row.minutes for row in rows], dtype="int16"),
+            "kwh": pd.Series([row.kwh for row in rows], dtype="float64"),
+            "quality": pd.Series([row.flag for row in rows], dtype="str"),
+            "quality_flag": pd.Series([row.flag for row in rows], dtype="str"),
+            "reason_code": pd.array([None] * len(rows), dtype="Int16"),
+            "dataset_id": pd.Series([dataset_id] * len(rows), dtype="str"),
+        }
+    )
+    target = root / LOCAL_DIR / "intervals.parquet"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    write_parquet(frame, target, kind=LOCAL_KIND, schema_version=LOCAL_VERSION, sort_by=LOCAL_SORT, schema=LOCAL_SCHEMA)
+    return target
 
 
 def day_minutes_for(rows: list[LocalInterval]) -> dict[date, int]:

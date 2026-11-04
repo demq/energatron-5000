@@ -73,3 +73,14 @@ stages:
       - stages.localise.stage_sha256
     outs:
     - data/interim/elec_interval_local
+  usage_profile:
+    cmd: energatron stage usage_profile
+    deps:
+    - data/interim/elec_interval_local
+    params:
+    - meter.local_tz
+    - analysis
+    - .energatron/code_fingerprint.json:
+      - stages.usage_profile.stage_sha256
+    outs:
+    - data/marts/usage_profile

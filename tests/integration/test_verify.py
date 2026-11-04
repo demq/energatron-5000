@@ -24,6 +24,7 @@ from energatron.core.models.catalog import CatalogRecord, SourceType
 from energatron.core.models.workspace import WorkspacePaths
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
 from tests.fixtures.make_sources import make_retailer_usage_from_nem12
+from tests.fixtures.params_text import set_reference_months
 from tests.fixtures.pipeline_workspace import LABELS, WINDOWS, make_record
 from tests.fixtures.synthetic import SYNTHETIC_NMI
 from tests.integration._scratch import Scratch, dvc, make_scratch
@@ -109,6 +110,7 @@ def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     scratch = make_scratch(tmp_path, remote=False)
     monkeypatch.chdir(scratch.root)
     assert envelope(capsys, "pipeline", "sync", "--json")[0] == 0
+    set_reference_months(scratch.root / "params.yaml", 1)  # forty days from 1 June: June is the one covered month
     land_interval_and_usage(scratch.paths)
     land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,bill\n3,4\n")
     land(scratch.paths, SourceType.GAS_BILL, b"synthetic,earlier gas\n7,8\n")
@@ -135,6 +137,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
             "validate_meter",
             "validate_timebase",
             "localise",
+            "usage_profile",
         ],
         "datasets": 4,
     }
@@ -161,6 +164,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
         "localise",
         "merge_interval",
         "parse_nem12",
+        "usage_profile",
         "validate_meter",
         "validate_timebase",
     ]

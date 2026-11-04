@@ -170,9 +170,9 @@ def test_spec_reads_the_merged_intervals_and_the_timebase_report() -> None:
     assert dict(spec.outputs) == {"interval": "data/interim/elec_interval_local"}
 
 
-def test_it_is_registered_last_after_validate_timebase() -> None:
-    assert list(STAGES)[-1] == "localise"
-    assert list(STAGES)[-2] == "validate_timebase"
+def test_it_is_registered_right_after_validate_timebase() -> None:
+    names = list(STAGES)
+    assert names[names.index("validate_timebase") + 1] == "localise"
 
 
 # --- a confirmed basis -------------------------------------------------------------------------------------------

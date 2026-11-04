@@ -13,12 +13,11 @@ The checks hold counts only, never a value.
 
 import math
 from collections.abc import Mapping
-from datetime import UTC, date, tzinfo
+from datetime import date, tzinfo
 from pathlib import Path
 from typing import Final, cast
 
 import pandas as pd
-import pyarrow as pa
 
 from energatron.core.errors import InternalError, InvalidInputError
 from energatron.core.models.meter import (
@@ -33,29 +32,11 @@ from energatron.core.models.meter import (
 from energatron.core.timebase import LocalTimes, Timebase, local_day_minutes, to_local
 from energatron.services.files import read_json, write_parquet
 from energatron.services.stages.runner import StageRun, StageSpec
-from energatron.services.stages.tables import STAGED_SCHEMA, load_table
+from energatron.services.stages.tables import LOCAL_SCHEMA, STAGED_SCHEMA, load_table
 
 INTERVALS_FILENAME: Final = "intervals.parquet"
 RESULT_FILENAME: Final = "result.json"
 _MINUTES_PER_DAY: Final = 1440
-
-LOCAL_SCHEMA: Final = pa.schema(
-    [
-        ("suffix", pa.string()),
-        ("utc_start", pa.timestamp("us", tz=UTC)),
-        ("local_start", pa.timestamp("us")),
-        ("local_date", pa.date32()),
-        ("utc_offset_minutes", pa.int16()),
-        ("meter_start", pa.timestamp("us")),
-        ("meter_date", pa.date32()),
-        ("interval_minutes", pa.int16()),
-        ("kwh", pa.float64()),
-        ("quality", pa.string()),
-        ("quality_flag", pa.string()),
-        ("reason_code", pa.int16()),
-        ("dataset_id", pa.string()),
-    ]
-)
 
 
 def _run(run: StageRun) -> None:

@@ -25,7 +25,7 @@ from energatron.core.models.provenance import CodeFingerprint, StageCode
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH, emit_dvc_yaml
 from energatron.services.stages.registry import STAGES
-from tests.fixtures.params_text import params_v2_text
+from tests.fixtures.params_text import params_v3_text
 from tests.fixtures.pipeline_workspace import build_raw_zone
 from tests.unit.adapters._workspace import make_workspace, write
 
@@ -360,11 +360,13 @@ def test_a_dvc_error_with_no_failed_stage_is_a_subprocess_error(built: Fake) -> 
 @pytest.fixture
 def real(tmp_path: Path) -> WorkspacePaths:
     """A scratch workspace holding the real pipeline (every registered stage) over the fixture raw zone, whose time
-    basis `validate_timebase` can confirm, as `localise` needs."""
+    basis `validate_timebase` can confirm, as `localise` needs. Its five covered months fill the reference window."""
     paths = make_workspace(tmp_path, private=None)
     dvc_init(paths.root)
     write(paths.root, "dvc.yaml", emit_dvc_yaml(STAGES))
-    write(paths.root, "params.yaml", params_v2_text(region=True))  # DVC reads the declared keys from the file itself
+    write(
+        paths.root, "params.yaml", params_v3_text(region=True, reference_months=5)
+    )  # DVC reads the declared keys from the file itself
     build_raw_zone(paths.root)
     return paths
 
@@ -387,6 +389,7 @@ def test_the_venv_energatron_runs_whatever_path_the_caller_has_and_prints_nothin
                 "validate_meter",
                 "validate_timebase",
                 "localise",
+                "usage_profile",
             ]
         )
     captured = capfd.readouterr()

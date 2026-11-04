@@ -1,6 +1,6 @@
 """The whole P2 meter pipeline in a scratch workspace with real git and DVC (P2 spec §11, §13.3).
 
-`pipeline sync` writes `dvc.yaml` and `params.yaml` (params v2, the zone and the windows from the region profile); the
+`pipeline sync` writes `dvc.yaml` and `params.yaml` (params v3, the zone and the windows from the region profile); the
 fixture raw zone of `tests/fixtures/pipeline_workspace.py` stands in for what `land` leaves; `DvcRunner.repro` refreshes
 the fingerprint and runs every stage; `verify` then reruns them in a scratch directory. Every value is synthetic, and
 nothing here touches the real workspace.
@@ -26,9 +26,11 @@ from energatron.core.models.meter import MergeSummary, TimebaseResult
 from energatron.services.stages.registry import STAGES
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
 from tests.fixtures.make_sources import make_retailer_usage_from_nem12
+from tests.fixtures.params_text import set_reference_months
 from tests.fixtures.pipeline_workspace import LABELS, WINDOWS, RawZone, build_raw_zone, land_blob
 from tests.fixtures.synthetic import SYNTHETIC_NMI
 from tests.integration._scratch import Scratch, dvc, make_scratch
+from tests.integration._stage_inputs import REFERENCE_MONTHS
 
 pytestmark = pytest.mark.integration
 
@@ -76,6 +78,7 @@ def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     scratch = make_scratch(tmp_path, remote=False)
     monkeypatch.chdir(scratch.root)
     assert envelope(capsys, "pipeline", "sync", "--json")[0] == 0
+    set_reference_months(scratch.root / "params.yaml", REFERENCE_MONTHS)  # the fixture covers five whole months
     return scratch
 
 
