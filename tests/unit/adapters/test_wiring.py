@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from energatron.adapters import wiring
+from energatron.adapters.offers.cdr import CdrProvider
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
 from energatron.adapters.sources.registry import PARSERS
 from energatron.adapters.storage.fs_blobs import FsBlobStore
@@ -38,7 +39,8 @@ def test_the_context_holds_the_workspace_and_its_configs(tmp_path: Path) -> None
     assert ctx.region == wiring.load_region_profile("sa")
     assert ctx.region.local_tz is not None
     assert ctx.region.tou_windows is not None
-    assert dict(ctx.offers) == {}
+    assert list(ctx.offers) == ["cdr"]
+    assert ctx.offers["cdr"].name == "cdr"
     assert isinstance(ctx.vcs, GitDvcVersionControl)
     assert isinstance(ctx.clock, wiring.SystemClock)
 
@@ -176,3 +178,14 @@ def test_the_system_clock_is_aware_utc() -> None:
     now = wiring.SystemClock().now()
     assert now.tzinfo is UTC
     assert now.utcoffset() == timedelta(0)
+
+
+def test_the_cdr_root_can_point_at_a_test_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(wiring.CDR_ROOT_ENV, "http://127.0.0.1:1")
+    provider = wiring.build_context(make_workspace(tmp_path)).offers["cdr"]
+    assert isinstance(provider, CdrProvider)
+    assert provider.root == "http://127.0.0.1:1"
+    monkeypatch.delenv(wiring.CDR_ROOT_ENV)
+    default = wiring.build_context(make_workspace(tmp_path / "other")).offers["cdr"]
+    assert isinstance(default, CdrProvider)
+    assert default.root == "https://cdr.energymadeeasy.gov.au"

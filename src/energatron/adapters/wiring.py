@@ -7,10 +7,14 @@ registered parsers the workspace region's profile lists (D3 §10.3); `region` is
 """
 
 import importlib.resources
+import os
 from datetime import UTC, datetime
+from typing import Final
 
 import yaml
 
+from energatron import __version__
+from energatron.adapters.offers.cdr import DEFAULT_ROOT, CdrProvider
 from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
 from energatron.adapters.pipeline.fingerprint import InstalledDistributions, compute_fingerprint, package_dir
@@ -48,7 +52,8 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
 
     `workspace.toml` gives the region, whose profile picks the parsers (D3 §10.3), and the backup policy;
     `local.toml` the bundle folder, `~` expanded and unchecked (None when unset; the real `backup` alone checks it,
-    D2 §8.1 step 1); `private/config.toml` the private config, or None when it's missing.
+    D2 §8.1 step 1); `private/config.toml` the private config, or None when it's missing. The CDR offer provider is
+    `offers["cdr"]` (P4 spec §3.1).
     """
     clock = clock if clock is not None else SystemClock()
     config = read_workspace_config(paths)
@@ -68,7 +73,18 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
         vcs=vcs,
         runner=DvcRunner(paths, fingerprint=lambda: code_fingerprint()),
         clock=clock,
+        offers={"cdr": cdr_provider(clock)},
     )
+
+
+CDR_ROOT_ENV: Final = "ENERGATRON_CDR_ROOT"
+"""Points the CDR provider at another root, such as a local test server (P4 spec §14)."""
+
+
+def cdr_provider(clock: Clock) -> CdrProvider:
+    """The CDR provider, at `ENERGATRON_CDR_ROOT` when set, else the AER's host."""
+    root = os.environ.get(CDR_ROOT_ENV) or DEFAULT_ROOT
+    return CdrProvider(clock=clock, user_agent=f"energatron/{__version__}", root=root)
 
 
 def load_region_profile(name: str) -> RegionProfile:

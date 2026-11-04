@@ -1,0 +1,40 @@
+{
+  "commit": "0000000000000000000000000000000000000000",
+  "dry_run": false,
+  "fetch_batch_id": "fetch-20261023T093000Z",
+  "kind": "fetch_offers_result",
+  "landed": [
+    "offer_cdr-20261001T000000-0123abcd"
+  ],
+  "postcode_applied": true,
+  "rejected": 0,
+  "retailers": [
+    {
+      "base": "alpha",
+      "error": null,
+      "failed": 0,
+      "fetched": 1,
+      "left_out": {
+        "distributor": 1
+      },
+      "listed": 3,
+      "selected": 2,
+      "unchanged": 1
+    },
+    {
+      "base": "beta-energy",
+      "error": {
+        "code": "E_NETWORK",
+        "message": "The CDR API couldn't be reached.",
+        "status": null
+      },
+      "failed": 0,
+      "fetched": 0,
+      "left_out": {},
+      "listed": 0,
+      "selected": 0,
+      "unchanged": 0
+    }
+  ],
+  "schema_version": 1
+}

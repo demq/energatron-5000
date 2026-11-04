@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.3
-- Last commit: energatron-5000 `P4.2.3: add the fetch log, offer_manual and offer rules`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 2960 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.2.4
+- Last commit: energatron-5000 `P4.2.4: add the CDR provider and energatron fetch-offers`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3003 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.4 (the CDR client and `energatron fetch-offers`)
+- Next: P4.2.5 (`normalise_offers`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -109,15 +109,17 @@ Then clear the context and type `/next`.
 - P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
   approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
   D1 rev 5 hold its §15 edits.
-- Done in P4: P4.2.1 (params v4, region v3), P4.2.2 (`Tariff`, `map_cdr`), P4.2.3 (fetch log, `offer_manual`, rules).
+- Done in P4: P4.2.1 (params v4, region v3), P4.2.2 (`Tariff`, `map_cdr`), P4.2.3 (fetch log, `offer_manual`, rules),
+  P4.2.4 (CDR provider, `fetch-offers`).
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §3.1 (`CdrProvider`), §3.2 (`fetch-offers` steps), §14 (the adapter and service tests); D1 rev 5 §4.6,
-  §8.6 (the lock); D3 §7 (`land`, which `fetch-offers` calls on a staging directory).
-- `services/land.py`, `adapters/cli/commands/land.py` (a writing command with the lock), `adapters/wiring.py`
-  (`ServiceContext.offers`), `core/models/offers.py` (`Fetched`, `OfferFetchLog`), `tests/fixtures/make_cdr.py`.
+- The P4 spec §6 (rules), §8 (`normalise_offers`: inputs, steps, outputs, six checks), §14; D1 rev 5 §9-§11 (the
+  stage contract, `package_data`).
+- A stage that reads raw zones and catalogs: `services/stages/parse_nem12.py` (blob and detector checks);
+  `services/stages/tables.py` (`write_parquet` schemas); `core/cdr_tariff.py`, `core/offer_rules.py` (the rules take
+  parsed YAML documents: the stage reads the YAML).
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -571,7 +573,7 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Done when: the standard checks pass; `offer_cdr` never detects a fetch log and `cdr_index` never detects a plan.
   - Handover: `OfferFetchLog` and `OfferManual` (`core/models/offers.py`), parsers `cdr_index` and `offer_manual` registered and in `sa.yaml`, `core/offer_rules.py` (`load_rules`, `apply_rules`), three curated `offer_rules/*.yaml`, fixture builders (2960 tests). Decision: rules may also match `display_name` and three curated wholesale-estimate rules ship (spec §6 updated); `map_cdr` trims brands (a real brand has a trailing space).
     Watch: the fetch log must be written with sorted keys (`write_json`) so `kind` precedes the page bodies in the 64 KiB head.
-- ⬜ **P4.2.4** CDR client and `energatron fetch-offers`.
+- ✅ **P4.2.4** CDR client and `energatron fetch-offers`.
   - `adapters/offers/cdr.py` (`CdrProvider`), wired into `ServiceContext.offers`; `services/fetch_offers.py` and the
     command; `fetch_offers_result` v1.
   - Refs: the P4 spec §3.1, §3.2; D1 rev 5 §4.6, §8.6; D3 §7.
@@ -579,6 +581,8 @@ warn; the historical tariff comes from the owner; no new dependency.
     `tests/unit/adapters/test_cdr_provider.py`, `tests/unit/services/test_fetch_offers.py`,
     `tests/unit/adapters/test_locking.py`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; the tests of spec §14 (adapters, services) pass against a local HTTP server.
+  - Handover: `CdrProvider` (`adapters/offers/cdr.py`: paging on the same host, at most 50 pages, header allow-list, `E_NETWORK` reasons) wired as `ctx.offers["cdr"]` (`ENERGATRON_CDR_ROOT` overrides the root), `services/fetch_offers.py` and `energatron fetch-offers` (filter, unchanged skip, `--all`, staging under `data/landing/.fetch-<batch>/`, one `land` commit), `fetch_offers_result` v1 (3003 tests). Decision: the result also counts `land`'s rejected files, and the log keeps per-base `listed` and `left_out` counts.
+    Watch: the log's list pages hold public postcode lists verbatim (base64); only its own fields must never name the household's postcode.
 - ⬜ **P4.2.5** `normalise_offers`.
   - The stage, its three outputs and six checks, `W_OFFERS_MISSING_SNAPSHOT`, the golden `dvc.yaml`, the fixture workspace.
   - Refs: the P4 spec §6, §8, §14.
@@ -637,6 +641,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-04 · P4.2.4 · CDR provider over stdlib `urllib` (tested against a local HTTP server), `fetch-offers` service and command with the local filter, unchanged skip, partial failures and one `land` commit, lock coverage, `fetch_offers_result` v1 (3003 tests); self-review pass · energatron-5000 `P4.2.4: add the CDR provider and energatron fetch-offers`
 - 2026-11-04 · P4.2.3 · fetch log and `offer_manual` models and parsers, offer rules (model, two directories, matching, effects) and three curated wholesale-estimate rules, fixture builders (2960 tests); self-review pass; spec §3.3 and §6 brought in line · energatron-5000 `P4.2.3: add the fetch log, offer_manual and offer rules`
 - 2026-11-04 · P4.2.2 · `Tariff` model with partition rules and the GST constants, `map_cdr` covering every row of the spec's §5.2 table, `make_cdr` fixture generator (2907 tests); self-review pass; on the real SAPN market every plan normalises, is approximate or is excluded with a reason · energatron-5000 `P4.2.2: add the Tariff model and the CDR mapping`
 - 2026-11-04 · P4.2.1 · `Params` v4 and `RegionProfile` v3 (distributor, CDR retailers), `pipeline sync` fills them and creates `config/offer_rules.local/`, four P4 warnings, golden `params/v4` and `region_profile/v3` (2815 tests); self-review pass, no findings · energatron-5000 `P4.2.1: add params v4, region profile v3 and the P4 warnings`
