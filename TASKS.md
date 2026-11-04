@@ -97,27 +97,26 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.9
-- Last commit: energatron-5000 `P4.2.9: add energatron offers diff and the end-to-end P4 test`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3113 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.3.1
+- Last commit: energatron-5000 `P4.3.1: record P4 acceptance in the workspace`; demq-elektric `P4.3.1: record the P4 offers and costs run and acceptance` (backup pending: 3 commits)
+- Checks: workspace `verify` ok (11 stages), `dvc status` clean, `pipeline sync --check` and `fingerprint --check` current, workspace privacy guard 0 violations; tool repo `pytest -q` 3115 passed, ruff, pyright, lint-imports clean
 - Review: none
-- Next: P4.3.1 (P4 acceptance in the workspace)
+- Next: P4.3.2 (owner: the historical tariff for the backtest, then back up)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
-  approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
-  D1 rev 5 hold its §15 edits.
-- P4.2 (the build, P4.2.1-P4.2.9) is done: eleven stages, `fetch-offers`, `offers diff`. Next is the workspace
-  acceptance P4.3.1, then the owner's step P4.3.2.
-- The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
-  files; a new machine needs both set again.
+- P0-P3 are done and accepted. P4's spec is approved, its build (P4.2) is done, and P4.3.1 ran the acceptance: checks
+  1-5, 7 and 8 pass; check 6 (backtest) waits on P4.3.2, the owner's historical tariff, as does the backup.
+- The workspace has eleven stages and 636 current SAPN residential plans landed (fetch batch of 2026-11-04 UTC).
+- The tool repo is on GitHub (private, `origin`; not pushed this session). The owner's iCloud backup folder is set in two
+  git-ignored workspace files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §13 (acceptance checks 1-8); `demq-elektric/CLAUDE.md` (never read `private/`; commits only of exact paths).
-- The P3 acceptance note in `demq-elektric/agent_docs/2026-11/` for the shape of a workspace note (it holds figures:
-  never copy from it).
+- P4.3.2 is the owner's step: no agent work until the owner has written the tariff in force (an `offer_manual`, P4
+  spec §5.3) and set `backtest.tariffs`; then `dvc repro` and the backtest result go in the workspace note.
+- The acceptance results: `demq-elektric/agent_docs/2026-11/2026-11-05_p4-acceptance-offers-engine.md` (it holds
+  figures: never copy from it).
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -130,8 +129,12 @@ Then clear the context and type `/next`.
 - Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures <changed files> TASKS.md`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing except the tool repo on
   `/done push`; no global installs.
+- CDR base `energy-locals` (RAA Energy) lists no SAPN residential plan, so the owner's current plan isn't in CDR; `current_plans.electricity` in the private config can only name an `offer_manual` snapshot.
+- Follow-up, not scheduled: a rule effect (or mapper support) for a one-off percentage discount, so the two excluded first-bill-discount plans can be priced; and a checked source for the fee GST convention.
 
 **Open questions for the owner**
+- P4.3.2: write an `offer_manual` YAML (P4 spec §5.3) for the electricity plan in force over the retailer usage export's
+  months, from a bill; land it; set `backtest.tariffs` to its snapshot ID and dates; run `dvc repro`. Then back up.
 - From P3: the browser look at the usage report (§12 check 5), and a yes or a correction for the second TOU window set.
 - From P3: add `demand_minutes` to `UsageSummary`? The report's size budget with two registers?
 
@@ -627,8 +630,8 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Handover: `services/offer_diff.py` and `energatron offers diff [--plan]` (the two newest snapshots of each plan mapped with a neutral household and compared field by field, signed deltas for numbers), `offer_diff_result` v1, `tests/integration/test_p4_pipeline.py` (sync, fixture raw zone, `fetch-offers` against a localhost CDR stand-in, `dvc repro` of all eleven stages, a second fetch, `offers diff`, `verify`) (3113 tests). Decision: the diff maps with no rules and a household that meets every eligibility rule, so excluded variants still diff.
     Watch: P4 build is complete; the workspace still runs params v3 and needs `pipeline sync` first (P4.3.1).
 
-#### P4.3 Acceptance ⬜
-- ⬜ **P4.3.1** P4 acceptance in the workspace.
+#### P4.3 Acceptance 🔄
+- ✅ **P4.3.1** P4 acceptance in the workspace.
   - The spec's §13 checks 1-8, in order. If the GST check fails, stop and ask the owner.
   - Refs: the P4 spec §13; plan §15 (P4).
   - Files (`demq-elektric/`): `dvc.yaml`, `dvc.lock`, `params.yaml`, `.energatron/code_fingerprint.json`,
@@ -636,6 +639,8 @@ warn; the historical tariff comes from the owner; no new dependency.
     dated note in `agent_docs/` for results that mention data.
   - Done when: checks 1-5, 7 and 8 pass; check 6 passes or waits on P4.3.2; `TASKS.md` gets counts and pass/fail only.
   - On /done: commit those files as one workspace commit.
+  - Handover: Workspace synced to params v4 (eleven stages), `fetch-offers` landed 636 plans and a fetch log in one commit (28 bases, 0 failures), `dvc repro` and `verify` pass; 636 current plans: 191 normalised, 90 approximate, 355 excluded with reasons; GST convention verified exactly against EnergyAustralia's published SA standing-offer rates; backtest waits on P4.3.2. Decision: two acceptance fixes in the tool, `zero_priced` (companion export plans) and a curated rule excluding two first-bill-discount plans.
+    Watch: a one-off percentage discount can't be priced yet (follow-up below); fees are taken as GST-inclusive without a checked source.
 - ⬜ **P4.3.2** Owner: the historical tariff, then back up after P4.
   - Why: owner step (the tariff in force comes from the owner's bills; iCloud).
   - The owner writes an `offer_manual` YAML for the plan in force, lands it, sets `backtest.tariffs`, runs `dvc repro`
@@ -649,6 +654,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-05 · P4.3.1 · P4 acceptance in the workspace: sync to params v4, `fetch-offers` (636 plans, 0 failures, one `land` commit), `dvc repro` of eleven stages, every plan accounted for (191/90/355), GST verified against a published GST-inclusive rate sheet, costs ranked, `offers diff` and `verify` ok; two tool fixes from real data (`zero_priced`, first-bill-discount rule); backtest and backup wait on P4.3.2 · demq-elektric `P4.3.1: sync the pipeline to params v4 and the P4 stages`, `land: 637 datasets`, `P4.3.1: record the P4 offers and costs run and acceptance`; energatron-5000 `P4.3.1: exclude zero-priced companion plans`, `P4.3.1: exclude the two first-bill-discount plans by a curated rule`, `P4.3.1: record P4 acceptance in the workspace`
 - 2026-11-05 · P4.2.9 · `offers diff` service and command, `offer_diff_result` v1, end-to-end `test_p4_pipeline` (fetch against a local server, repro of eleven stages, diff, verify) (3113 tests); self-review pass; P4.2 ticked · energatron-5000 `P4.2.9: add energatron offers diff and the end-to-end P4 test`
 - 2026-11-05 · P4.2.8 · transactions reader and `backtest` stage (periods from reads, tariff in force, invoice matching, statuses, three checks, two warnings), golden `dvc.yaml` with eleven stages (3106 tests); self-review pass · energatron-5000 `P4.2.8: add the backtest stage`
 - 2026-11-05 · P4.2.7 · `cost_elec` stage (reference-window months, both scenarios, line items, ranked totals, summary, four checks), cost kinds, shared costing helpers, golden `dvc.yaml` with ten stages (3082 tests); self-review pass · energatron-5000 `P4.2.7: add the cost_elec stage`
