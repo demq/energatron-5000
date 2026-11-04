@@ -119,3 +119,18 @@ stages:
       - stages.cost_elec.stage_sha256
     outs:
     - data/marts/costs/elec
+  backtest:
+    cmd: energatron stage backtest
+    deps:
+    - data/marts/offers
+    - data/interim/elec_interval_local
+    - data/raw/retailer_usage
+    - data/raw/retailer_txn
+    params:
+    - pricing
+    - backtest
+    - validation.backtest
+    - .energatron/code_fingerprint.json:
+      - stages.backtest.stage_sha256
+    outs:
+    - data/reports/validation/backtest

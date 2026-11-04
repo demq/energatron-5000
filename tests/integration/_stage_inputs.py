@@ -149,6 +149,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "usage_report": _usage_report,
     "normalise_offers": _normalise_offers,
     "cost_elec": _cost_elec,
+    "backtest": _cost_elec,  # the same inputs: offers, the local table; the raw zone's usage exports give the periods
 }
 
 

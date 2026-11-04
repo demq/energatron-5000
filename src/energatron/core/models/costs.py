@@ -130,3 +130,38 @@ class CostSummary(Persisted):
     tariffs: _Count
     cheapest: dict[str, list[str]]  # scenario → the three lowest `annual_ongoing` snapshot IDs, in rank order
     checks: dict[str, bool]
+
+
+BILL_KIND: Final = "backtest_bill"
+BILL_VERSION: Final = 1
+BILL_COLUMNS: Final = (
+    "period_start",
+    "period_end",
+    "offer_snapshot_id",
+    "invoice_date",
+    "invoice_amount",
+    "engine_amount",
+    "diff",
+    "diff_pct",
+    "status",
+)
+BILL_SORT: Final = ("period_start",)
+BILLS_FILENAME: Final = "bills.parquet"
+BACKTEST_RESULT_FILENAME: Final = "result.json"
+type BillStatus = Literal["within", "outside", "unmatched", "no_tariff", "split_tariff", "not_covered"]
+
+
+class BacktestResult(Persisted):
+    """`backtest_result` v1 (P4 spec §10): counts by status, the largest deviation, the tolerance, the checks."""
+
+    KIND: ClassVar[str] = "backtest_result"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["backtest_result"] = "backtest_result"
+    schema_version: Literal[1] = 1
+
+    periods: _Count
+    statuses: dict[BillStatus, _Count]
+    max_abs_diff_pct: float | None  # over matched periods; None when none matched
+    tolerance_pct: float
+    tariffs_configured: _Count
+    checks: dict[str, bool]

@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.7
-- Last commit: energatron-5000 `P4.2.7: add the cost_elec stage`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3082 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.2.8
+- Last commit: energatron-5000 `P4.2.8: add the backtest stage`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3106 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.8 (`backtest`)
+- Next: P4.2.9 (`energatron offers diff` and the end-to-end P4 test)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -109,16 +109,16 @@ Then clear the context and type `/next`.
 - P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
   approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
   D1 rev 5 hold its §15 edits.
-- Done in P4: P4.2.1-P4.2.7 (params v4, region v3, `Tariff` and `map_cdr`, fetch log, `offer_manual`, rules, CDR
-  provider, `fetch-offers`, `normalise_offers`, the engine, `cost_elec`).
+- Done in P4: P4.2.1-P4.2.8 (params v4, region v3, `Tariff` and `map_cdr`, fetch log, `offer_manual`, rules, CDR
+  provider, `fetch-offers`, `normalise_offers`, the engine, `cost_elec`, `backtest`).
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §10 (`backtest`: periods from retailer reads, the tariff in force, invoice matching, outputs, checks and
-  two warnings); the P2 spec §9.3 (periods) and `services/stages/validate_timebase.py` (how it builds them).
-- `core/retailer_usage.py` (`read_usage_export`), `adapters/sources/retailer_txn.py` (the export's shape),
-  `services/stages/costing.py`, `services/stages/cost_elec.py`.
+- The P4 spec §11 (`offers diff`), §14 (`test_p4_pipeline`); D1 rev 5 §11.4 (`verify`).
+- `services/fetch_offers.py`, `adapters/cli/commands/fetch_offers.py` (a command to mirror, read-only here),
+  `tests/integration/test_p3_pipeline.py` (a scratch pipeline test), `tests/unit/adapters/test_cdr_provider.py` (the
+  local HTTP server).
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -607,7 +607,7 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Done when: the standard checks pass; every check passes and fails in its test.
   - Handover: `cost_elec` (the one consumption register over the P3 reference window's calendar months, every tariff in both scenarios; `line_items.parquet`, `totals.parquet` with ranks, `summary.json`; four checks), the cost kinds in `core/models/costs.py`, shared `services/stages/costing.py`, golden `dvc.yaml` with ten stages (3082 tests). Decision: rates are stored as `decimal128(24, 10)` (manual offers keep ten places; D1 §12 updated), and `lines_sum` cross-checks the two tables.
     Watch: `cost_elec` reruns whenever the usage profile changes (it reads its summary); `run_stage_named` in `tests/integration/_stage_inputs.py` runs one stage for stage tests.
-- ⬜ **P4.2.8** `backtest`.
+- ✅ **P4.2.8** `backtest`.
   - `core/retailer_txn.py`, the stage, its outputs, checks and two warnings, a transactions generator, the golden
     `dvc.yaml`, the fixture workspace.
   - Refs: the P4 spec §10; the P2 spec §9.3.
@@ -616,6 +616,8 @@ warn; the historical tariff comes from the owner; no new dependency.
     `tests/fixtures/{make_sources.py,pipeline_workspace.py,golden/dvc.yaml}`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; a generated invoice equal to the engine's bill is `within`, one 2% off is
     `outside` and warns.
+  - Handover: `core/retailer_txn.py` (`read_txn`: kind, time, amount; descriptions never leave it) and `backtest` (periods from the retailer reads, the tariff in force from `backtest.tariffs`, invoices matched within `invoice_window_days`, statuses within/outside/unmatched/no_tariff/split_tariff/not_covered; `bills.parquet`, `line_items.parquet`, `result.json`; three checks; two warnings), golden `dvc.yaml` with eleven stages (3106 tests). Decision: an invoice dated on or after a period's last date matches it, earliest first, amounts rounded to cents.
+    Watch: with no `backtest.tariffs` the stage warns `W_BACKTEST_NO_TARIFF` and passes; the owner supplies the tariff in P4.3.2.
 - ⬜ **P4.2.9** `energatron offers diff` and the end-to-end P4 test.
   - `services/offer_diff.py`, the command, `offer_diff_result` v1; `tests/integration/test_p4_pipeline.py` (land,
     `fetch-offers` against a local HTTP server, `dvc repro`, `offers diff`, `verify`).
@@ -646,6 +648,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-05 · P4.2.8 · transactions reader and `backtest` stage (periods from reads, tariff in force, invoice matching, statuses, three checks, two warnings), golden `dvc.yaml` with eleven stages (3106 tests); self-review pass · energatron-5000 `P4.2.8: add the backtest stage`
 - 2026-11-05 · P4.2.7 · `cost_elec` stage (reference-window months, both scenarios, line items, ranked totals, summary, four checks), cost kinds, shared costing helpers, golden `dvc.yaml` with ten stages (3082 tests); self-review pass · energatron-5000 `P4.2.7: add the cost_elec stage`
 - 2026-11-05 · P4.2.6 · cost engine (`core/engine.py`: clocks, seasons, TOU labels, daily and monthly blocks, demand, discounts, GST, prorated fees, `Decimal` cents) checked against an independent interval-by-interval oracle and five properties (3062 tests); self-review pass · energatron-5000 `P4.2.6: add the cost engine`
 - 2026-11-04 · P4.2.5 · `normalise_offers` stage (current plans, newest snapshots, rules, three outputs, six checks), offer mart kinds, fixture offer zone, golden `dvc.yaml` with nine stages, pipeline tests moved to params v4 (3032 tests); self-review pass · energatron-5000 `P4.2.5: add the normalise_offers stage`

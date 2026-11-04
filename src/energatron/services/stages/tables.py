@@ -236,6 +236,20 @@ COST_TOTAL_SCHEMA: Final = pa.schema(
     ]
 )
 """`totals.parquet` of `cost_elec` (kind `elec_cost_total`, P4 spec §9)."""
+BILL_SCHEMA: Final = pa.schema(
+    [
+        ("period_start", pa.date32()),
+        ("period_end", pa.date32()),
+        ("offer_snapshot_id", pa.string()),
+        ("invoice_date", pa.date32()),
+        ("invoice_amount", MONEY),
+        ("engine_amount", MONEY),
+        ("diff", MONEY),
+        ("diff_pct", pa.float64()),
+        ("status", pa.string()),
+    ]
+)
+"""`bills.parquet` of `backtest` (kind `backtest_bill`, P4 spec §10)."""
 
 
 SUMMARY_FILENAME: Final = "summary.json"

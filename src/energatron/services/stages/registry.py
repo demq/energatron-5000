@@ -9,6 +9,7 @@ from typing import Final
 
 from energatron.core.errors import InternalError, UsageError
 from energatron.services.stages import (
+    backtest,
     catalog_index,
     cost_elec,
     localise,
@@ -49,6 +50,7 @@ STAGES: Final[Mapping[str, StageSpec]] = _build(
         usage_report.SPEC,
         normalise_offers.SPEC,
         cost_elec.SPEC,
+        backtest.SPEC,
     ]
 )
 """Every stage, in `dvc.yaml` order."""

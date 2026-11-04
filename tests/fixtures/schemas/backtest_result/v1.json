@@ -1,0 +1,21 @@
+{
+  "checks": {
+    "blobs_match_catalog": true,
+    "lines_sum": true,
+    "tariffs_resolve": true
+  },
+  "kind": "backtest_result",
+  "max_abs_diff_pct": null,
+  "periods": 5,
+  "schema_version": 1,
+  "statuses": {
+    "no_tariff": 5,
+    "not_covered": 0,
+    "outside": 0,
+    "split_tariff": 0,
+    "unmatched": 0,
+    "within": 0
+  },
+  "tariffs_configured": 0,
+  "tolerance_pct": 1.0
+}
