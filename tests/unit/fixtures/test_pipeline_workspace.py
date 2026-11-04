@@ -87,4 +87,5 @@ def test_the_newest_usage_row_of_the_second_export_is_empty(zone: RawZone) -> No
 
 def test_no_blob_is_written_outside_the_raw_zone(zone: RawZone, tmp_path: Path) -> None:
     files = [path.relative_to(zone.root) for path in zone.root.rglob("*") if path.is_file()]
-    assert all(path.parts[:2] == ("data", "raw") for path in files)
+    rules_readme = Path("config", "offer_rules.local", "README.md")  # the folder `pipeline sync` creates
+    assert all(path.parts[:2] == ("data", "raw") or path == rules_readme for path in files)

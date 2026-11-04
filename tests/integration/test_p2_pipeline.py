@@ -141,6 +141,7 @@ def test_landing_a_sapn_dataset_makes_parse_nem12_and_what_follows_it_run_again(
 
     stale = {status.name for status in runner(scratch).status()}
     assert {"catalog_index", "parse_nem12"} <= stale
-    assert runner(scratch).repro().ran == ALL_STAGES
+    assert "normalise_offers" not in stale  # no offer input changed
+    assert runner(scratch).repro().ran == [name for name in ALL_STAGES if name != "normalise_offers"]
     index = pq.read_table(scratch.root / "data" / "staged" / "elec_interval" / "index.parquet")
     assert index.num_rows == 3

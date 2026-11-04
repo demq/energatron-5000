@@ -1,0 +1,180 @@
+{
+  "as_of": "2026-11-01",
+  "kind": "offer_tariffs",
+  "schema_version": 1,
+  "tariffs": [
+    {
+      "approximations": [],
+      "brand": "manualco",
+      "customer_type": "RESIDENTIAL",
+      "discounts": [],
+      "display_name": "A made-up retained offer",
+      "distributors": [],
+      "effective_from": "2025-07-01",
+      "effective_to": null,
+      "fees": [],
+      "notes": [],
+      "offer_snapshot_id": "MANUAL-TEST-TOU~20250701T000000Z~c0f96ca1",
+      "plan_id": "MANUAL-TEST-TOU",
+      "pricing_model": "TIME_OF_USE",
+      "retailer": "manual",
+      "seasons": [
+        {
+          "clock": "LOCAL",
+          "daily_supply": "1",
+          "demand": [],
+          "end": "06-30",
+          "energy": [
+            {
+              "block_period": "P1D",
+              "blocks": [
+                {
+                  "unit_price": "0.3636363636",
+                  "volume_kwh": null
+                }
+              ],
+              "label": "PEAK",
+              "windows": [
+                {
+                  "days": [
+                    "MON",
+                    "TUE",
+                    "WED",
+                    "THU",
+                    "FRI",
+                    "SAT",
+                    "SUN"
+                  ],
+                  "end_minute": 1380,
+                  "start_minute": 960
+                }
+              ]
+            },
+            {
+              "block_period": "P1D",
+              "blocks": [
+                {
+                  "unit_price": "0.1818181818",
+                  "volume_kwh": null
+                }
+              ],
+              "label": "OFF_PEAK",
+              "windows": [
+                {
+                  "days": [
+                    "MON",
+                    "TUE",
+                    "WED",
+                    "THU",
+                    "FRI",
+                    "SAT",
+                    "SUN"
+                  ],
+                  "end_minute": 420,
+                  "start_minute": 0
+                }
+              ]
+            },
+            {
+              "block_period": "P1D",
+              "blocks": [
+                {
+                  "unit_price": "0.2727272727",
+                  "volume_kwh": null
+                }
+              ],
+              "label": "SHOULDER",
+              "windows": [
+                {
+                  "days": [
+                    "MON",
+                    "TUE",
+                    "WED",
+                    "THU",
+                    "FRI",
+                    "SAT",
+                    "SUN"
+                  ],
+                  "end_minute": 960,
+                  "start_minute": 420
+                },
+                {
+                  "days": [
+                    "MON",
+                    "TUE",
+                    "WED",
+                    "THU",
+                    "FRI",
+                    "SAT",
+                    "SUN"
+                  ],
+                  "end_minute": 1440,
+                  "start_minute": 1380
+                }
+              ]
+            }
+          ],
+          "start": "07-01"
+        }
+      ],
+      "source": "manual",
+      "status": "normalised"
+    },
+    {
+      "approximations": [],
+      "brand": "beta",
+      "customer_type": "RESIDENTIAL",
+      "discounts": [],
+      "display_name": "Beta Test Plan TEST-B@EME",
+      "distributors": [
+        "Test Networks"
+      ],
+      "effective_from": "2026-07-01",
+      "effective_to": null,
+      "fees": [],
+      "notes": [],
+      "offer_snapshot_id": "TEST-B@EME~20261001T000000Z~d6f747ba",
+      "plan_id": "TEST-B@EME",
+      "pricing_model": "SINGLE_RATE",
+      "retailer": "beta-energy",
+      "seasons": [
+        {
+          "clock": "LOCAL",
+          "daily_supply": "1.00",
+          "demand": [],
+          "end": "12-31",
+          "energy": [
+            {
+              "block_period": "P1D",
+              "blocks": [
+                {
+                  "unit_price": "0.30",
+                  "volume_kwh": null
+                }
+              ],
+              "label": "ALL",
+              "windows": [
+                {
+                  "days": [
+                    "MON",
+                    "TUE",
+                    "WED",
+                    "THU",
+                    "FRI",
+                    "SAT",
+                    "SUN"
+                  ],
+                  "end_minute": 1440,
+                  "start_minute": 0
+                }
+              ]
+            }
+          ],
+          "start": "01-01"
+        }
+      ],
+      "source": "cdr",
+      "status": "normalised"
+    }
+  ]
+}

@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.4
-- Last commit: energatron-5000 `P4.2.4: add the CDR provider and energatron fetch-offers`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3003 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.2.5
+- Last commit: energatron-5000 `P4.2.5: add the normalise_offers stage`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3032 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.5 (`normalise_offers`)
+- Next: P4.2.6 (the engine)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,16 +110,15 @@ Then clear the context and type `/next`.
   approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
   D1 rev 5 hold its §15 edits.
 - Done in P4: P4.2.1 (params v4, region v3), P4.2.2 (`Tariff`, `map_cdr`), P4.2.3 (fetch log, `offer_manual`, rules),
-  P4.2.4 (CDR provider, `fetch-offers`).
+  P4.2.4 (CDR provider, `fetch-offers`), P4.2.5 (`normalise_offers`).
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §6 (rules), §8 (`normalise_offers`: inputs, steps, outputs, six checks), §14; D1 rev 5 §9-§11 (the
-  stage contract, `package_data`).
-- A stage that reads raw zones and catalogs: `services/stages/parse_nem12.py` (blob and detector checks);
-  `services/stages/tables.py` (`write_parquet` schemas); `core/cdr_tariff.py`, `core/offer_rules.py` (the rules take
-  parsed YAML documents: the stage reads the YAML).
+- The P4 spec §7 (the engine: clock, season, label, blocks, supply, rounding, demand, fees, discounts, GST, the §7.9
+  invariants), §14 (the oracle in `tests/fixtures/oracle.py`, no `energatron` import).
+- `core/tariff.py` (the model the engine prices), `core/usage.py` (aligned demand blocks), `core/models/meter.py`
+  (`elec_interval_local` columns), `tests/fixtures/oracle.py`.
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -583,13 +582,15 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Done when: the standard checks pass; the tests of spec §14 (adapters, services) pass against a local HTTP server.
   - Handover: `CdrProvider` (`adapters/offers/cdr.py`: paging on the same host, at most 50 pages, header allow-list, `E_NETWORK` reasons) wired as `ctx.offers["cdr"]` (`ENERGATRON_CDR_ROOT` overrides the root), `services/fetch_offers.py` and `energatron fetch-offers` (filter, unchanged skip, `--all`, staging under `data/landing/.fetch-<batch>/`, one `land` commit), `fetch_offers_result` v1 (3003 tests). Decision: the result also counts `land`'s rejected files, and the log keeps per-base `listed` and `left_out` counts.
     Watch: the log's list pages hold public postcode lists verbatim (base64); only its own fields must never name the household's postcode.
-- ⬜ **P4.2.5** `normalise_offers`.
+- ✅ **P4.2.5** `normalise_offers`.
   - The stage, its three outputs and six checks, `W_OFFERS_MISSING_SNAPSHOT`, the golden `dvc.yaml`, the fixture workspace.
   - Refs: the P4 spec §6, §8, §14.
   - Files: `src/energatron/services/stages/{normalise_offers,registry}.py`, `src/energatron/core/models/costs.py`,
     `tests/unit/services/stages/test_normalise_offers.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
     `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; every check passes and fails in its test.
+  - Handover: `normalise_offers` (current plans from each base's latest error-free fetch log, newest snapshot per plan, `map_cdr` then rules; `offers.parquet`, `tariffs.json`, `summary.json`; six checks; `W_OFFERS_MISSING_SNAPSHOT`), the `offer_status`/`offer_tariffs`/`offers_summary` kinds (`core/models/costs.py`), `tests/fixtures/offer_workspace.py`, golden `dvc.yaml` with nine stages (3032 tests). Decision: a manual offer is judged effective on its own dates, so historical tariffs stay priceable for the backtest.
+    Watch: fixture raw zones now create `config/offer_rules.local/` (a DVC dependency), and tests that run `dvc repro` need `params_v4_text`.
 - ⬜ **P4.2.6** The engine.
   - `core/engine.py` (spec §7), the oracle additions in `tests/fixtures/oracle.py`, property tests.
   - Refs: the P4 spec §7, §14.
@@ -641,6 +642,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-04 · P4.2.5 · `normalise_offers` stage (current plans, newest snapshots, rules, three outputs, six checks), offer mart kinds, fixture offer zone, golden `dvc.yaml` with nine stages, pipeline tests moved to params v4 (3032 tests); self-review pass · energatron-5000 `P4.2.5: add the normalise_offers stage`
 - 2026-11-04 · P4.2.4 · CDR provider over stdlib `urllib` (tested against a local HTTP server), `fetch-offers` service and command with the local filter, unchanged skip, partial failures and one `land` commit, lock coverage, `fetch_offers_result` v1 (3003 tests); self-review pass · energatron-5000 `P4.2.4: add the CDR provider and energatron fetch-offers`
 - 2026-11-04 · P4.2.3 · fetch log and `offer_manual` models and parsers, offer rules (model, two directories, matching, effects) and three curated wholesale-estimate rules, fixture builders (2960 tests); self-review pass; spec §3.3 and §6 brought in line · energatron-5000 `P4.2.3: add the fetch log, offer_manual and offer rules`
 - 2026-11-04 · P4.2.2 · `Tariff` model with partition rules and the GST constants, `map_cdr` covering every row of the spec's §5.2 table, `make_cdr` fixture generator (2907 tests); self-review pass; on the real SAPN market every plan normalises, is approximate or is excluded with a reason · energatron-5000 `P4.2.2: add the Tariff model and the CDR mapping`

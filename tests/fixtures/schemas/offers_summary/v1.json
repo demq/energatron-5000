@@ -1,0 +1,45 @@
+{
+  "as_of": "2026-11-01",
+  "batches": {
+    "alpha": "fetch-20261101T000000Z",
+    "beta-energy": "fetch-20261101T000000Z"
+  },
+  "checks": {
+    "blobs_match_catalog": true,
+    "detector_known": true,
+    "every_offer_accounted": true,
+    "rules_valid": true,
+    "snapshot_ids_recompute": true,
+    "tariffs_partition": true
+  },
+  "current_plans": 4,
+  "kind": "offers_summary",
+  "manual": 1,
+  "missing_snapshot": 0,
+  "reasons": {
+    "controlled_load_plan": 1
+  },
+  "retailers": {
+    "alpha": {
+      "approximate": 0,
+      "excluded": 1,
+      "normalised": 2
+    },
+    "beta-energy": {
+      "approximate": 0,
+      "excluded": 0,
+      "normalised": 1
+    },
+    "manual": {
+      "approximate": 0,
+      "excluded": 0,
+      "normalised": 1
+    }
+  },
+  "schema_version": 1,
+  "statuses": {
+    "approximate": 0,
+    "excluded": 1,
+    "normalised": 4
+  }
+}

@@ -98,9 +98,9 @@ def test_spec_reads_the_mart_directory_alone_and_declares_no_params() -> None:
     assert dict(spec.outputs) == {"report": "data/reports/usage"}
 
 
-def test_it_is_registered_last_after_usage_profile() -> None:
+def test_it_is_registered_right_after_usage_profile() -> None:
     names = list(STAGES)
-    assert names[-2:] == ["usage_profile", "usage_report"]
+    assert names[names.index("usage_profile") + 1] == "usage_report"
 
 
 def test_an_empty_params_tuple_reaches_the_dvc_entry_as_the_code_entry_alone() -> None:

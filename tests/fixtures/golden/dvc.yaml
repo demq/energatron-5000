@@ -93,3 +93,17 @@ stages:
       - stages.usage_report.stage_sha256
     outs:
     - data/reports/usage
+  normalise_offers:
+    cmd: energatron stage normalise_offers
+    deps:
+    - data/raw/offer_cdr
+    - data/raw/offer_cdr_index
+    - data/raw/offer_manual
+    - config/offer_rules.local
+    params:
+    - offers
+    - pricing.gst_rate
+    - .energatron/code_fingerprint.json:
+      - stages.normalise_offers.stage_sha256
+    outs:
+    - data/marts/offers

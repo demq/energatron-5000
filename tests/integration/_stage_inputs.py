@@ -15,13 +15,15 @@ from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
 from energatron.services.stages.registry import STAGES
 from energatron.services.stages.runner import prepare_stage, run_stage
-from tests.fixtures.params_text import params_v3_text
-from tests.fixtures.pipeline_workspace import build_raw_zone
+from tests.fixtures.offer_workspace import build_offer_zone
+from tests.fixtures.params_text import params_v4_text
+from tests.fixtures.pipeline_workspace import build_raw_zone, empty_raw_zone
 
 REFERENCE_MONTHS: Final = 5
 """The fixture raw zone covers May to September: five whole local months, so five fit the reference window."""
-PARAMS_YAML: Final = params_v3_text(region=True, reference_months=REFERENCE_MONTHS)
-"""The zone and windows are filled, as `pipeline sync` leaves them: `validate_timebase` refuses `null` ones."""
+PARAMS_YAML: Final = params_v4_text(region=True, reference_months=REFERENCE_MONTHS)
+"""The region fields are filled, as `pipeline sync` leaves them: `validate_timebase` and `normalise_offers` refuse
+`null` ones."""
 _SOURCE_TS: Final = datetime(2026, 1, 2, 3, 4, 5)
 
 
@@ -112,6 +114,12 @@ def _usage_report(root: Path) -> None:
     _run_upstream(root, "usage_profile")
 
 
+def _normalise_offers(root: Path) -> None:
+    """Empty catalogs beside the fixture offer zone: landed plans, two fetch logs, a manual offer, the rules folder."""
+    empty_raw_zone(root)
+    build_offer_zone(root)
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -121,6 +129,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "localise": _localise,
     "usage_profile": _usage_profile,
     "usage_report": _usage_report,
+    "normalise_offers": _normalise_offers,
 }
 
 

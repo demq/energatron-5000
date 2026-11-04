@@ -4,7 +4,8 @@ that checks a table against one.
 Core holds no pyarrow (D1 §3), and a stage may not import another stage (D1 §11.1), so the schemas that
 `parse_nem12` writes and `merge_interval` reads and writes again live here, in the module set of every stage that
 shares them. So do `localise`'s table, which `usage_profile` reads, and the nine tables of `usage_profile`, which
-`usage_report` reads. Column names, kinds and versions are in `core.models.meter` and `core.models.usage`.
+`usage_report` reads, and the P4 offer and cost tables. Column names, kinds and versions are in `core.models.meter`,
+`core.models.usage` and `core.models.costs`.
 """
 
 from dataclasses import dataclass
@@ -179,6 +180,25 @@ class UsageTable:
     version: int
     schema: pa.Schema
     sort: tuple[str, ...]
+
+
+OFFER_STATUS_SCHEMA: Final = pa.schema(
+    [
+        ("offer_snapshot_id", pa.string()),
+        ("plan_id", pa.string()),
+        ("retailer", pa.string()),
+        ("brand", pa.string()),
+        ("display_name", pa.string()),
+        ("source", pa.string()),
+        ("pricing_model", pa.string()),
+        ("status", pa.string()),
+        ("reasons", pa.list_(pa.string())),
+        ("approximations", pa.list_(pa.string())),
+        ("notes", pa.list_(pa.string())),
+        ("rules", pa.list_(pa.string())),
+    ]
+)
+"""`offers.parquet` of `normalise_offers` (kind `offer_status`, P4 spec §8)."""
 
 
 SUMMARY_FILENAME: Final = "summary.json"

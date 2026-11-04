@@ -1,8 +1,8 @@
 """The whole P3 pipeline in a scratch workspace with real git and DVC (P3 spec §10, §13.3).
 
 Extends `test_p2_pipeline.py` by two stages: `pipeline sync` writes `dvc.yaml` and `params.yaml` (params v3), the
-fixture raw zone stands in for what `land` leaves, `DvcRunner.repro` refreshes the fingerprint and runs all eight
-stages, and `verify` then reruns them in a scratch directory. What `usage_profile` and `usage_report` depend on is
+fixture raw zone stands in for what `land` leaves, `DvcRunner.repro` refreshes the fingerprint and runs every
+stage, and `verify` then reruns them in a scratch directory. What `usage_profile` and `usage_report` depend on is
 checked by changing one input at a time and reading DVC's view of what is stale. Every value is synthetic.
 """
 
@@ -112,11 +112,10 @@ def zone(scratch: Scratch) -> RawZone:
     return build_raw_zone(scratch.root)
 
 
-def test_all_eight_stages_pass_and_verify_accepts_the_clean_state(
+def test_every_stage_passes_and_verify_accepts_the_clean_state(
     capsys: pytest.CaptureFixture[str], scratch: Scratch, zone: RawZone
 ) -> None:
-    assert len(ALL_STAGES) == 8
-    assert ALL_STAGES[-2:] == DOWNSTREAM
+    assert ALL_STAGES.index("usage_report") == ALL_STAGES.index("usage_profile") + 1
     assert runner(scratch).repro().ran == ALL_STAGES
 
     summary = UsageSummary.from_document(json.loads((scratch.root / PROFILE / "summary.json").read_text()))
