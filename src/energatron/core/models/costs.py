@@ -75,3 +75,58 @@ class OffersSummary(Persisted):
     manual: _Count
     batches: dict[str, str]  # base → the fetch batch that defined its current plans
     checks: dict[str, bool]
+
+
+# `cost_elec` (P4 spec §9) and `backtest` (§10)
+
+COST_LINE_KIND: Final = "elec_cost_line"
+COST_LINE_VERSION: Final = 1
+COST_LINE_COLUMNS: Final = (
+    "offer_snapshot_id",
+    "scenario",
+    "period_start",
+    "period_end",
+    "line",
+    "label",
+    "season",
+    "block",
+    "quantity",
+    "unit",
+    "rate",
+    "amount",
+)
+COST_LINE_SORT: Final = ("offer_snapshot_id", "scenario", "period_start", "line", "label", "season", "block")
+COST_TOTAL_KIND: Final = "elec_cost_total"
+COST_TOTAL_VERSION: Final = 1
+COST_TOTAL_COLUMNS: Final = (
+    "offer_snapshot_id",
+    "scenario",
+    "status",
+    "annual_ongoing",
+    "annual_year1",
+    "rank",
+    "approximations",
+)
+COST_TOTAL_SORT: Final = ("scenario", "rank")
+LINE_ITEMS_FILENAME: Final = "line_items.parquet"
+TOTALS_FILENAME: Final = "totals.parquet"
+COST_SUMMARY_FILENAME: Final = "summary.json"
+SCENARIOS: Final = ("conditions_met", "conditions_not_met")
+
+
+class CostSummary(Persisted):
+    """`elec_cost_summary` v1: what `cost_elec` priced, over which register and window, and the cheapest offers."""
+
+    KIND: ClassVar[str] = "elec_cost_summary"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["elec_cost_summary"] = "elec_cost_summary"
+    schema_version: Literal[1] = 1
+
+    suffix: str | None
+    window_start: str | None  # YYYY-MM, the first billing month
+    window_end: str | None
+    periods: _Count
+    scenarios: tuple[str, ...]
+    tariffs: _Count
+    cheapest: dict[str, list[str]]  # scenario → the three lowest `annual_ongoing` snapshot IDs, in rank order
+    checks: dict[str, bool]

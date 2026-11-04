@@ -143,8 +143,8 @@ class Usage:
 def prepare_usage(frame: pd.DataFrame) -> Usage:
     """Arrays of one register's placed rows (`local_start` not null), sorted by `utc_start`."""
     placed = frame[frame["local_start"].notna()].sort_values("utc_start", kind="stable")
-    utc = placed["utc_start"]
-    utc_ns = (utc.dt.tz_convert("UTC") if utc.dt.tz is not None else utc).dt.tz_localize(None)
+    utc = placed["utc_start"]  # aware UTC in `elec_interval_local`, or naive UTC
+    utc_ns = utc.dt.tz_localize(None) if utc.dt.tz is not None else utc
     local_ns = placed["local_start"].astype("datetime64[ns]").to_numpy().astype(np.int64)
     aest_ns = utc_ns.astype("datetime64[ns]").to_numpy().astype(np.int64) + _AEST_NS
     return Usage(

@@ -201,6 +201,43 @@ OFFER_STATUS_SCHEMA: Final = pa.schema(
 """`offers.parquet` of `normalise_offers` (kind `offer_status`, P4 spec §8)."""
 
 
+MONEY: Final = pa.decimal128(18, 2)
+"""Money in the cost tables: dollars to the cent (D1 §12)."""
+FINE: Final = pa.decimal128(18, 6)
+"""Quantities in the cost tables (D1 §12)."""
+RATE: Final = pa.decimal128(24, 10)
+"""Rates in the cost tables: a manual offer's GST-exclusive price is kept to ten places (D1 §12)."""
+COST_LINE_SCHEMA: Final = pa.schema(
+    [
+        ("offer_snapshot_id", pa.string()),
+        ("scenario", pa.string()),
+        ("period_start", pa.date32()),
+        ("period_end", pa.date32()),
+        ("line", pa.string()),
+        ("label", pa.string()),
+        ("season", pa.int16()),
+        ("block", pa.int16()),
+        ("quantity", FINE),
+        ("unit", pa.string()),
+        ("rate", RATE),
+        ("amount", MONEY),
+    ]
+)
+"""`line_items.parquet` of `cost_elec` and `backtest` (kind `elec_cost_line`, P4 spec §9, §10)."""
+COST_TOTAL_SCHEMA: Final = pa.schema(
+    [
+        ("offer_snapshot_id", pa.string()),
+        ("scenario", pa.string()),
+        ("status", pa.string()),
+        ("annual_ongoing", MONEY),
+        ("annual_year1", MONEY),
+        ("rank", pa.int32()),
+        ("approximations", pa.list_(pa.string())),
+    ]
+)
+"""`totals.parquet` of `cost_elec` (kind `elec_cost_total`, P4 spec §9)."""
+
+
 SUMMARY_FILENAME: Final = "summary.json"
 """The `usage_summary` document beside the nine tables in `usage_profile`'s output."""
 USAGE_TABLES: Final = (

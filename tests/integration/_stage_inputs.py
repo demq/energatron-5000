@@ -14,7 +14,7 @@ from energatron.core.canonical import JSONValue, canonical_json, sha256_hex
 from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
 from energatron.services.stages.registry import STAGES
-from energatron.services.stages.runner import prepare_stage, run_stage
+from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
 from tests.fixtures.offer_workspace import build_offer_zone
 from tests.fixtures.params_text import params_v4_text
 from tests.fixtures.pipeline_workspace import build_raw_zone, empty_raw_zone
@@ -66,6 +66,16 @@ def _catalog_index(root: Path) -> None:
 def _parse_nem12(root: Path) -> None:
     """The fixture raw zone of the P2 stages: two overlapping SAPN datasets, a SUMMARY CSV and two usage exports."""
     build_raw_zone(root)
+
+
+def run_stage_named(name: str, root: Path) -> StageResult:
+    """Run the registered stage `name` once on the workspace `root`, with its live code entry."""
+    spec = STAGES[name]
+    prepared = prepare_stage(spec, root=root, params_file=root / "params.yaml")
+    code = wiring.stage_code(name)
+    return run_stage(
+        spec, prepared.inputs, prepared.params, prepared.outputs, code=code, recorded_code=code.stage_sha256
+    )
 
 
 def _run_upstream(root: Path, *names: str) -> None:
@@ -120,6 +130,14 @@ def _normalise_offers(root: Path) -> None:
     build_offer_zone(root)
 
 
+def _cost_elec(root: Path) -> None:
+    """The fixture raw and offer zones with every upstream stage run: `cost_elec` reads the local table, the usage
+    profile's summary and the offers mart."""
+    _usage_profile(root)
+    build_offer_zone(root)
+    _run_upstream(root, "usage_profile", "normalise_offers")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -130,6 +148,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "usage_profile": _usage_profile,
     "usage_report": _usage_report,
     "normalise_offers": _normalise_offers,
+    "cost_elec": _cost_elec,
 }
 
 

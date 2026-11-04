@@ -140,6 +140,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
             "usage_profile",
             "usage_report",
             "normalise_offers",
+            "cost_elec",
         ],
         "datasets": 4,
     }
@@ -163,6 +164,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
     assert result["error"]["code"] == "E_FINGERPRINT_STALE"
     assert result["error"]["details"]["stages"] == [
         "catalog_index",
+        "cost_elec",
         "localise",
         "merge_interval",
         "normalise_offers",

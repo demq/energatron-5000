@@ -1293,7 +1293,7 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
   - naive datetimes appear only where a source carries no zone; the P1 spec lists those per source type
 - **Money:** `Decimal`, never `float`. Each line item is rounded to cents with `ROUND_HALF_UP`; totals are sums of
   rounded lines; GST is one rounded line per billing period (P4 spec §7.4, §7.8). Parquet stores money as
-  `decimal128(18, 2)` and rates and quantities as `decimal128(18, 6)`.
+  `decimal128(18, 2)`, quantities as `decimal128(18, 6)` and rates as `decimal128(24, 10)`.
 - **Energy:** kWh as float64 in Parquet.
 - **Dependencies:**
   - core: pydantic, pandas, numpy

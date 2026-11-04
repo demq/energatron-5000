@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P4.2.6
-- Last commit: energatron-5000 `P4.2.6: add the cost engine`
-- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3062 passed; pre-commit and privacy guard on the changed files 0 violations
+- Last done: P4.2.7
+- Last commit: energatron-5000 `P4.2.7: add the cost_elec stage`
+- Checks: ruff, ruff format, pyright, lint-imports clean; `pytest -q` 3082 passed; pre-commit and privacy guard on the changed files 0 violations
 - Review: none
-- Next: P4.2.7 (`cost_elec`)
+- Next: P4.2.8 (`backtest`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -109,16 +109,16 @@ Then clear the context and type `/next`.
 - P0-P3 are done and accepted. The P4 spec (`agent_docs/2026-11/2026-11-04_p4-offers-electricity-engine-spec.md`) is
   approved (Q1-Q8 as recommended, on the owner's standing instruction to review and accept each step); plan rev 12 and
   D1 rev 5 hold its §15 edits.
-- Done in P4: P4.2.1-P4.2.6 (params v4, region v3, `Tariff` and `map_cdr`, fetch log, `offer_manual`, rules, CDR
-  provider, `fetch-offers`, `normalise_offers`, the engine).
+- Done in P4: P4.2.1-P4.2.7 (params v4, region v3, `Tariff` and `map_cdr`, fetch log, `offer_manual`, rules, CDR
+  provider, `fetch-offers`, `normalise_offers`, the engine, `cost_elec`).
 - The tool repo is on GitHub (private, `origin`). The owner's iCloud backup folder is set in two git-ignored workspace
   files; a new machine needs both set again.
 
 **Read first** (for the next session)
-- The P4 spec §9 (`cost_elec`: inputs, the register, the reference window, outputs and four checks); the P3 spec §8
-  (`usage_summary`: `window_start`, `window_end`).
-- `core/engine.py` (`prepare_usage`, `price`, `Bill`), `core/models/costs.py` (add the cost kinds), `services/stages/
-  tables.py` (add the decimal schemas), `services/stages/usage_profile.py` (reads the local table).
+- The P4 spec §10 (`backtest`: periods from retailer reads, the tariff in force, invoice matching, outputs, checks and
+  two warnings); the P2 spec §9.3 (periods) and `services/stages/validate_timebase.py` (how it builds them).
+- `core/retailer_usage.py` (`read_usage_export`), `adapters/sources/retailer_txn.py` (the export's shape),
+  `services/stages/costing.py`, `services/stages/cost_elec.py`.
 
 **Facts**
 - CDR base URIs are not brands; an unknown base returns HTTP 200 with zero plans. RAA Energy is served from
@@ -598,13 +598,15 @@ warn; the historical tariff comes from the owner; no new dependency.
   - Done when: the standard checks pass; the engine equals the oracle on the fixtures; spec §7.9 holds.
   - Handover: `core/engine.py`: `prepare_usage(frame)` (arrays for both clocks), `price(tariff, usage, periods, scenario=, pricing=, by=)` → `Bill` of `LineItem`s (supply, usage by block, demand, discounts, GST, fees) and a one-off credit; equals the independent `oracle_bill` on DST-spanning half-hourly and 5-minute usage; the §7.9 properties hold (3062 tests). Decision: monthly blocks restart at a season boundary inside a period, and the season is chosen on the first season's clock.
     Watch: about 4 ms per tariff-year of 5-minute data; the scenario `backtest` prices conditional discounts like `conditions_met`.
-- ⬜ **P4.2.7** `cost_elec`.
+- ✅ **P4.2.7** `cost_elec`.
   - The stage, its three outputs and four checks, the cost table kinds, the golden `dvc.yaml`, the fixture workspace.
   - Refs: the P4 spec §9; the P3 spec §8 (`usage_summary`).
   - Files: `src/energatron/services/stages/{cost_elec,registry}.py`, `src/energatron/core/models/costs.py`,
     `tests/unit/services/stages/test_cost_elec.py`, `tests/fixtures/{pipeline_workspace.py,golden/dvc.yaml}`,
     `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; every check passes and fails in its test.
+  - Handover: `cost_elec` (the one consumption register over the P3 reference window's calendar months, every tariff in both scenarios; `line_items.parquet`, `totals.parquet` with ranks, `summary.json`; four checks), the cost kinds in `core/models/costs.py`, shared `services/stages/costing.py`, golden `dvc.yaml` with ten stages (3082 tests). Decision: rates are stored as `decimal128(24, 10)` (manual offers keep ten places; D1 §12 updated), and `lines_sum` cross-checks the two tables.
+    Watch: `cost_elec` reruns whenever the usage profile changes (it reads its summary); `run_stage_named` in `tests/integration/_stage_inputs.py` runs one stage for stage tests.
 - ⬜ **P4.2.8** `backtest`.
   - `core/retailer_txn.py`, the stage, its outputs, checks and two warnings, a transactions generator, the golden
     `dvc.yaml`, the fixture workspace.
@@ -644,6 +646,7 @@ P5 gas · P6 bundles, recommendation, decisions · P7 operations. Each starts wi
 
 ## Log (newest first)
 
+- 2026-11-05 · P4.2.7 · `cost_elec` stage (reference-window months, both scenarios, line items, ranked totals, summary, four checks), cost kinds, shared costing helpers, golden `dvc.yaml` with ten stages (3082 tests); self-review pass · energatron-5000 `P4.2.7: add the cost_elec stage`
 - 2026-11-05 · P4.2.6 · cost engine (`core/engine.py`: clocks, seasons, TOU labels, daily and monthly blocks, demand, discounts, GST, prorated fees, `Decimal` cents) checked against an independent interval-by-interval oracle and five properties (3062 tests); self-review pass · energatron-5000 `P4.2.6: add the cost engine`
 - 2026-11-04 · P4.2.5 · `normalise_offers` stage (current plans, newest snapshots, rules, three outputs, six checks), offer mart kinds, fixture offer zone, golden `dvc.yaml` with nine stages, pipeline tests moved to params v4 (3032 tests); self-review pass · energatron-5000 `P4.2.5: add the normalise_offers stage`
 - 2026-11-04 · P4.2.4 · CDR provider over stdlib `urllib` (tested against a local HTTP server), `fetch-offers` service and command with the local filter, unchanged skip, partial failures and one `land` commit, lock coverage, `fetch_offers_result` v1 (3003 tests); self-review pass · energatron-5000 `P4.2.4: add the CDR provider and energatron fetch-offers`

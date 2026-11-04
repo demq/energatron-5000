@@ -1,0 +1,31 @@
+{
+  "cheapest": {
+    "conditions_met": [
+      "TEST-FLAT@EME~20261001T000000Z~a16aaa5a",
+      "MANUAL-TEST-TOU~20250701T000000Z~c0f96ca1",
+      "TEST-TOU@EME~20261001T000000Z~31d3d029"
+    ],
+    "conditions_not_met": [
+      "TEST-FLAT@EME~20261001T000000Z~a16aaa5a",
+      "MANUAL-TEST-TOU~20250701T000000Z~c0f96ca1",
+      "TEST-B@EME~20261001T000000Z~d6f747ba"
+    ]
+  },
+  "checks": {
+    "energy_conserved": true,
+    "lines_sum": true,
+    "one_consumption_register": true,
+    "window_present": true
+  },
+  "kind": "elec_cost_summary",
+  "periods": 5,
+  "scenarios": [
+    "conditions_met",
+    "conditions_not_met"
+  ],
+  "schema_version": 1,
+  "suffix": "E1",
+  "tariffs": 4,
+  "window_end": "2025-09",
+  "window_start": "2025-05"
+}

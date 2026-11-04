@@ -107,3 +107,15 @@ stages:
       - stages.normalise_offers.stage_sha256
     outs:
     - data/marts/offers
+  cost_elec:
+    cmd: energatron stage cost_elec
+    deps:
+    - data/marts/offers
+    - data/interim/elec_interval_local
+    - data/marts/usage_profile
+    params:
+    - pricing
+    - .energatron/code_fingerprint.json:
+      - stages.cost_elec.stage_sha256
+    outs:
+    - data/marts/costs/elec
