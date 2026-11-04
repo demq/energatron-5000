@@ -21,6 +21,7 @@ from energatron.adapters.cli.commands import (
     fetch_offers,
     fingerprint,
     land,
+    offers,
     pipeline,
     stage,
     verify,
@@ -58,6 +59,7 @@ app.add_typer(pipeline.app, name="pipeline")
 app.command("verify")(verify.verify)
 app.command("land")(land.land)
 app.command("fetch-offers")(fetch_offers.fetch_offers)
+app.add_typer(offers.app, name="offers")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
