@@ -1,0 +1,14 @@
+# Curated offer rule (P4 spec §6). Public facts only.
+kind: offer_rule
+schema_version: 1
+id: io-energy-first-bill-discount
+description: >-
+  These plans publish a 60% guaranteed percent-of-bill discount whose text says it applies to the first bill only; CDR
+  has no field for that, so the engine would apply it to every bill. Excluded until a one-off percentage discount can
+  be priced.
+match: {brand: io-energy, plan_id: 'IOR115931[78]MRE1@EME'}
+effect: {exclude: first_bill_discount_unpriced}
+verified_on: "2026-11-05"
+cites:
+  - IOR1159317MRE1@EME~20260814T065645Z~cfab2a22
+  - IOR1159318MRE1@EME~20260814T065559Z~fb27d3ea

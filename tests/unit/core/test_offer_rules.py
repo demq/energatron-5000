@@ -184,11 +184,12 @@ def test_the_curated_rules_load_cite_snapshots_and_were_verified() -> None:
         "amber-wholesale",
         "flow-power-variable-estimate",
         "globird-wholesave-estimate",
+        "io-energy-first-bill-discount",
     ]
     for found in rules:
         assert found.cites
-        assert found.verified_on <= date(2026, 11, 4)
-        assert found.effect.approximate == "wholesale_estimate"
+        assert found.verified_on <= date(2026, 11, 5)
+        assert (found.effect.approximate or found.effect.exclude) is not None
 
 
 def test_the_curated_wholesale_rules_match_as_intended() -> None:
@@ -203,3 +204,11 @@ def test_the_curated_wholesale_rules_match_as_intended() -> None:
     assert applied(
         a_tariff(), *rules, brand="globird", display_name="WHOLESAVE Resi (Two Rate) estimate-SAPN"
     ).rules == ("globird-wholesave-estimate",)
+
+
+def test_the_curated_first_bill_rule_excludes_only_its_two_plans() -> None:
+    rules = load_rules(curated_files(), [])
+    hit = applied(a_tariff(), *rules, brand="io-energy", plan_id="IOR1159318MRE1@EME")
+    assert hit.rules == ("io-energy-first-bill-discount",)
+    assert isinstance(hit.result, Excluded)
+    assert applied(a_tariff(), *rules, brand="io-energy", plan_id="IOR1159319MRE1@EME").rules == ()

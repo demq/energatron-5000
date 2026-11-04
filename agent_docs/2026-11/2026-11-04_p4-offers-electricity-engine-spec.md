@@ -327,7 +327,8 @@ cites: [<offer snapshot IDs the rule was derived from>]
 - P4 ships three curated rules, each `approximate` with reason `wholesale_estimate` for plans whose CDR rates are
   illustrative wholesale estimates (verified against their `variation` text and names), citing the snapshot IDs seen
   when they were written: `amber-wholesale` (brand `amber`), `flow-power-variable-estimate` and
-  `globird-wholesave-estimate` (by display name).
+  `globird-wholesave-estimate` (by display name). Acceptance (2026-11-05) added `io-energy-first-bill-discount`, which excludes two plans whose
+  guaranteed percentage discount applies to the first bill only (free text CDR can't express).
 
 ---
 
