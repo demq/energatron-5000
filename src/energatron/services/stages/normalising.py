@@ -148,7 +148,7 @@ def normalise(run: StageRun, config: FuelConfig) -> None:
             if plan.base == base and config.takes(plan.fuel_type)
         }
     )
-    as_of = _as_of(latest, manual)
+    as_of = _as_of(latest, [(record, data) for record, data in manual if _manual_fuel(data) == config.fuel])
     snapshots = _newest_snapshots(cdr, findings)
     rows: list[_Row] = []
     missing = 0
@@ -260,6 +260,14 @@ def _latest_logs(logs: Iterable[OfferFetchLog]) -> dict[str, OfferFetchLog]:
             if retailer.error is None:
                 latest[retailer.base] = log
     return latest
+
+
+def _manual_fuel(blob: bytes) -> Fuel | None:
+    """The fuel of a manual offer's contract, or None when the document can't be read."""
+    try:
+        return OfferManual.from_document(yaml.safe_load(blob.decode("utf-8"))).fuel
+    except ValueError, yaml.YAMLError, InvalidInputError, SchemaTooNewError, RecursionError:
+        return None
 
 
 def _as_of(latest: dict[str, OfferFetchLog], manual: list[tuple[CatalogRecord, bytes]]) -> date | None:

@@ -3,15 +3,20 @@ same six checks as `normalise_offers`, the offer rules, and `gas_offer_tariffs`.
 
 import json
 from pathlib import Path
+from typing import Any
 
 import pyarrow.parquet as pq
 import pytest
 
-from energatron.core.canonical import content_hash, sha256_hex
-from energatron.core.errors import WarningCode
-from energatron.core.models.catalog import SourceType
+from energatron.core.canonical import canonical_json, content_hash, sha256_hex
+from energatron.core.cdr_tariff import Excluded
+from energatron.core.errors import CheckFailedError, WarningCode
+from energatron.core.gas_tariff import GasTariff
+from energatron.core.ids import dataset_id
+from energatron.core.models.catalog import SourceType, blob_key
 from energatron.core.models.costs import GasOfferTariffs, OffersSummary
 from energatron.core.models.provenance import StageCode
+from energatron.services.stages import normalising
 from energatron.services.stages.registry import get_stage
 from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
 from tests.fixtures import make_cdr as cdr
@@ -24,7 +29,7 @@ from tests.fixtures.offer_workspace import (
     build_offer_zone,
 )
 from tests.fixtures.params_text import params_v5_text
-from tests.fixtures.pipeline_workspace import empty_raw_zone, land_blob
+from tests.fixtures.pipeline_workspace import empty_raw_zone, land_blob, make_record
 
 CHECKS = [
     "blobs_match_catalog",
@@ -37,10 +42,10 @@ CHECKS = [
 OUT = Path("data/marts/offers_gas")
 
 
-def normalise(root: Path) -> StageResult:
-    spec = get_stage("normalise_gas_offers")
+def normalise(root: Path, stage: str = "normalise_gas_offers") -> StageResult:
+    spec = get_stage(stage)
     prepared = prepare_stage(spec, root=root, params_file=root / "params.yaml")
-    source = sha256_hex(b"normalise_gas_offers")
+    source = sha256_hex(stage.encode())
     digest = content_hash({"source_sha256": source, "packages": {}, "python": "3.14.0"})
     code = StageCode(stage_sha256=digest, source_sha256=source, python="3.14.0", packages={}, files=["__init__.py"])
     return run_stage(
@@ -119,3 +124,57 @@ def test_no_offer_data_gives_empty_outputs(tmp_path: Path) -> None:
     (tmp_path / "params.yaml").write_text(params_v5_text(region=True), encoding="utf-8")
     normalise(tmp_path)
     assert GasOfferTariffs.from_document(json.loads((tmp_path / OUT / "tariffs.json").read_bytes())).tariffs == ()
+
+
+def land_unreadable_manual(root: Path) -> None:
+    """A catalogued manual offer whose blob no longer validates (as after a schema change)."""
+    valid = make_record(SourceType.OFFER_MANUAL, "x.yaml", cdr.offer_manual_text("MANUAL-BROKEN").encode("utf-8"))
+    stub = b"kind: offer_manual\nschema_version: 2\n"
+    digest = sha256_hex(stub)
+    ident = dataset_id(SourceType.OFFER_MANUAL.value, valid.source_ts, digest)
+    record = valid.model_copy(
+        update={
+            "dataset_id": ident,
+            "sha256": digest,
+            "bytes": len(stub),
+            "stored_path": blob_key(SourceType.OFFER_MANUAL, ident, ".yaml"),
+        }
+    )
+    (root / record.stored_path).parent.mkdir(parents=True, exist_ok=True)
+    (root / record.stored_path).write_bytes(stub)
+    catalog = root / "data/raw/offer_manual/_catalog.jsonl"
+    catalog.write_bytes(catalog.read_bytes() + canonical_json(record.model_dump(mode="json")) + b"\n")
+
+
+@pytest.mark.parametrize("stage", ["normalise_offers", "normalise_gas_offers"])
+def test_an_unreadable_manual_offer_is_accounted_in_both_stages(zone: OfferZone, stage: str) -> None:
+    land_unreadable_manual(zone.root)
+    found = normalise(zone.root, stage)
+    assert all(check.status == "pass" for check in found.checks)
+
+
+def test_a_missing_gas_snapshot_is_not_the_electricity_stages(zone: OfferZone) -> None:
+    newer = cdr.fetch_log(
+        batch="fetch-20261102T000000Z",
+        fetched_at="2026-11-02T00:00:00Z",
+        retailers=[("alpha", [])],
+        selected=[cdr.selected("NOT-LANDED@EME", fuel_type="GAS")],
+        gas_distributor=cdr.GAS_DISTRIBUTOR,
+    )
+    land_blob(zone.root, SourceType.OFFER_CDR_INDEX, "fetch-log-3.json", cdr.fetch_log_body(newer))
+    found = normalise(zone.root, "normalise_offers")
+    assert list(found.warnings) == []
+    summary = OffersSummary.from_document(json.loads((zone.root / "data/marts/offers/summary.json").read_bytes()))
+    assert (summary.current_plans, summary.missing_snapshot) == (1, 0)  # beta-energy's plan; alpha's list is empty
+
+
+def test_an_exclusion_without_a_reason_fails_every_offer_accounted(
+    zone: OfferZone, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def broken(*args: Any, **kwargs: Any) -> GasTariff | Excluded:
+        return Excluded(reasons=())
+
+    monkeypatch.setattr(normalising, "map_cdr_gas", broken)
+    with pytest.raises(CheckFailedError) as caught:
+        normalise(zone.root)
+    assert caught.value.details["failed"] == ["every_offer_accounted"]

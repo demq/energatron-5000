@@ -65,13 +65,14 @@ def _period(
 ) -> list[LineItem]:
     first, last = period.first, period.last
     counts = season_days(season_of, period)
+    closing = season_of[period.last.strftime("%m-%d")]  # takes the remainder (the last season in date order)
+    shares = {index: six(period.mj * days / period.days) for index, days in counts.items() if index != closing}
+    shares[closing] = period.mj - sum(shares.values(), Decimal(0))
     supply: list[LineItem] = []
     usage: list[LineItem] = []
-    given = Decimal(0)
-    for position, (index, days) in enumerate(counts.items()):
+    for index, days in counts.items():
         season = tariff.seasons[index]
-        share = period.mj - given if position == len(counts) - 1 else six(period.mj * days / period.days)
-        given += share
+        share = shares[index]
         quantity = Decimal(days)
         supply.append(
             LineItem(

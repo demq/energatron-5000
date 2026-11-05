@@ -70,7 +70,7 @@ def _run(run: StageRun) -> None:
             line_records.extend(costing.cost_line_records(tariff.offer_snapshot_id, scenario, bill.lines))
             totals.append(_total(tariff, scenario, bill))
             conserved = conserved and _energy_conserved(bill, rows, periods)
-    _rank(totals)
+    costing.rank(totals, SCENARIOS)
     sums_ok = _lines_sum(line_records, totals, periods)
 
     output = run.output("costs")
@@ -103,7 +103,7 @@ def _run(run: StageRun) -> None:
         periods=len(periods),
         scenarios=SCENARIOS,
         tariffs=len(tariffs) if priced else 0,
-        cheapest={scenario: _cheapest(totals, scenario) for scenario in SCENARIOS},
+        cheapest={scenario: costing.cheapest(totals, scenario, CHEAPEST) for scenario in SCENARIOS},
         checks=checks,
     )
     write_json(output / COST_SUMMARY_FILENAME, cast(JSONValue, cost_summary.model_dump(mode="json")))
@@ -156,22 +156,6 @@ def _total(tariff: Tariff, scenario: str, bill: Bill) -> dict[str, object]:
         "rank": 0,
         "approximations": list(tariff.approximations),
     }
-
-
-def _rank(totals: list[dict[str, object]]) -> None:
-    """Rank 1 is the lowest `annual_ongoing` in its scenario; ties go to the smaller snapshot ID."""
-    for scenario in SCENARIOS:
-        ordered = sorted(
-            (row for row in totals if row["scenario"] == scenario),
-            key=lambda row: (cast(Decimal, row["annual_ongoing"]), cast(str, row["offer_snapshot_id"])),
-        )
-        for rank, row in enumerate(ordered, start=1):
-            row["rank"] = rank
-
-
-def _cheapest(totals: Sequence[dict[str, object]], scenario: str) -> list[str]:
-    ranked = sorted((row for row in totals if row["scenario"] == scenario), key=lambda row: cast(int, row["rank"]))
-    return [cast(str, row["offer_snapshot_id"]) for row in ranked[:CHEAPEST]]
 
 
 def _lines_sum(

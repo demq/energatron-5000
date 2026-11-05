@@ -176,3 +176,15 @@ def test_a_single_rate_tariff_charges_mj_times_the_rate() -> None:
     ).lines
     (usage,) = [line for line in lines if line.line == "usage"]
     assert usage.amount == (Decimal("1234.56") * Decimal("0.04321")).quantize(Decimal("0.01"))
+
+
+def test_the_season_of_the_last_day_takes_the_remainder_when_a_period_wraps_a_season() -> None:
+    period = GasPeriod(date(2026, 5, 20), date(2026, 10, 10), Decimal("1000.00"))  # summer, winter, summer
+    lines = price_gas(seasonal(), [period], scenario="conditions_met", pricing=PRICING).lines
+    by_season = {
+        season: sum((line.quantity for line in lines if line.line == "usage" and line.season == season), Decimal(0))
+        for season in (0, 1)
+    }
+    days = period.days
+    assert by_season[0] == (Decimal("1000.00") * 122 / days).quantize(Decimal("0.000001"))  # winter: Jun-Sep
+    assert by_season[1] == Decimal("1000.00") - by_season[0]
