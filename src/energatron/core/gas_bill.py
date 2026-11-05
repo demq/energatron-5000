@@ -160,7 +160,8 @@ def combine(bills: Sequence[BillUsage]) -> Periods:
             overlap = True
         elif previous_end is not None and not follows:
             gaps.append((previous_end + ONE_DAY, bill.period_start - ONE_DAY))
-        if current is not None and current.estimated and follows:
+        joins = current is not None and current.estimated and bill.period_start == current.end + ONE_DAY and not overlap
+        if current is not None and joins:
             current = UsagePeriod(
                 start=current.start,
                 end=bill.period_end,

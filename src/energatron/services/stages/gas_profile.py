@@ -89,7 +89,7 @@ def _run(run: StageRun) -> None:
         "periods_contiguous_or_listed": not found.overlap,
         "mj_conserved": sum((period.mj for period in found.periods), Decimal(0)) == bill_mj
         and sum((month.mj for month in months), Decimal(0)) == bill_mj,
-        "read_types_flagged": sum(period.bills for period in found.periods) == len(bills),
+        "read_types_flagged": _flags_match(found.periods, bills),
     }
     summary = GasProfileSummary(
         periods=len(found.periods),
@@ -115,6 +115,15 @@ def _run(run: StageRun) -> None:
     run.check("periods_contiguous_or_listed", checks["periods_contiguous_or_listed"], gaps=len(found.gaps))
     run.check("mj_conserved", checks["mj_conserved"])
     run.check("read_types_flagged", checks["read_types_flagged"], estimated=summary.estimated_periods)
+
+
+def _flags_match(periods: tuple[UsagePeriod, ...], bills: list[BillUsage]) -> bool:
+    """Every period holds bills and is `estimated` exactly when the bill it ends with ends on an estimated read."""
+    last_bill = {bill.period_end: bill for bill in bills}
+    return sum(period.bills for period in periods) == len(bills) and all(
+        period.end in last_bill and period.estimated == (last_bill[period.end].end_read_type == "estimate")
+        for period in periods
+    )
 
 
 def _period_row(period: UsagePeriod, in_reference: set[tuple[date, date]]) -> dict[str, object]:

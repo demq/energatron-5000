@@ -4,10 +4,13 @@ that `energatron gas-bill new` writes.
 A record holds no identifier: the MIRN, account, invoice and reference numbers stay in the PDF, which the record names
 only by `pdf_dataset_id`, and an unknown key is refused, so a pasted number has nowhere to go. Every number is a quoted
 decimal string, kept as a `Decimal` with the places it was written with (the MJ check compares at the printed
-precision). Rates are dollars per unit, GST-exclusive; amounts are signed. Pure: no I/O.
+precision), and bounded to the places the stage tables hold: money 2, quantities 6, rates 10. Reads are listed oldest
+first, so the last read is the period's closing one. Rates are dollars per unit, GST-exclusive; amounts are signed.
+Pure: no I/O.
 """
 
 import re
+from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
 from typing import Annotated, ClassVar, Final, Literal, Self
@@ -36,6 +39,18 @@ def _decimal_text(value: object) -> Decimal:
     return Decimal(value)
 
 
+def _places(most: int) -> Callable[[Decimal], Decimal]:
+    """At most `most` decimal places: the stages' tables hold money to 2, quantities to 6 and rates to 10 (D1 §12)."""
+
+    def check(value: Decimal) -> Decimal:
+        exponent = value.as_tuple().exponent
+        if not isinstance(exponent, int) or -exponent > most:
+            raise ValueError(f"at most {most} decimal places")
+        return value
+
+    return check
+
+
 def _non_negative(value: Decimal) -> Decimal:
     if value < 0:
         raise ValueError("must not be negative")
@@ -54,10 +69,14 @@ def _gas_bill_id(value: str) -> str:
     return value
 
 
-Amount = Annotated[Decimal, BeforeValidator(_decimal_text)]
-"""A signed decimal string."""
-NonNegative = Annotated[Decimal, BeforeValidator(_decimal_text), AfterValidator(_non_negative)]
-Positive = Annotated[Decimal, BeforeValidator(_decimal_text), AfterValidator(_positive)]
+Money = Annotated[Decimal, BeforeValidator(_decimal_text), AfterValidator(_places(2))]
+"""A signed dollar amount, to the cent."""
+Rate = Annotated[Decimal, BeforeValidator(_decimal_text), AfterValidator(_places(10))]
+"""A signed price per unit."""
+NonNegative = Annotated[
+    Decimal, BeforeValidator(_decimal_text), AfterValidator(_non_negative), AfterValidator(_places(6))
+]
+Positive = Annotated[Decimal, BeforeValidator(_decimal_text), AfterValidator(_positive), AfterValidator(_places(6))]
 
 
 class GasRead(FrozenModel):
@@ -87,8 +106,8 @@ class GasLine(FrozenModel):
     label: Annotated[str, AfterValidator(trimmed_text("lines.label"))]
     quantity: NonNegative | None = None
     unit: GasUnit | None = None
-    rate: Amount | None = None
-    amount: Amount
+    rate: Rate | None = None
+    amount: Money
     gst_free: Annotated[bool, Field(strict=True)] = False
 
     @model_validator(mode="after")
@@ -121,14 +140,17 @@ class GasBillRecord(Persisted):
     period_end: date
     reads: Annotated[tuple[GasRead, ...], Field(min_length=1)]
     lines: Annotated[tuple[GasLine, ...], Field(min_length=1)]
-    subtotal: Amount
-    gst: Amount
-    total: Amount
+    subtotal: Money
+    gst: Money
+    total: Money
 
     @model_validator(mode="after")
-    def _period_is_ordered(self) -> Self:
+    def _period_and_reads_are_ordered(self) -> Self:
         if self.period_start > self.period_end:
             raise InvalidInputError("The bill period starts after it ends.", field="period_start")
+        dates = [read.read_date for read in self.reads]
+        if dates != sorted(dates):
+            raise InvalidInputError("The reads must be listed oldest first.", field="reads")
         return self
 
     @property

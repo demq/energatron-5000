@@ -175,3 +175,11 @@ def test_monthly_spreads_each_period_evenly_and_keeps_every_mj() -> None:
     assert months[0].mj == Decimal("50.005000")
     assert sum((m.mj for m in months), Decimal(0)) == Decimal("100.01")
     assert months[0].mj_per_day == Decimal("3.333667")
+
+
+def test_a_bill_inside_an_earlier_one_joins_nothing() -> None:
+    found = combine(
+        [bill((8, 1), (9, 30), "100"), bill((8, 10), (8, 31), "10", "estimate"), bill((9, 1), (9, 30), "20")]
+    )
+    assert found.overlap
+    assert all(period.bills == 1 for period in found.periods)

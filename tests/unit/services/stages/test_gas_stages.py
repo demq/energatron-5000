@@ -5,20 +5,25 @@ The workspace is `empty_raw_zone` plus `build_gas_zone`; every record is generat
 """
 
 import json
+from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
 from energatron.core.canonical import canonical_json, content_hash, sha256_hex
 from energatron.core.errors import CheckFailedError, WarningCode
+from energatron.core.gas_bill import Periods
 from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType, blob_key
 from energatron.core.models.gas import GasBillsSummary, GasProfileSummary
 from energatron.core.models.provenance import StageCode
+from energatron.services.stages import gas_profile
 from energatron.services.stages.registry import get_stage
 from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
 from tests.fixtures import make_gas as gas
@@ -158,11 +163,30 @@ def test_no_records_give_empty_outputs_that_pass(root: Path) -> None:
     assert (summary.periods, summary.reference_days, summary.partial_year) == (0, 0, True)
 
 
-def test_a_tampered_blob_fails_blobs_match_catalog(zone: GasZone, root: Path) -> None:
-    lines = (root / "data/raw/gas_bill_record/_catalog.jsonl").read_text(encoding="utf-8").splitlines()
-    (stored,) = [json.loads(line)["stored_path"] for line in lines if json.loads(line)["dataset_id"] == zone.records[2]]
+def catalog_lines(root: Path) -> list[dict[str, Any]]:
+    text = (root / "data/raw/gas_bill_record/_catalog.jsonl").read_text(encoding="utf-8")
+    return [json.loads(line) for line in text.splitlines()]
+
+
+def write_catalog(root: Path, lines: list[dict[str, Any]]) -> None:
+    data = b"".join(canonical_json(line) + b"\n" for line in lines)
+    (root / "data/raw/gas_bill_record/_catalog.jsonl").write_bytes(data)
+
+
+def test_a_tampered_newest_record_fails_and_leaves_its_pdf_out(zone: GasZone, root: Path) -> None:
+    (stored,) = [line["stored_path"] for line in catalog_lines(root) if line["dataset_id"] == zone.records[0]]
     (root / stored).write_bytes((root / stored).read_bytes() + b"# tampered\n")
-    assert failed_checks(root) == ["blobs_match_catalog"]
+    assert failed_checks(root) == ["blobs_match_catalog"]  # August's older, wrong record isn't revived
+    assert (bills_summary(root).current, bills_summary(root).records) == (2, 4)
+
+
+def test_an_unknown_detector_version_fails_detector_known(zone: GasZone, root: Path) -> None:
+    lines = catalog_lines(root)
+    for line in lines:
+        if line["dataset_id"] == zone.records[2]:
+            line["detector"]["version"] = 99
+    write_catalog(root, lines)
+    assert failed_checks(root) == ["detector_known"]
 
 
 @pytest.mark.usefixtures("zone")
@@ -179,7 +203,12 @@ def test_a_record_whose_pdf_is_not_landed_fails_pdf_landed(root: Path) -> None:
 
 @pytest.mark.parametrize(
     ("field", "check"),
-    [("mj", ["reads_recompute", "usage_matches_reads"]), ("total", ["totals_recompute"])],
+    [
+        ("mj", ["reads_recompute", "usage_matches_reads"]),
+        ("total", ["totals_recompute"]),
+        ("supply_days", ["days_match", "lines_recompute"]),
+        ("usage_amount", ["lines_recompute", "totals_recompute"]),
+    ],
 )
 def test_a_correction_that_breaks_a_rule_fails_its_check(
     zone: GasZone, root: Path, field: str, check: list[str]
@@ -187,8 +216,12 @@ def test_a_correction_that_breaks_a_rule_fails_its_check(
     document = bill_records(zone.pdfs)[2]
     if field == "mj":
         document["reads"][0]["mj"] = "1.00"
-    else:
+    elif field == "total":
         document["total"] = "1.00"
+    elif field == "supply_days":
+        document["lines"][1]["quantity"] = "29"
+    else:
+        document["lines"][0]["amount"] = "1.00"
     land_record(root, document)  # landed later: it replaces October's record
     assert failed_checks(root) == check
 
@@ -247,3 +280,45 @@ def test_the_reference_follows_the_params(root: Path) -> None:
     run(root, "gas_profile")
     summary = profile_summary(root)
     assert (summary.reference_start, summary.reference_bills, summary.partial_year) == (date(2026, 9, 1), 2, False)
+
+
+def rewrite_bills(root: Path, change: Callable[[list[dict[str, Any]]], list[dict[str, Any]]]) -> None:
+    """Rewrite `gas_bills`' table by hand, as a broken upstream would leave it."""
+    path = root / BILLS_OUT / "bills.parquet"
+    table = pq.read_table(path)
+    rows = change(table.to_pylist())
+    pq.write_table(pa.Table.from_pylist(rows, schema=table.schema), path)
+
+
+@pytest.mark.usefixtures("zone")
+def test_an_overlap_in_the_bills_table_fails_periods_contiguous_or_listed(root: Path) -> None:
+    run(root, "gas_bills")
+    rewrite_bills(
+        root, lambda rows: [*rows, {**rows[-1], "period_start": date(2026, 10, 20), "period_end": date(2026, 11, 20)}]
+    )
+    assert failed_checks(root, "gas_profile") == ["periods_contiguous_or_listed"]
+
+
+@pytest.mark.usefixtures("zone")
+@pytest.mark.parametrize(
+    ("broken", "check"),
+    [
+        (
+            lambda found: replace(
+                found, periods=(replace(found.periods[0], mj=found.periods[0].mj + 1), *found.periods[1:])
+            ),
+            "mj_conserved",
+        ),
+        (
+            lambda found: replace(found, periods=(replace(found.periods[0], estimated=True), *found.periods[1:])),
+            "read_types_flagged",
+        ),
+    ],
+)
+def test_a_broken_combination_fails_its_invariant(
+    root: Path, monkeypatch: pytest.MonkeyPatch, broken: Callable[[Periods], Periods], check: str
+) -> None:
+    run(root, "gas_bills")
+    real = gas_profile.combine
+    monkeypatch.setattr(gas_profile, "combine", lambda bills: broken(real(bills)))
+    assert failed_checks(root, "gas_profile") == [check]

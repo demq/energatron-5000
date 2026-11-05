@@ -96,7 +96,7 @@ Then clear the context and type `/next`.
 
 ## State
 
-- Current: none
+- Current: P5.2.4, started 2026-11-05
 - Last done: P5.2.3
 - Last commit: energatron-5000 `P5.2.3: add the gas_bills and gas_profile stages`
 - Checks: tool repo pytest -q 3240 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
@@ -142,7 +142,7 @@ Then clear the context and type `/next`.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
-none
+P5.2.4 Gas offers: `GasTariff`, `map_cdr_gas`, `offer_manual` v2, `normalise_gas_offers`.
 
 ## Tasks
 
@@ -556,8 +556,8 @@ gas blocks prorated by days; the tariff in force transcribed from the bill; the 
   - Refs: the P5 spec §6, §7, §11, §13; the P2 spec (stage checks pattern).
   - Files: the modules above, tests.
   - Done when: the standard checks pass; every check has a passing and a failing test.
-  - Handover: `core/gas_bill.py` (checks at the printed MJ precision, combining, gaps, reference, monthly), stages `gas_bills` (ten checks, newest record per PDF) and `gas_profile` (three checks, `W_GAS_GAP`), `raw_zone.py` shared reader, gas fixture zone; golden `dvc.yaml` with 13 stages. Different from the spec: `lines.parquet` has `gst_free`, the profile summary `reference_bills`, the `pdfs` input is the gas_bill directory (catalog only read). Watch: a fresh review runs on the commit.
-- ⬜ **P5.2.4** Gas offers: `GasTariff`, `map_cdr_gas`, `offer_manual` v2, `normalise_gas_offers`.
+  - Handover: `core/gas_bill.py` (checks at the printed MJ precision, combining, gaps, reference, monthly), stages `gas_bills` (ten checks, newest record per PDF) and `gas_profile` (three checks, `W_GAS_GAP`), `raw_zone.py` shared reader, gas fixture zone; golden `dvc.yaml` with 13 stages. Different from the spec: `lines.parquet` has `gst_free`, the profile summary `reference_bills`, the `pdfs` input is the gas_bill directory (catalog only read). Fresh review (2026-11-05): approve with changes, 4 should-fix and 3 nits, all fixed in a follow-up commit (bounded decimal places, reads oldest first, a PDF whose newest record is unusable has none, \`read_types_flagged\` recomputed, failing tests for every check).
+- 🔄 **P5.2.4** Gas offers: `GasTariff`, `map_cdr_gas`, `offer_manual` v2, `normalise_gas_offers`.
   - `core/gas_tariff.py`, `core/cdr_gas_tariff.py` (every row of §5.2), `offer_manual` v2 (`gasContract`), the shared
     normalise implementation with the fuel filter in `normalise_offers`; `make_cdr` gas contracts.
   - Refs: the P5 spec §5, §8, §13; the P4 spec §5, §6, §8.
@@ -588,6 +588,7 @@ P6 bundles, recommendation, decisions · P7 operations. Each starts with its own
 
 ## Log (newest first)
 
+- 2026-11-05 · P5.2.3 · fresh-review findings fixed (4 should-fix, 3 nits) · energatron-5000 `P5.2.3: fix the review findings in the gas bill stages`
 - 2026-11-05 · P5.2.3 · gas_bills and gas_profile stages, core/gas_bill.py, the fixture gas zone (3240 tests); fresh review on the commit · energatron-5000 `P5.2.3: add the gas_bills and gas_profile stages`
 - 2026-11-05 · P5.2.2 · gas_bill_record model and parser, gas-bill new, gas_bill_scaffold_result, make_gas fixtures (3182 tests); self-review pass · energatron-5000 `P5.2.2: add gas bill records and energatron gas-bill new`
 - 2026-11-05 · P5.2.1 · params v5, region v4, offer_fetch_log v2, per-fuel distributor filter, W_GAS_GAP and W_GAS_PARTIAL_YEAR (3143 tests); self-review pass · energatron-5000 `P5.2.1: add params v5, region profile v4 and the per-fuel fetch filter`

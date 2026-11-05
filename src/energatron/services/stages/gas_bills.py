@@ -4,7 +4,8 @@ Inputs: the landed records (`data/raw/gas_bill_record`, read whole) and the gas 
 each record's PDF is landed; the PDFs aren't read). The newest landed record per PDF is current; older ones are
 superseded corrections. Every check fails the stage: a mismatch is a transcription error the owner fixes by landing a
 corrected record. Outputs: `bills.parquet`, `reads.parquet`, `lines.parquet` and `summary.json`. Workspace data: the
-household's bills, never written to the tool repo. The retailer and plan name stay in the records.
+household's bills, never written to the tool repo. The retailer and plan name stay in the records. A PDF whose newest
+record can't be used (a changed blob, an unknown detector, a record that no longer validates) has no current record.
 """
 
 from decimal import Decimal
@@ -70,7 +71,9 @@ def _run(run: StageRun) -> None:
             invalid.append(catalog_record.dataset_id)
         else:
             parsed.append((catalog_record, record))
-    current = _current(parsed)
+    newest = _newest_per_pdf(catalog_records(run.input("records"), SourceType.GAS_BILL_RECORD))
+    current = _current(parsed, newest)
+    current_ids = {ident for ident, _ in current}
     results = {ident: check_record(record, tolerance=tolerance, gst_rate=gst_rate) for ident, record in current}
     failing: dict[str, list[str]] = {name: [] for name in CHECKS}
     for ident, record in current:
@@ -92,9 +95,9 @@ def _run(run: StageRun) -> None:
     _write_tables(output, current, results)
     periods = [(record.period_start, record.period_end) for _, record in current]
     summary = GasBillsSummary(
-        records=len(parsed) + len(invalid),
+        records=len(parsed) + len(invalid) + len(zone.mismatched) + len(zone.unknown_detector),
         current=len(current),
-        superseded=len(parsed) - len(current),
+        superseded=sum(catalog_record.dataset_id not in current_ids for catalog_record, _ in parsed),
         first_period_start=min((start for start, _ in periods), default=None),
         last_period_end=max((end for _, end in periods), default=None),
         checks=checks,
@@ -116,16 +119,31 @@ def _parse(data: bytes) -> GasBillRecord | None:
         return None
 
 
-def _current(parsed: list[tuple[CatalogRecord, GasBillRecord]]) -> list[tuple[str, GasBillRecord]]:
-    """Per PDF, the newest landed record (by `landed_at`, then dataset ID), in period order."""
-    newest: dict[str, tuple[CatalogRecord, GasBillRecord]] = {}
-    for catalog_record, record in parsed:
-        held = newest.get(record.pdf_dataset_id)
-        key = (catalog_record.landed_at, catalog_record.dataset_id)
-        if held is None or key > (held[0].landed_at, held[0].dataset_id):
-            newest[record.pdf_dataset_id] = (catalog_record, record)
-    ordered = sorted(newest.values(), key=lambda found: (found[1].period_start, found[0].dataset_id))
-    return [(catalog_record.dataset_id, record) for catalog_record, record in ordered]
+def _newest_per_pdf(records: list[CatalogRecord]) -> dict[str, str]:
+    """Per PDF (the catalog's `extra.pdf_dataset_id`), the dataset ID of the newest landed record, whether or not its
+    blob turns out usable: a newest record that can't be read leaves its PDF out rather than reviving an older one."""
+    newest: dict[str, CatalogRecord] = {}
+    for record in records:
+        pdf = record.extra.get("pdf_dataset_id")
+        if not isinstance(pdf, str):
+            continue
+        held = newest.get(pdf)
+        if held is None or (record.landed_at, record.dataset_id) > (held.landed_at, held.dataset_id):
+            newest[pdf] = record
+    return {pdf: record.dataset_id for pdf, record in newest.items()}
+
+
+def _current(
+    parsed: list[tuple[CatalogRecord, GasBillRecord]], newest: dict[str, str]
+) -> list[tuple[str, GasBillRecord]]:
+    """The parsed records that are their PDF's newest landed record, in period order."""
+    chosen = [
+        (catalog_record, record)
+        for catalog_record, record in parsed
+        if newest.get(record.pdf_dataset_id) == catalog_record.dataset_id
+    ]
+    chosen.sort(key=lambda found: (found[1].period_start, found[0].dataset_id))
+    return [(catalog_record.dataset_id, record) for catalog_record, record in chosen]
 
 
 def _write_tables(output: Path, current: list[tuple[str, GasBillRecord]], results: dict[str, RecordChecks]) -> None:

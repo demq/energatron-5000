@@ -62,6 +62,10 @@ def test_a_consistent_record_validates_and_keeps_its_printed_places() -> None:
         with_line(1, unit="MJ"),
         with_line(1, rate=None),
         with_line(0, gst_free="yes"),
+        with_line(0, amount="12.345"),  # money holds cents
+        with_line(0, rate="0.12345678901"),  # rates hold ten places
+        with_read(0, heating_value="38.4017123"),  # quantities hold six
+        doc(gst="1.001"),
     ],
 )
 def test_a_record_breaking_a_rule_is_invalid_input(document: dict[str, Any]) -> None:
@@ -90,5 +94,12 @@ def test_the_skeleton_names_its_pdf_reads_as_yaml_and_does_not_validate() -> Non
         gas.PDF_ID,
     )
     assert [line["line"] for line in document["lines"]] == ["usage", "supply"]
+    with pytest.raises(InvalidInputError):
+        GasBillRecord.from_document(document)
+
+
+def test_reads_listed_newest_first_are_refused() -> None:
+    document = gas.record(volumes=(10, 20))
+    document["reads"] = list(reversed(document["reads"]))
     with pytest.raises(InvalidInputError):
         GasBillRecord.from_document(document)
