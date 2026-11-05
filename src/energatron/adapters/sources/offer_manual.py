@@ -42,7 +42,7 @@ class OfferManualParser:
             raise fail(_SOURCE, "The file isn't valid YAML.", "bad_yaml") from None
         if not isinstance(document, dict):
             raise fail(_SOURCE, "The file isn't a YAML mapping.", "not_a_mapping")
-        if _holds_a_date(document):
+        if holds_a_date(document):
             raise fail(_SOURCE, "A date is written unquoted: quote every date.", "unquoted_date")
         try:
             manual = OfferManual.from_document(document)
@@ -60,13 +60,14 @@ class OfferManualParser:
         return SourceInfo(source_ts=manual.published, coverage=None, extra=extra, identifiers={}, extension=".yaml")
 
 
-def _holds_a_date(value: object) -> bool:
+def holds_a_date(value: object) -> bool:
+    """Whether a YAML value holds a date or datetime anywhere (an unquoted date); `gas_bill_record` shares it."""
     if isinstance(value, date):  # datetime is a date too
         return True
     if isinstance(value, dict):
-        return any(_holds_a_date(key) or _holds_a_date(item) for key, item in value.items())  # pyright: ignore[reportUnknownVariableType]
+        return any(holds_a_date(key) or holds_a_date(item) for key, item in value.items())  # pyright: ignore[reportUnknownVariableType]
     if isinstance(value, list):
-        return any(_holds_a_date(item) for item in value)  # pyright: ignore[reportUnknownVariableType]
+        return any(holds_a_date(item) for item in value)  # pyright: ignore[reportUnknownVariableType]
     return False
 
 

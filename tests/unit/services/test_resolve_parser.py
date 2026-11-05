@@ -174,7 +174,7 @@ def test_a_real_parser_given_by_source_with_the_wrong_content_is_a_mismatch() ->
     assert caught.value.details["reason"] == "content_mismatch"
 
 
-def test_source_option_for_a_type_without_a_parser_is_a_usage_error_with_the_real_registry() -> None:
-    for source in (SourceType.GAS_BILL_RECORD,):  # P4 gave offer_manual and offer_cdr_index parsers
-        with pytest.raises(UsageError):
-            resolve_parser(PARSERS, "x.csv", b"", source=source)
+def test_source_option_for_a_type_the_registry_has_no_parser_for_is_a_usage_error() -> None:
+    registry = tuple(parser for parser in PARSERS if parser.source != SourceType.GAS_BILL_RECORD)  # P5 has them all
+    with pytest.raises(UsageError):
+        resolve_parser(registry, "x.csv", b"", source=SourceType.GAS_BILL_RECORD)

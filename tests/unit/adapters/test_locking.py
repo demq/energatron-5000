@@ -104,6 +104,19 @@ def test_backup_status_and_version_run_while_the_lock_is_held(
     assert version.code == 0
 
 
+def test_gas_bill_new_takes_no_lock_and_names_an_unknown_pdf_as_invalid_input(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState
+) -> None:
+    paths = make_workspace(tmp_path)
+    with held_by_another_process(paths):
+        ran = run_cli(
+            capsys, "gas-bill", "new", "gas_bill-20261101T000000-0123abcd", "--json", "--workspace", str(paths.root)
+        )
+    envelope = ran.envelope()
+    assert (ran.code, envelope["command"], envelope["error"]["code"]) == (3, "gas-bill", "E_INVALID_INPUT")
+    assert envelope["error"]["details"]["field"] == "pdf_dataset_id"
+
+
 def test_the_lock_is_free_again_after_a_command(
     capsys: pytest.CaptureFixture[str], tmp_path: Path, fake_vcs: FakeVcsState
 ) -> None:

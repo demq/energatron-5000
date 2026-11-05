@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P5.2.1
-- Last commit: energatron-5000 `P5.2.1: add params v5, region profile v4 and the per-fuel fetch filter`
-- Checks: tool repo pytest -q 3143 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P5.2.2
+- Last commit: energatron-5000 `P5.2.2: add gas bill records and energatron gas-bill new`
+- Checks: tool repo pytest -q 3182 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P5.2.2 gas bill records
+- Next: P5.2.3 gas_bills and gas_profile
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -542,13 +542,14 @@ gas blocks prorated by days; the tariff in force transcribed from the bill; the 
     `services/{pipeline_sync,fetch_offers}.py`, `core/errors.py`, tests and fixtures.
   - Done when: the standard checks pass; a v4 `params.yaml` syncs to v5 with the gas distributor filled.
   - Handover: params v5 (gas distributor, `GAS` fuel, `gas`, `backtest.gas_tariffs`, `validation.gas_bills`), region v4, fetch log v2 (`selected[].fuel_type`), fetch filter per fuel, two warnings, `params_v5_text`; self-review. Decision: the v4 to v5 migration leaves an empty fuel list invalid. Watch: stage tests that declare `offers` need v5 params text (a migrated gas distributor is `null`).
-- ⬜ **P5.2.2** Gas bill records: the `gas_bill_record` model and parser, `energatron gas-bill new`.
+- ✅ **P5.2.2** Gas bill records: the `gas_bill_record` model and parser, `energatron gas-bill new`.
   - `core/models/gas.py` (record, §3.2 rules and conventions), `adapters/sources/gas_bill_record.py` (listed in
     `regions/sa.yaml`), `services/gas_bill.py`, `adapters/cli/commands/gas_bill.py`, `gas_bill_scaffold_result` v1;
     `tests/fixtures/make_gas.py`.
   - Refs: the P5 spec §3, §13; D3 §5, §6; the P4 spec §5.3 (the YAML parser pattern).
   - Files: the modules above, tests, golden schemas.
   - Done when: the standard checks pass; a scaffold can't land unfilled, a filled one lands.
+  - Handover: `gas_bill_record` v1 (no identifier fields, quoted decimals keep their places, `gst_free` lines), its parser (listed in `sa.yaml`; every source type now has one), `gas-bill new` writing the skeleton to `data/landing/`, `make_gas.py`; self-review. Decision: an existing skeleton → `E_CONFIRMATION_REQUIRED` unless `--force`. Watch: `make_gas.record_text` quotes numbers and dates, which `land` requires.
 - ⬜ **P5.2.3** `gas_bills` and `gas_profile`.
   - `core/gas_bill.py` (validation, current records, combining estimates, gaps, reference), the two stages, their
     kinds, golden `dvc.yaml`, fixture workspace.
@@ -586,6 +587,7 @@ P6 bundles, recommendation, decisions · P7 operations. Each starts with its own
 
 ## Log (newest first)
 
+- 2026-11-05 · P5.2.2 · gas_bill_record model and parser, gas-bill new, gas_bill_scaffold_result, make_gas fixtures (3182 tests); self-review pass · energatron-5000 `P5.2.2: add gas bill records and energatron gas-bill new`
 - 2026-11-05 · P5.2.1 · params v5, region v4, offer_fetch_log v2, per-fuel distributor filter, W_GAS_GAP and W_GAS_PARTIAL_YEAR (3143 tests); self-review pass · energatron-5000 `P5.2.1: add params v5, region profile v4 and the per-fuel fetch filter`
 - 2026-11-05 · P5.1.1 · P5 gas spec drafted, fresh review (changes requested, 11 findings applied), approved on the owner's instruction; plan rev 13, D1 rev 6; P5.2-P5.3 written from its §2 · energatron-5000 `P5.1.1: approve the P5 gas spec and apply plan rev 13 and D1 rev 6`
 - 2026-11-05 · P4.3.2 · the owner's tariffs transcribed from invoices into two `offer_manual` documents and landed, `backtest.tariffs` set, backtest 7 within / 1 outside (retailer double-billing, explained) / 1 split / 1 unmatched, backup done; P4 ticked and archived · demq-elektric `land: 2 datasets`, `P4.3.2: configure the backtest tariffs and record the backtest`; energatron-5000 `P4.3.2: record the P4 backtest and close P4`

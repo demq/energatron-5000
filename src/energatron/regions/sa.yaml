@@ -41,4 +41,4 @@ cdr_retailers:
   - tango
 # The metropolitan Adelaide gas network as CDR names it (P5 spec §1); other SA towns' networks wait for P8.
 gas_distributor: AGN Metro/Barossa/Peterborough
-parsers: [elec_bill, gas_bill, offer_cdr, offer_cdr_index, offer_manual, retailer_txn, retailer_usage, sapn_interval, sapn_summary]
+parsers: [elec_bill, gas_bill, gas_bill_record, offer_cdr, offer_cdr_index, offer_manual, retailer_txn, retailer_usage, sapn_interval, sapn_summary]

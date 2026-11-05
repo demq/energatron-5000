@@ -8,6 +8,7 @@ from energatron.adapters import wiring
 from energatron.adapters.sources.bill_pdf import ELEC_BILL, GAS_BILL
 from energatron.adapters.sources.cdr_index import OFFER_CDR_INDEX
 from energatron.adapters.sources.cdr_plan import OFFER_CDR
+from energatron.adapters.sources.gas_bill_record import GAS_BILL_RECORD
 from energatron.adapters.sources.offer_manual import OFFER_MANUAL
 from energatron.adapters.sources.registry import PARSERS, parsers_for
 from energatron.adapters.sources.retailer_txn import RETAILER_TXN
@@ -46,6 +47,7 @@ ALL = (
     RETAILER_TXN,
     ELEC_BILL,
     GAS_BILL,
+    GAS_BILL_RECORD,
     OFFER_CDR,
     OFFER_CDR_INDEX,
     OFFER_MANUAL,
@@ -59,16 +61,16 @@ P1_SOURCES = {
     SourceType.SAPN_INTERVAL,
     SourceType.SAPN_SUMMARY,
 }
-REGISTERED_SOURCES = P1_SOURCES | {SourceType.OFFER_CDR_INDEX, SourceType.OFFER_MANUAL}
+REGISTERED_SOURCES = P1_SOURCES | {SourceType.OFFER_CDR_INDEX, SourceType.OFFER_MANUAL, SourceType.GAS_BILL_RECORD}
 
 
-def test_the_seven_p1_and_two_p4_parsers_are_registered() -> None:
+def test_the_seven_p1_two_p4_and_one_p5_parsers_are_registered() -> None:
     assert PARSERS == ALL
     assert {parser.source for parser in PARSERS} == REGISTERED_SOURCES
 
 
-def test_only_gas_bill_record_has_no_parser_yet() -> None:
-    assert set(SourceType) - {parser.source for parser in PARSERS} == {SourceType.GAS_BILL_RECORD}
+def test_every_source_type_has_a_parser() -> None:
+    assert set(SourceType) == {parser.source for parser in PARSERS}  # P5 gave gas_bill_record the last one
 
 
 def test_the_profile_keeps_the_listed_parsers_in_registry_order() -> None:
@@ -100,7 +102,7 @@ def test_the_registry_order_wins_over_the_profile_order() -> None:
 
 def test_a_listed_source_without_a_parser_is_internal() -> None:
     with pytest.raises(InternalError):
-        parsers_for(profile(SourceType.GAS_BILL_RECORD))
+        parsers_for(profile(SourceType.GAS_BILL_RECORD), parsers=(SAPN_INTERVAL,))
 
 
 def test_the_sa_profile_is_valid_and_lists_only_parsers_that_exist() -> None:

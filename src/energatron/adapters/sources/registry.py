@@ -5,6 +5,7 @@ from typing import Final
 from energatron.adapters.sources.bill_pdf import ELEC_BILL, GAS_BILL
 from energatron.adapters.sources.cdr_index import OFFER_CDR_INDEX
 from energatron.adapters.sources.cdr_plan import OFFER_CDR
+from energatron.adapters.sources.gas_bill_record import GAS_BILL_RECORD
 from energatron.adapters.sources.offer_manual import OFFER_MANUAL
 from energatron.adapters.sources.retailer_txn import RETAILER_TXN
 from energatron.adapters.sources.retailer_usage import RETAILER_USAGE
@@ -21,11 +22,13 @@ PARSERS: Final[tuple[SourceParser, ...]] = (
     RETAILER_TXN,
     ELEC_BILL,
     GAS_BILL,
+    GAS_BILL_RECORD,
     OFFER_CDR,
     OFFER_CDR_INDEX,
     OFFER_MANUAL,
 )
-"""The registered parsers: P1's seven (D3 §5) and P4's two (P4 spec §3.3, §5.3). `gas_bill_record` has none yet."""
+"""The registered parsers: P1's seven (D3 §5), P4's two (P4 spec §3.3, §5.3) and P5's `gas_bill_record` (P5 spec
+§3.2)."""
 
 
 def parsers_for(profile: RegionProfile, parsers: tuple[SourceParser, ...] = PARSERS) -> tuple[SourceParser, ...]:

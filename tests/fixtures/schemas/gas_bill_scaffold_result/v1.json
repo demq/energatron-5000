@@ -1,0 +1,6 @@
+{
+  "kind": "gas_bill_scaffold_result",
+  "path": "data/landing/gas_bill_record-gas_bill-20261101T000000-0123abcd.yaml",
+  "pdf_dataset_id": "gas_bill-20261101T000000-0123abcd",
+  "schema_version": 1
+}

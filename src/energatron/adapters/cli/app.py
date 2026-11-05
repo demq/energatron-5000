@@ -20,6 +20,7 @@ from energatron.adapters.cli.commands import (
     denylist,
     fetch_offers,
     fingerprint,
+    gas_bill,
     land,
     offers,
     pipeline,
@@ -60,6 +61,7 @@ app.command("verify")(verify.verify)
 app.command("land")(land.land)
 app.command("fetch-offers")(fetch_offers.fetch_offers)
 app.add_typer(offers.app, name="offers")
+app.add_typer(gas_bill.app, name="gas-bill")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
