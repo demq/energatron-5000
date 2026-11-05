@@ -178,3 +178,32 @@ class GasOfferTariffs(Persisted):
 
     as_of: date | None
     tariffs: tuple[GasTariff, ...]
+
+
+# `cost_gas` (P5 spec §9.3) and `backtest_gas` (§10)
+
+GAS_COST_LINE_KIND: Final = "gas_cost_line"
+GAS_COST_LINE_VERSION: Final = 1
+"""The columns, schema and sort of `elec_cost_line`."""
+GAS_COST_TOTAL_KIND: Final = "gas_cost_total"
+GAS_COST_TOTAL_VERSION: Final = 1
+GAS_COST_TOTAL_SORT: Final = ("scenario", "rank")
+
+
+class GasCostSummary(Persisted):
+    """`gas_cost_summary` v1: what `cost_gas` priced over which reference periods, and the cheapest offers."""
+
+    KIND: ClassVar[str] = "gas_cost_summary"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["gas_cost_summary"] = "gas_cost_summary"
+    schema_version: Literal[1] = 1
+
+    reference_start: date | None
+    reference_end: date | None
+    reference_days: _Count
+    partial_year: bool
+    periods: _Count
+    scenarios: tuple[str, ...]
+    tariffs: _Count
+    cheapest: dict[str, list[str]]  # scenario → the three lowest `annual_ongoing` snapshot IDs, in rank order
+    checks: dict[str, bool]

@@ -170,3 +170,14 @@ stages:
       - stages.normalise_gas_offers.stage_sha256
     outs:
     - data/marts/offers_gas
+  cost_gas:
+    cmd: energatron stage cost_gas
+    deps:
+    - data/marts/offers_gas
+    - data/marts/gas_profile
+    params:
+    - pricing
+    - .energatron/code_fingerprint.json:
+      - stages.cost_gas.stage_sha256
+    outs:
+    - data/marts/costs/gas

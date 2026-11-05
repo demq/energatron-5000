@@ -31,7 +31,7 @@ def money(value: Decimal) -> Decimal:
 
 
 def printed_unit(value: Decimal) -> Decimal:
-    """One unit of the last place `value` was written with: `Decimal("583.17")` → `0.01`, `Decimal("583")` → `1`."""
+    """One unit of the last place `value` was written with: `Decimal("512.34")` → `0.01`, `Decimal("512")` → `1`."""
     exponent = value.as_tuple().exponent
     assert isinstance(exponent, int)  # a finite decimal
     return Decimal(1).scaleb(min(exponent, 0))

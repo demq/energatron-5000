@@ -1,0 +1,20 @@
+{
+  "cheapest": {
+    "conditions_met": ["TEST-GAS@EME~20261001T000000Z~0123abcd"],
+    "conditions_not_met": ["TEST-GAS@EME~20261001T000000Z~0123abcd"]
+  },
+  "checks": {
+    "energy_conserved": true,
+    "lines_sum": true,
+    "reference_present": true
+  },
+  "kind": "gas_cost_summary",
+  "partial_year": true,
+  "periods": 2,
+  "reference_days": 92,
+  "reference_end": "2026-10-31",
+  "reference_start": "2026-08-01",
+  "scenarios": ["conditions_met", "conditions_not_met"],
+  "schema_version": 1,
+  "tariffs": 1
+}

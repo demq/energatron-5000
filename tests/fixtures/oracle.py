@@ -17,6 +17,8 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from decimal import Decimal
+from fractions import Fraction
 from typing import Any
 
 BASES = ("nem_aest", "local_wall", "local_standard")
@@ -440,3 +442,60 @@ def oracle_bill(
         fees = sum((_round(fee["amount"] * days / fee_days[fee["term"]]) for fee in tariff["fees"]), Decimal(0))
         totals[(first, last)] = net + gst + fees
     return {"totals": totals, "usage_kwh": usage_kwh}
+
+
+# The gas engine (P5 spec §9.2)
+
+
+def oracle_gas_totals(
+    tariff: Mapping[str, Any],
+    periods: Sequence[tuple[date, date, Decimal]],
+    *,
+    scenario: str,
+    gst_rate: Decimal,
+    conditions: frozenset[str],
+) -> dict[tuple[date, date], Decimal]:
+    """Each period's total, day by day in exact fractions: each day gets `mj / D`; the day's season adds a day of
+    supply and of each block's allowance; usage then fills the season's blocks over the whole period. `tariff` is plain
+    data: `seasons` (each `days`, a set of `MM-DD`, `supply`, `period`, `blocks` of `(volume | None, price)`),
+    `discounts` and `fees` as in `oracle_bill`."""
+    totals: dict[tuple[date, date], Decimal] = {}
+    for first, last, mj in periods:
+        days = (last - first).days + 1
+        per_day = Fraction(mj) / days
+        used: dict[int, Fraction] = {}
+        counted: dict[int, int] = {}
+        for offset in range(days):
+            text = (first + timedelta(days=offset)).strftime("%m-%d")
+            index = next(i for i, season in enumerate(tariff["seasons"]) if text in season["days"])
+            used[index] = used.get(index, Fraction(0)) + per_day
+            counted[index] = counted.get(index, 0) + 1
+        usage = Decimal(0)
+        supply = Decimal(0)
+        for index, energy in used.items():
+            season = tariff["seasons"][index]
+            supply += _round(Decimal(counted[index]) * season["supply"])
+            left = energy
+            for volume, price in season["blocks"]:
+                if left <= 0:
+                    break
+                if volume is None:
+                    taken = left
+                else:
+                    scale = Fraction(12, 365) if season["period"] == "P1M" else Fraction(1)
+                    taken = min(left, Fraction(volume) * counted[index] * scale)
+                left -= taken
+                usage += _round(Decimal(taken.numerator) / Decimal(taken.denominator) * price)
+        base = usage + supply
+        discounts = Decimal(0)
+        for discount in tariff["discounts"]:
+            applies = discount["kind"] == "guaranteed" or (
+                scenario != "conditions_not_met" and discount["category"] in conditions
+            )
+            if applies:
+                discounts -= _round((base if discount["method"] == "percent_of_bill" else usage) * discount["rate"])
+        net = base + discounts
+        fee_days = {"ANNUAL": Decimal(365), "MONTHLY": Decimal(365) / 12, "DAILY": Decimal(1)}
+        fees = sum((_round(fee["amount"] * days / fee_days[fee["term"]]) for fee in tariff["fees"]), Decimal(0))
+        totals[(first, last)] = net + _round(net * gst_rate) + fees
+    return totals

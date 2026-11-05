@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P5.2.4
-- Last commit: energatron-5000 `P5.2.4: add gas tariffs, offer_manual v2 and normalise_gas_offers`
-- Checks: tool repo pytest -q 3300 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P5.2.5
+- Last commit: energatron-5000 `P5.2.5: add the gas engine and the cost_gas stage`
+- Checks: tool repo pytest -q 3326 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P5.2.5 gas engine and cost_gas
+- Next: P5.2.6 backtest_gas and the end-to-end test
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -126,6 +126,9 @@ Then clear the context and type `/next`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing; no global installs.
 
 **Open questions for the owner**
+- **Before any push:** commits 4edaf38 and 3948b6d (P5.2.3, local only) hold a few numbers copied from the gas bill (two MJ
+  read values in a docstring and a test, and the heating value), removed from the tree in P5.2.5. The rules forbid an
+  agent rewriting history; decide whether to rewrite those two commits (e.g. an interactive rebase) before pushing.
 - The gas account number in `private/config.toml` (`accounts.gas`), then `energatron denylist`.
 - From P4: the double-billed month (check later statements or raise it with the retailer); `elec_bill` support for the
   retailer PDFs; a one-off percentage discount rule effect; a checked source for the fee GST convention.
@@ -564,12 +567,13 @@ gas blocks prorated by days; the tariff in force transcribed from the bill; the 
   - Files: the modules above, tests, golden schemas and `dvc.yaml`.
   - Done when: the standard checks pass; `normalise_offers` ignores gas plans.
   - Handover: `GasTariff` (seasons with MJ block ladders), `map_cdr_gas` (every row of spec §5.2, sharing `cdr_tariff` helpers through public aliases), `offer_manual` v2 (`gasContract`), `services/stages/normalising.py` shared by `normalise_offers` and `normalise_gas_offers` (`marts/offers_gas`, `gas_offer_tariffs`), offer rules for both tariff types; the fixture offer zone gains two gas plans and a gas manual offer. Decision: the fuel comes from `selected[].fuel_type`. Watch: `normalise_offers` code entry changed (fingerprint in the workspace).
-- ⬜ **P5.2.5** Gas engine and `cost_gas`.
+- ✅ **P5.2.5** Gas engine and `cost_gas`.
   - `core/gas_engine.py` (seasons, blocks, the shared settle step of `core/engine.py`), an oracle in
     `tests/fixtures/oracle.py`, property tests; the `cost_gas` stage and kinds.
   - Refs: the P5 spec §9, §13; the P4 spec §7, §9.
   - Files: the modules above, tests.
   - Done when: the standard checks pass; electricity engine tests unchanged and green.
+  - Handover: `core/gas_engine.py` (seasons by days with the last taking the remainder, MJ block allowances, `P1M` prorated), `core.engine.settle` shared for discounts, GST and fees (electricity results unchanged), a day-by-day fraction oracle and property tests; `cost_gas` (three checks, annualised by days, `W_GAS_PARTIAL_YEAR`). Different from the spec: `cost_gas` declares only `pricing` (the partial-year flag comes from the profile) and passes with empty outputs when there are no gas bills. Watch: bill-derived numbers found in two earlier local commits (open question).
 - ⬜ **P5.2.6** `backtest_gas` and the end-to-end test.
   - The stage and kinds; `test_p5_pipeline` (land a PDF and its record, fetch gas plans from the local server, a gas
     `offer_manual`, `dvc repro` of sixteen stages, `verify`).
@@ -589,6 +593,7 @@ P6 bundles, recommendation, decisions · P7 operations. Each starts with its own
 
 ## Log (newest first)
 
+- 2026-11-05 · P5.2.5 · gas engine with an oracle and properties, cost_gas, engine settle step shared; bill-derived numbers in two earlier tests and a docstring replaced (3326 tests); self-review · energatron-5000 `P5.2.5: add the gas engine and the cost_gas stage`
 - 2026-11-05 · P5.2.4 · gas tariff model, CDR gas mapping, offer_manual v2, normalise_gas_offers with a shared normaliser (3300 tests); self-review pass · energatron-5000 `P5.2.4: add gas tariffs, offer_manual v2 and normalise_gas_offers`
 - 2026-11-05 · P5.2.3 · fresh-review findings fixed (4 should-fix, 3 nits) · energatron-5000 `P5.2.3: fix the review findings in the gas bill stages`
 - 2026-11-05 · P5.2.3 · gas_bills and gas_profile stages, core/gas_bill.py, the fixture gas zone (3240 tests); fresh review on the commit · energatron-5000 `P5.2.3: add the gas_bills and gas_profile stages`

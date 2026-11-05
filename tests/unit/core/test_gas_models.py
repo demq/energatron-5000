@@ -64,7 +64,7 @@ def test_a_consistent_record_validates_and_keeps_its_printed_places() -> None:
         with_line(0, gst_free="yes"),
         with_line(0, amount="12.345"),  # money holds cents
         with_line(0, rate="0.12345678901"),  # rates hold ten places
-        with_read(0, heating_value="38.4017123"),  # quantities hold six
+        with_read(0, heating_value="38.5000123"),  # quantities hold six
         doc(gst="1.001"),
     ],
 )

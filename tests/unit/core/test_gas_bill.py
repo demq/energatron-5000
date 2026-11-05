@@ -37,7 +37,7 @@ def failing(document: dict[str, Any]) -> list[str]:
     return [name for name, passed in checked(document).items() if not passed]
 
 
-@pytest.mark.parametrize(("text", "unit"), [("583.17", "0.01"), ("812.4", "0.1"), ("1396", "1"), ("0.000", "0.001")])
+@pytest.mark.parametrize(("text", "unit"), [("512.34", "0.01"), ("876.5", "0.1"), ("1500", "1"), ("0.000", "0.001")])
 def test_the_printed_unit_is_one_of_the_last_place(text: str, unit: str) -> None:
     assert printed_unit(Decimal(text)) == Decimal(unit)
 

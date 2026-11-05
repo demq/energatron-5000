@@ -38,6 +38,7 @@ from energatron.core.tariff import (
     MINUTES_PER_DAY,
     Clock,
     DemandCharge,
+    Discount,
     EnergyCharge,
     Fee,
     Tariff,
@@ -190,15 +191,7 @@ def price(
     lines: list[LineItem] = []
     for first, last in periods:
         lines.extend(_period(compiled, usage, dates, first, last, scenario, pricing))
-    credit = sum(
-        (
-            discount.amount
-            for discount in tariff.discounts
-            if discount.method == "fixed" and discount.amount is not None
-        ),
-        Decimal(0),
-    )
-    return Bill(lines=tuple(lines), one_off_credit=credit)
+    return Bill(lines=tuple(lines), one_off_credit=one_off_credit(tariff.discounts))
 
 
 @dataclass(frozen=True)
@@ -299,10 +292,34 @@ def _period(
                     _demand_quantity(charge, usage, in_season, clock, days_in_season[index], pricing.demand_minutes)
                 ]
             )
-    usage_amount = sum((line.amount for line in energy), Decimal(0))
-    base_bill = usage_amount + sum((line.amount for line in (*supply, *demand)), Decimal(0))
-    discounts: list[LineItem] = []
-    for discount in tariff.discounts:
+    return [
+        *supply,
+        *energy,
+        *demand,
+        *settle(
+            tariff.discounts, tariff.fees, first, last, energy, [*supply, *demand], scenario=scenario, pricing=pricing
+        ),
+    ]
+
+
+def settle(
+    discounts: Sequence[Discount],
+    fees: Sequence[Fee],
+    first: date,
+    last: date,
+    usage: Sequence[LineItem],
+    other: Sequence[LineItem],
+    *,
+    scenario: Scenario,
+    pricing: Pricing,
+) -> list[LineItem]:
+    """The lines that settle one period (P4 spec §7.6-§7.8), shared by the electricity and gas engines: percentage
+    discounts on usage (`percent_of_use`) or on usage plus `other` (supply, demand; `percent_of_bill`), GST on the
+    GST-exclusive lines, then the prorated GST-inclusive fees."""
+    usage_amount = sum((line.amount for line in usage), Decimal(0))
+    base_bill = usage_amount + sum((line.amount for line in other), Decimal(0))
+    found: list[LineItem] = []
+    for discount in discounts:
         if discount.method == "fixed" or discount.rate is None:
             continue
         applies = discount.kind == "guaranteed" or (
@@ -311,8 +328,10 @@ def _period(
         if not applies:
             continue
         base = base_bill if discount.method == "percent_of_bill" else usage_amount
-        discounts.append(
-            item(
+        found.append(
+            LineItem(
+                first,
+                last,
                 "discount",
                 discount.name or discount.method,
                 None,
@@ -323,10 +342,14 @@ def _period(
                 -money(base * discount.rate),
             )
         )
-    net = base_bill + sum((line.amount for line in discounts), Decimal(0))
-    gst = item("gst", "gst", None, None, net, "$", pricing.gst_rate, money(net * pricing.gst_rate))
-    fees = [_fee_line(fee, first, last) for fee in tariff.fees]
-    return [*supply, *energy, *demand, *discounts, gst, *fees]
+    net = base_bill + sum((line.amount for line in found), Decimal(0))
+    gst = LineItem(first, last, "gst", "gst", None, None, net, "$", pricing.gst_rate, money(net * pricing.gst_rate))
+    return [*found, gst, *(_fee_line(fee, first, last) for fee in fees)]
+
+
+def one_off_credit(discounts: Sequence[Discount]) -> Decimal:
+    """The fixed guaranteed discounts: a one-off credit, GST-inclusive, outside every period (P4 spec §7.7)."""
+    return sum((d.amount for d in discounts if d.method == "fixed" and d.amount is not None), Decimal(0))
 
 
 def _block_totals(charge: EnergyCharge, kwh: npt.NDArray[np.float64], day: npt.NDArray[np.int64]) -> list[float]:
