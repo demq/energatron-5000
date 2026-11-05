@@ -60,6 +60,13 @@
   config in `normalise_offers`; `backtest` reads retailer reads and transactions, and its tolerance breaches warn);
   `params` v4 (`offers`, `pricing`, `backtest`, `validation.backtest`); the CDR support table, monthly calendar billing
   periods, the GST convention and `Decimal` cents (§8.2, §9.1, §9.2, §10.4, §10.5, §10.9, §14.1, §15).
+  2026-11-05 rev 13 — P5 gas spec (`2026-11-05_p5-gas-spec.md`) approved, and its §14 edits applied: `gas_bill` keeps
+  the PDF creation date (no text extraction); `gas_bill_record` is a YAML transcription with no identifier fields,
+  `source_ts` its issue date; the stages `gas_bills`, `gas_profile`, `normalise_gas_offers` (`marts/offers_gas/`),
+  `cost_gas` and `backtest_gas` (its own stage, not an extension of `backtest`); `params` v5; estimates combined with
+  the next bill, gaps warned, usage spread evenly over a bill's days; the gas reference year is the latest
+  `gas.reference_bills` bills, annualised by days and flagged when partial; §16 Q3 answered (§8.2, §9.1, §9.2, §10.6,
+  §10.8, §15, §16).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -421,7 +428,7 @@ in the tool repo; anything that mentions your own data stays in the workspace.
 | `sapn_summary` | SAPN `*_SAPN_SUMMARY.csv` / `.pdf` | Manual | Generation timestamp from the filename; else content (CSV) or PDF creation date |
 | `retailer_usage` | Retailer monthly TOU usage export | Manual | Latest `Read Datetime` in the content (the export carries no export date) |
 | `retailer_txn` | Retailer transactions export (invoices, payments) | Manual | Latest `Date` in the content |
-| `elec_bill`, `gas_bill` | Bill PDF | Manual | PDF creation date (P1); the issue date once P5 adds text extraction |
+| `elec_bill`, `gas_bill` | Bill PDF | Manual | PDF creation date (P1; P5 adds no text extraction, rev 13) |
 | `gas_bill_record` | YAML transcription of one gas bill (references the PDF's dataset ID) | Manual, scaffolded by CLI | Issue date |
 | `offer_cdr` | Plan-detail JSON from the AER CDR API | `energatron fetch-offers` | Plan `lastUpdated` |
 | `offer_cdr_index` | The fetch log of one batch: every list page verbatim (base64) and what was selected (P4 spec §3.3) | `energatron fetch-offers` | `fetched_at` |
@@ -539,10 +546,12 @@ directories.
 | `usage_profile` | `interim/elec_interval_local/`, params `meter.local_tz`, `analysis` | `marts/usage_profile/` | One interval length per register; daily and TOU totals conserve energy and every interval gets one TOU label; `reference_window`: the last `reference_months` covered months at the coverage threshold (P3 spec §8) |
 | `usage_report` | `marts/usage_profile/` (no params) | `reports/usage/` (`index.html`) | A deterministic, self-contained HTML (inline SVG, no script, no network asset) built from the marts alone (P3 spec §9) |
 | `gas_bills` | `raw/gas_bill`, `raw/gas_bill_record` | `interim/gas_bills/` | Each bill's total recomputes within ±$0.05 |
-| `gas_profile` | `interim/gas_bills/` | `marts/gas_profile/` | Periods contiguous; read types flagged |
+| `gas_profile` | `interim/gas_bills/` | `marts/gas_profile/` | Overlaps fail, gaps warn; read types flagged (P5 spec §7) |
+| `normalise_gas_offers` | raw offers, fetch logs, manual offers, local rules | `marts/offers_gas/` | As `normalise_offers` (P5 spec §8) |
 | `normalise_offers` | `raw/offer_cdr`, `raw/offer_cdr_index`, `raw/offer_manual` (each with its catalog), `config/offer_rules.local`, package `offer_rules/`, params `offers`, `pricing.gst_rate` (no private config) | `marts/offers/` (`tariffs.json`, `offers.parquet`, `summary.json`) | Blobs match the catalog; snapshot IDs recompute; rules valid; every current offer normalised, approximate or excluded with a reason; seasons and TOU windows partition (P4 spec §8) |
 | `cost_elec` | `marts/offers`, `interim/elec_interval_local/`, `marts/usage_profile` (its reference window), params `pricing` | `marts/costs/elec/` | One consumption register; window present; line items sum to totals; energy conserved (P4 spec §9) |
-| `cost_gas` | `marts/offers`, `interim/gas_bills/` | `marts/costs/gas/` | Same |
+| `cost_gas` | `marts/offers_gas`, `marts/gas_profile/` | `marts/costs/gas/` | Lines sum; MJ conserved; a partial year warns (P5 spec §9.3) |
+| `backtest_gas` | `marts/offers_gas`, `interim/gas_bills/`, params `backtest.gas_tariffs` | `reports/validation/backtest_gas/` | As `backtest`; per bill (P5 spec §10) |
 | `backtest` | `marts/offers`, `interim/elec_interval_local/`, `raw/retailer_usage`, `raw/retailer_txn`, params `pricing`, `backtest`, `validation.backtest` (P5 adds gas) | `reports/validation/backtest/` | Configured tariffs resolve; line items sum; outside ±`validation.backtest.tolerance_pct` is a warning (P4 spec §10) |
 | `bundles` | `marts/costs/*`, `config/offer_rules.local` | `marts/costs/bundles/` | Eligibility rules applied |
 | `recommend` | `marts/costs/*`, `marts/usage_profile`, `private/config.toml`, params | `reports/recommendations/` (`REC-*.json`, `.html`) | Deterministic ID; every cited ID resolves |
@@ -1101,7 +1110,8 @@ P8–P11 are not scheduled. They are listed so that P0–P7 leave the right seam
 1. **License:** decided 2026-10-23 — Apache-2.0 (`LICENSE` + `NOTICE` in the tool repo).
 2. **Older SAPN downloads:** the legacy viewer notebook references 2022–2025 downloads that aren't in this
    folder. If you still have them, landing them extends history back to late 2022.
-3. **Gas details:** which retailer, what bill format (PDF?), are the monthly reads actual or estimated, and what
+3. **Gas details** (answered 2026-11-05 by the P5 spec §1: monthly PDF bills with actual and estimated reads; the MIRN
+   is in private config): which retailer, what bill format (PDF?), are the monthly reads actual or estimated, and what
    is the MIRN (for private config)?
 4. **Network tariff code** on your electricity bill. It decides which plan variants you're eligible for (e.g.
    GloBird's "Flexible Rate" vs "Flexible RESELE").

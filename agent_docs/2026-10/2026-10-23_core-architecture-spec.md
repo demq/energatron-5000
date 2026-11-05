@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -13,7 +13,9 @@
   (listed in §1)
   2026-11-04 rev 5 (P4.1.1): the additive changes the P4 spec (`2026-11-04_p4-offers-electricity-engine-spec.md`)
   §15 lists: the offer and engine modules, the CDR provider's header allow-list and paging, the four P4 warnings and
-  the money rounding rule, edited in place (listed in §1)
+  the money rounding rule, edited in place (listed in §1).
+  2026-11-05 rev 6 (P5.1.1): the additive changes the P5 spec (`2026-11-05_p5-gas-spec.md`) §14 lists: the gas
+  modules, stages, parser and command, and the two P5 warnings, edited in place (listed in §1)
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -104,6 +106,12 @@ with it:
 - §7: the four P4 warnings.
 - §12: the money rounding rule.
 
+**Rev 6 (2026-11-05), edited in place.** The P5 spec (§14 there) adds to this spec; nothing is redefined:
+- §2: `core/` gains `gas_tariff.py`, `cdr_gas_tariff.py`, `gas_engine.py`, `gas_bill.py` and `models/gas.py`;
+  `services/` gains `gas_bill.py` and the stages `gas_bills`, `gas_profile`, `normalise_gas_offers`, `cost_gas` and
+  `backtest_gas`; `adapters/` gains the parser `gas_bill_record.py` and the `gas-bill` command.
+- §7: the two P5 warnings.
+
 ---
 
 ## 2. Package layout
@@ -134,6 +142,7 @@ src/energatron/
 │   ├── nem12.py  sapn_summary.py  retailer_usage.py  timebase.py  models/meter.py                 P2
 │   ├── usage.py  charts.py  usage_report.py  models/usage.py                                      P3
 │   ├── tariff.py  cdr_tariff.py  offer_rules.py  engine.py  retailer_txn.py  models/costs.py      P4
+│   ├── gas_tariff.py  cdr_gas_tariff.py  gas_engine.py  gas_bill.py  models/gas.py               P5
 │   └── ranking.py                                                                                 P6
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
@@ -147,6 +156,7 @@ src/energatron/
 │   ├── stages/catalog_index.py                                                                    P1
 │   ├── verify.py            verify() (§11.4)                                                      P1
 │   ├── fetch_offers.py  offer_diff.py  stages/{normalise_offers,cost_elec,backtest}.py            P4
+│   ├── gas_bill.py  stages/{gas_bills,gas_profile,normalise_gas_offers,cost_gas,backtest_gas}.py   P5
 │   └── run.py  compare.py  explain.py  decide.py  migrate.py                                     P6+
 ├── adapters/
 │   ├── wiring.py            composition root: build_context() (P0), code_fingerprint() (P1)       P0
@@ -156,6 +166,7 @@ src/energatron/
 │   ├── vcs/                 git_dvc.py                                                            P0
 │   ├── pipeline/            dvc_runner.py, fingerprint.py, closure.py (§11)                       P1
 │   ├── offers/              cdr.py (CdrProvider); sources/ gains cdr_index.py, offer_manual.py    P4
+│   │                        sources/ gains gas_bill_record.py; cli/commands/ gains gas_bill.py    P5
 │   └── cli/                 app.py, output.py (envelope, redaction), commands/                    P0
 ├── regions/                 package data: sa.yaml                                                 P1
 ├── offer_rules/             package data: curated public offer rules                              P4
@@ -723,6 +734,7 @@ class EnergatronError(Exception):
   - Warnings added in P3: `W_USAGE_MIXED_WINDOWS`, `W_USAGE_PARTIAL_DAYS` (P3 spec §11).
   - Warnings added in P4: `W_FETCH_FAILED`, `W_OFFERS_MISSING_SNAPSHOT`, `W_BACKTEST_OUTSIDE_TOLERANCE`,
     `W_BACKTEST_NO_TARIFF` (P4 spec §12).
+  - Warnings added in P5: `W_GAS_GAP`, `W_GAS_PARTIAL_YEAR` (P5 spec §11).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
