@@ -396,6 +396,7 @@ def test_the_venv_energatron_runs_whatever_path_the_caller_has_and_prints_nothin
                 "backtest",
                 "gas_bills",
                 "gas_profile",
+                "normalise_gas_offers",
             ]
         )
     captured = capfd.readouterr()

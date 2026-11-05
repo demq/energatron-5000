@@ -217,9 +217,10 @@ def test_a_tampered_blob_fails_blobs_match_catalog(zone: OfferZone) -> None:
 
 def test_an_unknown_detector_version_fails_detector_known(zone: OfferZone) -> None:
     catalog = zone.root / "data" / "raw" / "offer_manual" / "_catalog.jsonl"
-    record = json.loads(catalog.read_text())
+    first, *rest = catalog.read_text().splitlines()  # the electricity manual offer; the gas one follows
+    record = json.loads(first)
     record["detector"]["version"] = 99
-    catalog.write_bytes(canonical_json(record) + b"\n")
+    catalog.write_bytes(canonical_json(record) + b"\n" + "".join(f"{line}\n" for line in rest).encode())
     failed = failed_checks(zone.root)
     assert failed == ["detector_known"]
 

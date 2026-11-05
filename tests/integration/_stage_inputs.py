@@ -165,6 +165,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "backtest": _cost_elec,  # the same inputs: offers, the local table; the raw zone's usage exports give the periods
     "gas_bills": _gas_bills,
     "gas_profile": _gas_profile,
+    "normalise_gas_offers": _normalise_offers,  # the fixture offer zone holds gas plans and a gas manual offer
 }
 
 

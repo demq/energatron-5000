@@ -19,6 +19,7 @@ from pydantic import AfterValidator, ConfigDict, Field, model_validator
 from energatron.core.canonical import JSONValue
 from energatron.core.cdr_tariff import Excluded
 from energatron.core.errors import InvalidInputError, SchemaTooNewError
+from energatron.core.gas_tariff import GasTariff
 from energatron.core.models._common import FrozenModel
 from energatron.core.models.offers import SnapshotId
 from energatron.core.persisted import Persisted
@@ -143,14 +144,15 @@ def load_rules(curated: Iterable[RuleFile], local: Iterable[RuleFile]) -> tuple[
 
 @dataclass(frozen=True)
 class Ruled:
-    """An offer after its rules: the mapped result and the ids of the rules that matched, in order."""
+    """An offer after its rules: the mapped result and the ids of the rules that matched, in order. The rules apply to
+    electricity and gas tariffs alike (P5 spec §8)."""
 
-    result: Tariff | Excluded
+    result: Tariff | GasTariff | Excluded
     rules: tuple[str, ...]
 
 
 def apply_rules(
-    result: Tariff | Excluded,
+    result: Tariff | GasTariff | Excluded,
     rules: Sequence[OfferRule],
     *,
     brand: str,
@@ -170,12 +172,12 @@ def apply_rules(
             notes = result.notes
             reasons = (*result.reasons, reason) if isinstance(result, Excluded) else (reason,)
             result = Excluded(reasons=tuple(sorted(set(reasons))), notes=notes)
-        elif effect.approximate is not None and isinstance(result, Tariff):
+        elif effect.approximate is not None and not isinstance(result, Excluded):
             approximations = tuple(sorted({*result.approximations, f"rule:{rule.id}:{effect.approximate}"}))
             result = result.model_copy(update={"approximations": approximations, "status": "approximate"})
         elif effect.note is not None:
             note = f"rule:{rule.id}"
-            if isinstance(result, Tariff):
+            if not isinstance(result, Excluded):
                 result = result.model_copy(update={"notes": tuple(sorted({*result.notes, note}))})
             else:
                 result = Excluded(reasons=result.reasons, notes=tuple(sorted({*result.notes, note})))

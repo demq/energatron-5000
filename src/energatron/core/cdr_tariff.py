@@ -531,3 +531,23 @@ def _first_location(error: ValidationError | InvalidInputError) -> str:
         return ".".join(str(part) for part in problems[0]["loc"]) if problems else "tariff"
     field_name = error.details.get("field")
     return str(field_name) if field_name else "tariff"
+
+
+# Shared with `core.cdr_gas_tariff` (P5 spec §5.2): the gas mapping reads values, eligibility, discounts and fees the
+# same way, so it uses these helpers rather than copies.
+
+Found = _Found
+Malformed = _Malformed
+UNPRICED_FEATURES: Final = _UNPRICED_FEATURES
+mapping_of = _mapping
+list_of = _list
+text_of = _text
+texts_of = _texts
+decimal_of = _decimal
+price_of = _price
+instant_date = _instant_date
+eligibility_of = _eligibility
+discounts_of = _discounts
+fees_of = _fees
+sorted_unique = _sorted
+first_location = _first_location

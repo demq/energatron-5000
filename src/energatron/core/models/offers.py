@@ -10,11 +10,12 @@ tariff the owner writes in the CDR contract shape, so one mapper serves both (`c
 import base64
 import re
 from datetime import UTC, date, datetime, time
-from typing import Annotated, Any, ClassVar, Final, Literal
+from typing import Annotated, Any, ClassVar, Final, Literal, Self
 
-from pydantic import AfterValidator, ConfigDict, Field
+from pydantic import AfterValidator, ConfigDict, Field, model_validator
 
 from energatron.core.canonical import JSONValue
+from energatron.core.errors import InvalidInputError
 from energatron.core.ids import parse_offer_snapshot_id
 from energatron.core.models._common import DatasetId, FrozenModel, Sha256Hex, UtcDatetime, retailer_bases, trimmed_text
 from energatron.core.persisted import Persisted, migration
@@ -160,14 +161,15 @@ def _plan_id(value: str) -> str:
 
 
 class OfferManual(Persisted):
-    """`offer_manual` v1: a tariff not in CDR, written in the CDR `electricityContract` shape."""
+    """`offer_manual` v2: a tariff not in CDR, written in the CDR contract shape: an `electricityContract` or, from
+    version 2, a `gasContract` (exactly one; P5 spec §5.3)."""
 
     model_config = ConfigDict(serialize_by_alias=True, validate_by_name=True)  # merged with Persisted's
 
     KIND: ClassVar[str] = "offer_manual"
-    SCHEMA_VERSION: ClassVar[int] = 1
+    SCHEMA_VERSION: ClassVar[int] = 2
     kind: Literal["offer_manual"] = "offer_manual"
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
 
     plan_id: Annotated[str, AfterValidator(_plan_id)]
     brand: Annotated[str, AfterValidator(trimmed_text("brand"))]
@@ -178,19 +180,37 @@ class OfferManual(Persisted):
     prices_include_gst: Annotated[bool, Field(strict=True)]
     effective_from: date | None = None
     effective_to: date | None = None
-    contract: Annotated[dict[str, JSONValue], Field(alias="electricityContract")]
+    electricity_contract: Annotated[dict[str, JSONValue] | None, Field(alias="electricityContract")] = None
+    gas_contract: Annotated[dict[str, JSONValue] | None, Field(alias="gasContract")] = None
+
+    @model_validator(mode="after")
+    def _one_contract(self) -> Self:
+        if (self.electricity_contract is None) == (self.gas_contract is None):
+            raise InvalidInputError(
+                "An offer_manual holds exactly one of electricityContract and gasContract.", field="contract"
+            )
+        return self
+
+    @property
+    def fuel(self) -> Literal["ELECTRICITY", "GAS"]:
+        return "ELECTRICITY" if self.electricity_contract is not None else "GAS"
 
     def as_cdr_data(self) -> dict[str, JSONValue]:
-        """The document as a CDR plan `data` object, for `map_cdr`: residential electricity, no geography."""
+        """The document as a CDR plan `data` object, for `map_cdr` or `map_cdr_gas`: residential, no geography."""
+        key, contract = (
+            ("electricityContract", self.electricity_contract)
+            if self.electricity_contract is not None
+            else ("gasContract", self.gas_contract)
+        )
         data: dict[str, JSONValue] = {
             "planId": self.plan_id,
             "brand": self.brand,
             "displayName": self.display_name,
-            "fuelType": "ELECTRICITY",
+            "fuelType": self.fuel,
             "customerType": "RESIDENTIAL",
             "lastUpdated": self.published.isoformat(),
             "geography": {"distributors": []},
-            "electricityContract": self.contract,
+            key: contract,
         }
         if self.effective_from is not None:
             data["effectiveFrom"] = _midnight_utc(self.effective_from)
@@ -201,3 +221,9 @@ class OfferManual(Persisted):
 
 def _midnight_utc(day: date) -> str:
     return datetime.combine(day, time(), tzinfo=UTC).isoformat()
+
+
+@migration("offer_manual", from_version=1)
+def _offer_manual_v1_to_v2(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
+    """Only the version changes: every v1 document holds an `electricityContract`."""
+    return {**doc, "schema_version": 2}

@@ -16,6 +16,7 @@ from energatron.services.stages import (
     gas_profile,
     localise,
     merge_interval,
+    normalise_gas_offers,
     normalise_offers,
     parse_nem12,
     usage_profile,
@@ -55,6 +56,7 @@ STAGES: Final[Mapping[str, StageSpec]] = _build(
         backtest.SPEC,
         gas_bills.SPEC,
         gas_profile.SPEC,
+        normalise_gas_offers.SPEC,
     ]
 )
 """Every stage, in `dvc.yaml` order."""

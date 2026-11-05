@@ -11,6 +11,7 @@ from typing import Annotated, ClassVar, Final, Literal
 
 from pydantic import Field
 
+from energatron.core.gas_tariff import GasTariff
 from energatron.core.models._common import FrozenModel
 from energatron.core.persisted import Persisted
 from energatron.core.tariff import Tariff
@@ -165,3 +166,15 @@ class BacktestResult(Persisted):
     tolerance_pct: float
     tariffs_configured: _Count
     checks: dict[str, bool]
+
+
+class GasOfferTariffs(Persisted):
+    """`gas_offer_tariffs` v1 (P5 spec §8): the gas tariffs `cost_gas` and `backtest_gas` price, by snapshot ID."""
+
+    KIND: ClassVar[str] = "gas_offer_tariffs"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["gas_offer_tariffs"] = "gas_offer_tariffs"
+    schema_version: Literal[1] = 1
+
+    as_of: date | None
+    tariffs: tuple[GasTariff, ...]

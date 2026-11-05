@@ -1,0 +1,50 @@
+{
+  "brand": "manualco",
+  "display_name": "A made-up retained offer",
+  "effective_from": "2025-07-01",
+  "effective_to": null,
+  "evidence": [],
+  "gasContract": {
+    "billFrequency": [
+      "P1M"
+    ],
+    "fees": [],
+    "isFixed": false,
+    "paymentOption": [
+      "DIRECT_DEBIT"
+    ],
+    "pricingModel": "SINGLE_RATE",
+    "tariffPeriod": [
+      {
+        "dailySupplyCharge": "0.80",
+        "dailySupplyChargeType": "SINGLE",
+        "displayName": "Single Rate Tariff Period",
+        "endDate": "06-30",
+        "rateBlockUType": "singleRate",
+        "singleRate": {
+          "description": "Gas Tariff",
+          "displayName": "Residential",
+          "period": "P1D",
+          "rates": [
+            {
+              "unitPrice": "0.04",
+              "volume": 50
+            },
+            {
+              "unitPrice": "0.03"
+            }
+          ]
+        },
+        "startDate": "07-01"
+      }
+    ],
+    "terms": "Made-up terms.",
+    "timeZone": "LOCAL"
+  },
+  "kind": "offer_manual",
+  "plan_id": "MANUAL-TEST-GAS",
+  "prices_include_gst": false,
+  "published": "2025-07-01T00:00:00Z",
+  "schema_version": 2,
+  "source": "bill"
+}

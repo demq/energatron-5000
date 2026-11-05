@@ -144,6 +144,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
             "backtest",
             "gas_bills",
             "gas_profile",
+            "normalise_gas_offers",
         ],
         "datasets": 4,
     }
@@ -173,6 +174,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
         "gas_profile",
         "localise",
         "merge_interval",
+        "normalise_gas_offers",
         "normalise_offers",
         "parse_nem12",
         "usage_profile",

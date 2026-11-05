@@ -47,7 +47,7 @@ class OfferManualParser:
         try:
             manual = OfferManual.from_document(document)
         except InvalidInputError, SchemaTooNewError:
-            raise fail(_SOURCE, "The document doesn't match offer_manual v1.", "invalid_offer_manual") from None
+            raise fail(_SOURCE, "The document doesn't match offer_manual.", "invalid_offer_manual") from None
         try:
             snapshot = offer_snapshot_id(manual.plan_id, manual.published, document)
         except ValueError, RecursionError:  # a number canonical JSON can't hold

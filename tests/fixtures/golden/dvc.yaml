@@ -156,3 +156,17 @@ stages:
       - stages.gas_profile.stage_sha256
     outs:
     - data/marts/gas_profile
+  normalise_gas_offers:
+    cmd: energatron stage normalise_gas_offers
+    deps:
+    - data/raw/offer_cdr
+    - data/raw/offer_cdr_index
+    - data/raw/offer_manual
+    - config/offer_rules.local
+    params:
+    - offers
+    - pricing.gst_rate
+    - .energatron/code_fingerprint.json:
+      - stages.normalise_gas_offers.stage_sha256
+    outs:
+    - data/marts/offers_gas

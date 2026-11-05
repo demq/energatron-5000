@@ -1,0 +1,45 @@
+{
+  "as_of": "2026-11-01",
+  "kind": "gas_offer_tariffs",
+  "schema_version": 1,
+  "tariffs": [
+    {
+      "approximations": [],
+      "brand": "alpha",
+      "customer_type": "RESIDENTIAL",
+      "discounts": [],
+      "display_name": "Alpha Gas Plan TEST-GAS@EME",
+      "distributors": [
+        "Test Gas Networks"
+      ],
+      "effective_from": "2026-07-01",
+      "effective_to": null,
+      "fees": [],
+      "notes": [],
+      "offer_snapshot_id": "TEST-GAS@EME~20261001T000000Z~0123abcd",
+      "plan_id": "TEST-GAS@EME",
+      "pricing_model": "SINGLE_RATE",
+      "retailer": "alpha",
+      "seasons": [
+        {
+          "block_period": "P1D",
+          "blocks": [
+            {
+              "unit_price": "0.04",
+              "volume_mj": "50"
+            },
+            {
+              "unit_price": "0.03",
+              "volume_mj": null
+            }
+          ],
+          "daily_supply": "0.80",
+          "end": "06-30",
+          "start": "07-01"
+        }
+      ],
+      "source": "cdr",
+      "status": "normalised"
+    }
+  ]
+}

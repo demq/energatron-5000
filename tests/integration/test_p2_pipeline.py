@@ -141,7 +141,7 @@ def test_landing_a_sapn_dataset_makes_parse_nem12_and_what_follows_it_run_again(
 
     stale = {status.name for status in runner(scratch).status()}
     assert {"catalog_index", "parse_nem12"} <= stale
-    untouched = {"normalise_offers", "gas_bills", "gas_profile"}  # no offer or gas input changed
+    untouched = {"normalise_offers", "gas_bills", "gas_profile", "normalise_gas_offers"}  # no offer or gas input
     assert not untouched & stale
     assert runner(scratch).repro().ran == [name for name in ALL_STAGES if name not in untouched]
     index = pq.read_table(scratch.root / "data" / "staged" / "elec_interval" / "index.parquet")

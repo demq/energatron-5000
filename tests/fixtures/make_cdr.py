@@ -217,6 +217,89 @@ def plan(
     return found | dict(data_extra or {})
 
 
+# Gas plans (P5 spec §5.2)
+
+GAS_DISTRIBUTOR: Final = "Test Gas Networks"
+"""Matches `tests/fixtures/params_text.GAS_DISTRIBUTOR`."""
+
+
+def gas_period(
+    rates: Sequence[Mapping[str, Any]] | None = None,
+    *,
+    supply: str = "0.80",
+    period: str | None = "P1D",
+    start: str = "07-01",
+    end: str = "06-30",
+    extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A gas `tariffPeriod`: one single-rate ladder of MJ blocks (no `measureUnit`, as published)."""
+    blocks = [dict(item) for item in (rates or [rate("0.04", volume=50, unit=None), rate("0.03", unit=None)])]
+    single: dict[str, Any] = {"rates": blocks, "displayName": "Residential", "description": "Gas Tariff"}
+    if period is not None:
+        single["period"] = period
+    found: dict[str, Any] = {
+        "startDate": start,
+        "endDate": end,
+        "displayName": "Single Rate Tariff Period",
+        "rateBlockUType": "singleRate",
+        "singleRate": single,
+        "dailySupplyCharge": supply,
+        "dailySupplyChargeType": "SINGLE",
+    }
+    return found | dict(extra or {})
+
+
+def gas_plan(
+    plan_id: str = "TEST-GAS@EME",
+    *,
+    brand: str = "alpha",
+    fuel: str = "GAS",
+    pricing_model: str = "SINGLE_RATE",
+    periods: Sequence[Mapping[str, Any]] | None = None,
+    discounts: Sequence[Mapping[str, Any]] = (),
+    fees: Sequence[Mapping[str, Any]] = (),
+    eligibility: Sequence[str] = (),
+    distributors: Sequence[str] = (GAS_DISTRIBUTOR,),
+    last_updated: str = "2026-10-01T00:00:00Z",
+    effective_from: str | None = "2026-07-01T00:00:00Z",
+    effective_to: str | None = None,
+    contract_extra: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A gas plan-detail `data` object (`gasContract`)."""
+    contract: dict[str, Any] = {
+        "pricingModel": pricing_model,
+        "isFixed": False,
+        "timeZone": "LOCAL",
+        "tariffPeriod": [dict(item) for item in (periods or [gas_period()])],
+        "fees": [dict(item) for item in fees],
+        "paymentOption": ["DIRECT_DEBIT"],
+        "billFrequency": ["P1M"],
+        "terms": "Made-up terms.",
+    }
+    if discounts:
+        contract["discounts"] = [dict(item) for item in discounts]
+    if eligibility:
+        contract["eligibility"] = [{"type": kind, "description": "Made up."} for kind in eligibility]
+    contract |= dict(contract_extra or {})
+    found: dict[str, Any] = {
+        "planId": plan_id,
+        "brand": brand,
+        "brandName": brand.title(),
+        "displayName": f"{brand.title()} Gas Plan {plan_id}",
+        "type": "MARKET",
+        "fuelType": fuel,
+        "customerType": "RESIDENTIAL",
+        "geography": {"distributors": list(distributors)},
+        "lastUpdated": last_updated,
+        "gasContract": contract,
+    }
+    if effective_from is not None:
+        found["effectiveFrom"] = effective_from
+    if effective_to is not None:
+        found["effectiveTo"] = effective_to
+    return found
+
+
 def detail_body(data: Mapping[str, Any], *, indent: int | None = None) -> bytes:
     """A plan-detail response body: `{data, links, meta}`, as the API returns it."""
     document = {"data": dict(data), "links": {"self": f"https://cdr.test/plans/{data['planId']}"}, "meta": {}}
@@ -334,11 +417,14 @@ def offer_manual_text(
     effective_from: str | None = "2025-07-01",
     effective_to: str | None = None,
     contract: Mapping[str, Any] | None = None,
+    gas_contract: Mapping[str, Any] | None = None,
+    schema_version: int = 2,
 ) -> str:
-    """An `offer_manual` v1 YAML document with every date quoted; `contract` defaults to a TOU plan's."""
+    """An `offer_manual` YAML document with every date quoted; `contract` defaults to a TOU plan's, and a
+    `gas_contract` replaces it with a `gasContract` (v2, P5 spec §5.3)."""
     document: dict[str, Any] = {
         "kind": "offer_manual",
-        "schema_version": 1,
+        "schema_version": schema_version,
         "plan_id": plan_id,
         "brand": "manualco",
         "display_name": "A made-up retained offer",
@@ -348,6 +434,9 @@ def offer_manual_text(
         "prices_include_gst": prices_include_gst,
         "effective_from": effective_from,
         "effective_to": effective_to,
-        "electricityContract": dict(contract or plan()["electricityContract"]),
     }
+    if gas_contract is not None:
+        document["gasContract"] = dict(gas_contract)
+    else:
+        document["electricityContract"] = dict(contract or plan()["electricityContract"])
     return yaml.safe_dump(document, sort_keys=False)  # PyYAML quotes every date-like string

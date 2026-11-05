@@ -84,3 +84,38 @@ def test_a_manual_offer_maps_through_the_cdr_mapper_with_its_gst_divided_back() 
     assert found.effective_from == date(2025, 7, 1)
     assert found.seasons[0].daily_supply == Decimal("1")
     assert found.seasons[0].energy[0].blocks[0].unit_price == Decimal("0.3")
+
+
+# offer_manual v2 (P5 spec §5.3)
+
+
+def test_a_gas_manual_offer_lands_and_reads_as_gas_cdr_data() -> None:
+    contract = cdr.gas_plan()["gasContract"]
+    text = cdr.offer_manual_text("MANUAL-TEST-GAS", gas_contract=contract)
+    info = OFFER_MANUAL.inspect("gas.yaml", text.encode())
+    assert info.extra["plan_id"] == "MANUAL-TEST-GAS"
+    manual = OfferManual.from_document(yaml.safe_load(text))
+    data = manual.as_cdr_data()
+    assert (manual.fuel, data["fuelType"], "electricityContract" in data) == ("GAS", "GAS", False)
+    assert data["gasContract"] == contract
+
+
+def test_a_v1_document_reads_as_v2_electricity_with_its_snapshot_id_unchanged() -> None:
+    text = cdr.offer_manual_text(schema_version=1)
+    manual = OfferManual.from_document(yaml.safe_load(text))
+    assert (manual.schema_version, manual.fuel) == (2, "ELECTRICITY")
+    v2 = cdr.offer_manual_text()
+    first = OFFER_MANUAL.inspect("a.yaml", text.encode()).extra["offer_snapshot_id"]
+    assert first != OFFER_MANUAL.inspect("b.yaml", v2.encode()).extra["offer_snapshot_id"]  # the document differs
+    assert first == OFFER_MANUAL.inspect("c.yaml", text.encode()).extra["offer_snapshot_id"]
+
+
+@pytest.mark.parametrize("contracts", ["both", "neither"])
+def test_exactly_one_contract_is_required(contracts: str) -> None:
+    document = yaml.safe_load(cdr.offer_manual_text())
+    if contracts == "both":
+        document["gasContract"] = cdr.gas_plan()["gasContract"]
+    else:
+        del document["electricityContract"]
+    with pytest.raises(InvalidInputError):
+        OfferManual.from_document(document)
