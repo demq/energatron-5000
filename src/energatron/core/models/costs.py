@@ -207,3 +207,25 @@ class GasCostSummary(Persisted):
     tariffs: _Count
     cheapest: dict[str, list[str]]  # scenario → the three lowest `annual_ongoing` snapshot IDs, in rank order
     checks: dict[str, bool]
+
+
+GAS_BACKTEST_BILL_KIND: Final = "gas_backtest_bill"
+GAS_BACKTEST_BILL_VERSION: Final = 1
+GAS_BACKTEST_BILL_SORT: Final = ("period_start",)
+type GasBillStatus = Literal["within", "outside", "no_tariff", "split_tariff"]
+
+
+class GasBacktestResult(Persisted):
+    """`gas_backtest_result` v1 (P5 spec §10): counts by status, the largest deviation, the tolerance, the checks."""
+
+    KIND: ClassVar[str] = "gas_backtest_result"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["gas_backtest_result"] = "gas_backtest_result"
+    schema_version: Literal[1] = 1
+
+    bills: _Count
+    statuses: dict[GasBillStatus, _Count]
+    max_abs_diff_pct: float | None  # over priced bills; None when none was priced
+    tolerance_pct: float
+    tariffs_configured: _Count
+    checks: dict[str, bool]

@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P5.2.5
-- Last commit: energatron-5000 `P5.2.5: add the gas engine and the cost_gas stage`
-- Checks: tool repo pytest -q 3326 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P5.2.6
+- Last commit: energatron-5000 `P5.2.6: add backtest_gas and the end-to-end P5 test`
+- Checks: tool repo pytest -q 3339 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P5.2.6 backtest_gas and the end-to-end test
+- Next: P5.3.1 acceptance in the workspace
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -574,12 +574,13 @@ gas blocks prorated by days; the tariff in force transcribed from the bill; the 
   - Files: the modules above, tests.
   - Done when: the standard checks pass; electricity engine tests unchanged and green.
   - Handover: `core/gas_engine.py` (seasons by days with the last taking the remainder, MJ block allowances, `P1M` prorated), `core.engine.settle` shared for discounts, GST and fees (electricity results unchanged), a day-by-day fraction oracle and property tests; `cost_gas` (three checks, annualised by days, `W_GAS_PARTIAL_YEAR`). Different from the spec: `cost_gas` declares only `pricing` (the partial-year flag comes from the profile) and passes with empty outputs when there are no gas bills. Watch: bill-derived numbers found in two earlier local commits (open question).
-- ⬜ **P5.2.6** `backtest_gas` and the end-to-end test.
+- ✅ **P5.2.6** `backtest_gas` and the end-to-end test.
   - The stage and kinds; `test_p5_pipeline` (land a PDF and its record, fetch gas plans from the local server, a gas
     `offer_manual`, `dvc repro` of sixteen stages, `verify`).
   - Refs: the P5 spec §10, §13; the P4 spec §10, §14.
   - Files: the stage, tests.
   - Done when: the standard checks pass.
+  - Handover: `backtest_gas` (each bill as billed against `backtest.gas_tariffs`, statuses within/outside/no_tariff/split_tariff, two checks, P4 warnings), `gas_backtest_bill`, `gas_backtest_result`; golden `dvc.yaml` with sixteen stages; `test_p5_pipeline` (land PDF, `gas-bill new`, land record, fetch gas plans, manual tariff, repro, verify). Watch: a fresh review of P5.2.4-P5.2.6 runs on the commits.
 
 #### P5.3 Acceptance
 - ⬜ **P5.3.1** P5 acceptance in the workspace, and the `transcribe-gas-bill` workspace skill.
@@ -593,6 +594,7 @@ P6 bundles, recommendation, decisions · P7 operations. Each starts with its own
 
 ## Log (newest first)
 
+- 2026-11-05 · P5.2.6 · backtest_gas, test_p5_pipeline, sixteen stages (3339 tests); fresh review of P5.2.4-P5.2.6 on the commits · energatron-5000 `P5.2.6: add backtest_gas and the end-to-end P5 test`
 - 2026-11-05 · P5.2.5 · gas engine with an oracle and properties, cost_gas, engine settle step shared; bill-derived numbers in two earlier tests and a docstring replaced (3326 tests); self-review · energatron-5000 `P5.2.5: add the gas engine and the cost_gas stage`
 - 2026-11-05 · P5.2.4 · gas tariff model, CDR gas mapping, offer_manual v2, normalise_gas_offers with a shared normaliser (3300 tests); self-review pass · energatron-5000 `P5.2.4: add gas tariffs, offer_manual v2 and normalise_gas_offers`
 - 2026-11-05 · P5.2.3 · fresh-review findings fixed (4 should-fix, 3 nits) · energatron-5000 `P5.2.3: fix the review findings in the gas bill stages`

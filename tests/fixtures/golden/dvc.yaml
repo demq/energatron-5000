@@ -181,3 +181,16 @@ stages:
       - stages.cost_gas.stage_sha256
     outs:
     - data/marts/costs/gas
+  backtest_gas:
+    cmd: energatron stage backtest_gas
+    deps:
+    - data/marts/offers_gas
+    - data/interim/gas_bills
+    params:
+    - pricing
+    - backtest.gas_tariffs
+    - validation.backtest
+    - .energatron/code_fingerprint.json:
+      - stages.backtest_gas.stage_sha256
+    outs:
+    - data/reports/validation/backtest_gas

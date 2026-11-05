@@ -158,6 +158,13 @@ def _cost_gas(root: Path) -> None:
     _run_upstream(root, "gas_bills", "gas_profile", "normalise_gas_offers")
 
 
+def _backtest_gas(root: Path) -> None:
+    """The fixture gas and offer zones with `gas_bills` and the gas offers run: `backtest_gas` reads both."""
+    _gas_bills(root)
+    build_offer_zone(root)
+    _run_upstream(root, "gas_bills", "normalise_gas_offers")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -174,6 +181,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "gas_profile": _gas_profile,
     "normalise_gas_offers": _normalise_offers,  # the fixture offer zone holds gas plans and a gas manual offer
     "cost_gas": _cost_gas,
+    "backtest_gas": _backtest_gas,
 }
 
 

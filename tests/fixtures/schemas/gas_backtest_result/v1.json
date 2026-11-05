@@ -1,0 +1,18 @@
+{
+  "bills": 3,
+  "checks": {
+    "lines_sum": true,
+    "tariffs_resolve": true
+  },
+  "kind": "gas_backtest_result",
+  "max_abs_diff_pct": 0.42,
+  "schema_version": 1,
+  "statuses": {
+    "no_tariff": 0,
+    "outside": 0,
+    "split_tariff": 1,
+    "within": 2
+  },
+  "tariffs_configured": 2,
+  "tolerance_pct": 1.0
+}

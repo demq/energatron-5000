@@ -249,6 +249,19 @@ GAS_COST_TOTAL_SCHEMA: Final = pa.schema(
     ]
 )
 """`totals.parquet` of `cost_gas` (kind `gas_cost_total`, P5 spec §9.3)."""
+GAS_BACKTEST_BILL_SCHEMA: Final = pa.schema(
+    [
+        ("period_start", pa.date32()),
+        ("period_end", pa.date32()),
+        ("offer_snapshot_id", pa.string()),
+        ("bill_total", MONEY),
+        ("engine_total", MONEY),
+        ("diff", MONEY),
+        ("diff_pct", pa.float64()),
+        ("status", pa.string()),
+    ]
+)
+"""`bills.parquet` of `backtest_gas` (kind `gas_backtest_bill`, P5 spec §10)."""
 BILL_SCHEMA: Final = pa.schema(
     [
         ("period_start", pa.date32()),

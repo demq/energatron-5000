@@ -147,6 +147,7 @@ def test_landing_a_sapn_dataset_makes_parse_nem12_and_what_follows_it_run_again(
         "gas_profile",
         "normalise_gas_offers",
         "cost_gas",
+        "backtest_gas",
     }  # no offer or gas input
     assert not untouched & stale
     assert runner(scratch).repro().ran == [name for name in ALL_STAGES if name not in untouched]
