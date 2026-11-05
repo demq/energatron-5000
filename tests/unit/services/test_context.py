@@ -131,6 +131,7 @@ TEST_REGION = RegionProfile(
     tou_windows={"Alpha": ("08:00-20:00",), "Beta": ("20:00-08:00",)},
     distributor="Test Networks",
     cdr_retailers=("alpha", "beta-energy"),
+    gas_distributor="Test Gas Networks",
     parsers=(SourceType.SAPN_INTERVAL,),
 )
 """A made-up region profile: a zone, labels, a distributor and retailers that exist nowhere (P2 spec §13.1)."""

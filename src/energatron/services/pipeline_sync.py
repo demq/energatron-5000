@@ -7,7 +7,8 @@
 - The region's values are copied from `ctx.region` (P2 spec §5.3): `meter.local_tz` is the region's, so a file whose
   zone differs (or is `null`) is rewritten with only that value changed; `validation.timebase.windows` and the first
   `analysis.tou.window_sets` entry's windows (P3 spec §4.3) are replaced only while `null`, because the owner may edit
-  them. `offers.retailers` and `offers.distributor` (P4 spec §4.3) are likewise filled only while `null`. Every other
+  them. `offers.retailers` and `offers.distributor` (P4 spec §4.3) and `offers.gas_distributor` (P5 spec §4.3) are
+  likewise filled only while `null`. Every other
   value is the owner's and is kept.
 - Every source without a catalog gets an empty one, and the directories created are tracked (`dvc add`).
 - The local offer-rules directory `config/offer_rules.local/` (a `normalise_offers` dependency, P4 spec §6) is created
@@ -202,8 +203,8 @@ def _params(data: bytes | None, profile: RegionProfile) -> tuple[ParamsState, st
 
 
 def _with_region_values(model: type[Params], params: Params, profile: RegionProfile) -> Params:
-    """`params` with the region's zone, and the region's windows, retailers and distributor where `params` has none
-    (P2 §5.3, P3 §4.3, P4 §4.3)."""
+    """`params` with the region's zone, and the region's windows, retailers and distributors where `params` has none
+    (P2 §5.3, P3 §4.3, P4 §4.3, P5 §4.3)."""
     values = cast(dict[str, Any], params.model_dump(mode="json"))
     values["meter"]["local_tz"] = profile.local_tz
     region_windows = (
@@ -219,6 +220,8 @@ def _with_region_values(model: type[Params], params: Params, profile: RegionProf
         offers["retailers"] = list(profile.cdr_retailers)
     if offers["distributor"] is None:
         offers["distributor"] = profile.distributor
+    if offers["gas_distributor"] is None:
+        offers["gas_distributor"] = profile.gas_distributor
     return model.model_validate(values)
 
 

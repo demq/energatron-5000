@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
+import yaml
 
 from energatron.adapters.sources.cdr_index import OFFER_CDR_INDEX
 from energatron.adapters.sources.cdr_plan import OFFER_CDR
@@ -28,6 +29,7 @@ from energatron.core.models.catalog import SourceType
 from energatron.core.models.offers import Fetched, OfferFetchLog
 from energatron.core.models.private import PrivateConfig
 from energatron.core.models.workspace import WorkspacePaths
+from energatron.services import fetch_offers as fetch_offers_module
 from energatron.services.context import ServiceContext
 from energatron.services.fetch_offers import FetchOffersResult, fetch_offers, outcome
 from tests.fixtures import make_cdr as cdr
@@ -165,7 +167,7 @@ def test_selected_plans_land_with_one_fetch_log_in_one_commit(
 @pytest.mark.parametrize(
     ("plan", "reason"),
     [
-        (cdr.plan("X@EME", fuel="GAS"), "fuel"),
+        (cdr.plan("X@EME", fuel="DUAL"), "fuel"),
         (cdr.plan("X@EME", customer_type="BUSINESS"), "customer_type"),
         (cdr.plan("X@EME", distributors=["Other Networks"]), "distributor"),
         (cdr.plan("X@EME", postcodes=["1111"]), "postcode"),
@@ -232,6 +234,67 @@ def test_a_plan_listed_twice_is_selected_once(ctx: ServiceContext, provider: Fak
     provider.serve("alpha", cdr.plan("A1@EME"))
     provider.lists["alpha"] = [cdr.plan("A1@EME"), cdr.plan("A1@EME")]
     assert fetch_offers(ctx, retailers=["alpha"]).retailers[0].selected == 1
+
+
+# The distributor per fuel (P5 spec §4.4)
+
+GAS_NETWORKS = "Test Gas Networks"  # TEST_REGION's gas distributor
+
+
+def test_gas_plans_on_the_gas_network_are_selected_with_their_fuel(ctx: ServiceContext, provider: FakeProvider) -> None:
+    provider.serve(
+        "alpha",
+        cdr.plan("E1@EME"),
+        cdr.plan("G1@EME", fuel="GAS", distributors=[GAS_NETWORKS]),
+    )
+    provider.lists["alpha"] = [
+        *provider.lists["alpha"],  # type: ignore[misc]
+        cdr.plan("G2@EME", fuel="GAS", distributors=["Test Networks"]),  # gas listed on the electricity network
+        cdr.plan("E2@EME", distributors=[GAS_NETWORKS]),  # electricity listed on the gas network
+    ]
+    result = fetch_offers(ctx, retailers=["alpha"])
+    (alpha,) = result.retailers
+    assert (alpha.listed, alpha.selected, alpha.left_out) == (4, 2, {"distributor": 2})
+    log = the_log(ctx)
+    assert [(plan.plan_id, plan.fuel_type) for plan in log.selected] == [("E1@EME", "ELECTRICITY"), ("G1@EME", "GAS")]
+    assert (log.filter.distributor, log.filter.gas_distributor) == ("Test Networks", GAS_NETWORKS)
+
+
+def test_a_distributor_name_must_match_exactly(ctx: ServiceContext, provider: FakeProvider) -> None:
+    provider.serve("alpha", cdr.plan("G1@EME", fuel="GAS", distributors=[GAS_NETWORKS + " (North)"]))
+    assert fetch_offers(ctx, retailers=["alpha"], dry_run=True).retailers[0].left_out == {"distributor": 1}
+
+
+def write_offers(paths: WorkspacePaths, **changes: Any) -> None:
+    file = paths.root / "params.yaml"
+    document = yaml.safe_load(file.read_text(encoding="utf-8"))
+    document["offers"] |= changes
+    file.write_text(yaml.safe_dump(document, sort_keys=False), encoding="utf-8")
+
+
+@pytest.fixture
+def unsynced(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Skip the sync precondition, which reports a `null` distributor as drift first: the fuel check behind it is what
+    these tests reach."""
+    monkeypatch.setattr(fetch_offers_module.pipeline_sync, "check", lambda ctx: None)
+
+
+@pytest.mark.usefixtures("unsynced")
+def test_gas_listed_without_a_gas_distributor_is_invalid_input(ctx: ServiceContext, paths: WorkspacePaths) -> None:
+    write_offers(paths, gas_distributor=None)
+    with pytest.raises(InvalidInputError) as caught:
+        fetch_offers(ctx, retailers=["alpha"], dry_run=True)
+    assert caught.value.details["field"] == "offers.gas_distributor"
+
+
+@pytest.mark.usefixtures("unsynced")
+def test_gas_only_needs_no_electricity_distributor(
+    ctx: ServiceContext, paths: WorkspacePaths, provider: FakeProvider
+) -> None:
+    write_offers(paths, distributor=None, fuel_types=["GAS"])
+    provider.serve("alpha", cdr.plan("E1@EME"), cdr.plan("G1@EME", fuel="GAS", distributors=[GAS_NETWORKS]))
+    (alpha,) = fetch_offers(ctx, retailers=["alpha"], dry_run=True).retailers
+    assert (alpha.selected, alpha.left_out) == (1, {"fuel": 1})
 
 
 # Failures

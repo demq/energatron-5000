@@ -268,8 +268,9 @@ def fetch_log(
     retailers: Sequence[tuple[str, Sequence[Mapping[str, Any]]]] = (("alpha", ()),),
     selected: Sequence[Mapping[str, Any]] = (),
     postcode_applied: bool = True,
+    gas_distributor: str | None = None,
 ) -> dict[str, Any]:
-    """An `offer_fetch_log` v1 document: each `(base, plans)` gets one list page holding `plans`."""
+    """An `offer_fetch_log` v2 document: each `(base, plans)` gets one list page holding `plans`."""
     entries = []
     for base, plans in retailers:
         body = list_body(plans, self_url=f"https://cdr.test/{base}/plans")
@@ -284,13 +285,14 @@ def fetch_log(
         entries.append({"base": base, "pages": [page], "listed": len(plans), "left_out": {}, "error": None})
     return {
         "kind": "offer_fetch_log",
-        "schema_version": 1,
+        "schema_version": 2,
         "fetch_batch_id": batch,
         "fetched_at": fetched_at,
         "filter": {
             "fuel_types": ["ELECTRICITY"],
             "customer_type": "RESIDENTIAL",
             "distributor": DISTRIBUTOR,
+            "gas_distributor": gas_distributor,
             "postcode_applied": postcode_applied,
         },
         "retailers": entries,
@@ -306,10 +308,12 @@ def selected(
     action: str = "fetched",
     sha256: str | None = None,
     snapshot: str | None = None,
+    fuel_type: str = "ELECTRICITY",
 ) -> dict[str, Any]:
     return {
         "base": base,
         "plan_id": plan_id,
+        "fuel_type": fuel_type,
         "last_updated": last_updated,
         "action": action,
         "sha256": sha256,

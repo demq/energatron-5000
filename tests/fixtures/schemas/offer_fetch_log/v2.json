@@ -1,0 +1,51 @@
+{
+  "fetch_batch_id": "fetch-20261101T000000Z",
+  "fetched_at": "2026-11-01T00:00:00Z",
+  "filter": {
+    "customer_type": "RESIDENTIAL",
+    "distributor": "Test Networks",
+    "fuel_types": [
+      "ELECTRICITY",
+      "GAS"
+    ],
+    "gas_distributor": "Test Gas Networks",
+    "postcode_applied": true
+  },
+  "kind": "offer_fetch_log",
+  "retailers": [
+    {
+      "base": "alpha",
+      "error": null,
+      "left_out": {
+        "distributor": 3
+      },
+      "listed": 1,
+      "pages": [
+        {
+          "body_b64": "eyJkYXRhIjogeyJwbGFucyI6IFt7InBsYW5JZCI6ICJURVNUMUBFTUUiLCAiYnJhbmQiOiAiYWxwaGEiLCAiYnJhbmROYW1lIjogIkFscGhhIiwgImRpc3BsYXlOYW1lIjogIkFscGhhIFRlc3QgUGxhbiBURVNUMUBFTUUiLCAidHlwZSI6ICJNQVJLRVQiLCAiZnVlbFR5cGUiOiAiRUxFQ1RSSUNJVFkiLCAiY3VzdG9tZXJUeXBlIjogIlJFU0lERU5USUFMIiwgImdlb2dyYXBoeSI6IHsiZGlzdHJpYnV0b3JzIjogWyJUZXN0IE5ldHdvcmtzIl19LCAibGFzdFVwZGF0ZWQiOiAiMjAyNi0xMC0wMVQwMDowMDowMFoiLCAiZWZmZWN0aXZlRnJvbSI6ICIyMDI2LTA3LTAxVDAwOjAwOjAwWiJ9XX0sICJsaW5rcyI6IHsic2VsZiI6ICJodHRwczovL2Nkci50ZXN0L2FscGhhL3BsYW5zIn0sICJtZXRhIjogeyJ0b3RhbFJlY29yZHMiOiAxLCAidG90YWxQYWdlcyI6IDF9fQ==",
+          "fetched_at": "2026-11-01T00:00:00Z",
+          "request_headers": {
+            "x-v": "1"
+          },
+          "response_headers": {
+            "content-type": "application/json"
+          },
+          "status": 200,
+          "url": "https://cdr.test/alpha/plans"
+        }
+      ]
+    }
+  ],
+  "schema_version": 2,
+  "selected": [
+    {
+      "action": "fetched",
+      "base": "alpha",
+      "fuel_type": "ELECTRICITY",
+      "last_updated": "2026-10-01T00:00:00Z",
+      "offer_snapshot_id": "TEST1@EME~20261001T000000Z~0123abcd",
+      "plan_id": "TEST1@EME",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    }
+  ]
+}

@@ -27,6 +27,7 @@ def profile(
         tou_windows={"Alpha": ("08:00-20:00",), "Beta": ("20:00-08:00",)},
         distributor=distributor,
         cdr_retailers=retailers,
+        gas_distributor="Test Gas Networks",
         parsers=(SourceType.SAPN_INTERVAL,),
     )
 
@@ -62,11 +63,11 @@ def with_block(block: str, **changes: Any) -> dict[str, Any]:
 
 def test_a_valid_v4_document_validates() -> None:
     params = Params.from_document(doc_v4())
-    assert params.schema_version == 4
+    assert params.schema_version == 5
     assert params.offers.retailers == ("alpha", "beta-energy")
     assert params.offers.distributor == "Test Networks"
     assert params.offers.customer_type == "RESIDENTIAL"
-    assert params.offers.fuel_types == ("ELECTRICITY",)
+    assert params.offers.fuel_types == ("ELECTRICITY", "GAS")  # the v4 to v5 migration adds GAS
     assert params.offers.unmet_eligibility == ("EXISTING_SOLAR", "EXISTING_BATTERY")
     assert params.offers.controlled_load is False
     assert params.pricing.gst_rate == Decimal("0.10")
@@ -80,7 +81,7 @@ def test_a_valid_v4_document_validates() -> None:
 def test_the_gst_rate_dumps_as_a_decimal_string() -> None:
     dumped = Params.from_document(doc_v4()).model_dump(mode="json")
     assert dumped["pricing"]["gst_rate"] == "0.10"
-    assert list(dumped)[-3:] == ["offers", "pricing", "backtest"]
+    assert list(dumped)[-4:] == ["offers", "pricing", "backtest", "gas"]
 
 
 def test_the_region_fields_include_the_retailers_and_the_distributor() -> None:
@@ -189,7 +190,7 @@ def test_a_v3_document_reads_as_v4_with_null_region_fields_and_keeps_its_values(
     doc = doc_v3()
     doc["meter"]["timebase"] = "local_wall"
     params = Params.from_document(doc)
-    assert params.schema_version == 4
+    assert params.schema_version == 5
     assert params.meter.timebase == "local_wall"
     assert params.offers.retailers is None
     assert params.offers.distributor is None
@@ -203,9 +204,8 @@ def test_defaults_take_the_retailers_and_distributor_from_the_profile() -> None:
     assert migrated.pricing == params.pricing
     assert migrated.backtest == params.backtest
     assert migrated.validation.backtest == params.validation.backtest
-    assert migrated.offers.model_copy(update={"retailers": None, "distributor": None}) == params.offers.model_copy(
-        update={"retailers": None, "distributor": None}
-    )
+    unset = {"retailers": None, "distributor": None, "gas_distributor": None}
+    assert migrated.offers.model_copy(update=unset) == params.offers.model_copy(update=unset)
 
 
 def test_defaults_carry_a_null_profile_value_through() -> None:

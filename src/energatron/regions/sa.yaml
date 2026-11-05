@@ -1,6 +1,6 @@
-# South Australia (D3 §10.3; P2 spec §5.2; P4 spec §4.2).
+# South Australia (D3 §10.3; P2 spec §5.2; P4 spec §4.2; P5 spec §4.2).
 kind: region_profile
-schema_version: 3
+schema_version: 4
 name: sa
 local_tz: Australia/Adelaide
 tou_windows: # plan §3.3: the retailer's windows for this network
@@ -39,4 +39,6 @@ cdr_retailers:
   - silver-asset
   - sumo-power
   - tango
+# The metropolitan Adelaide gas network as CDR names it (P5 spec §1); other SA towns' networks wait for P8.
+gas_distributor: AGN Metro/Barossa/Peterborough
 parsers: [elec_bill, gas_bill, offer_cdr, offer_cdr_index, offer_manual, retailer_txn, retailer_usage, sapn_interval, sapn_summary]

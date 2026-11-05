@@ -1,0 +1,23 @@
+{
+  "cdr_retailers": [
+    "alpha",
+    "beta-energy"
+  ],
+  "distributor": "Test Networks",
+  "gas_distributor": "Test Gas Networks",
+  "kind": "region_profile",
+  "local_tz": "Test/Zone",
+  "name": "sa",
+  "parsers": [
+    "sapn_interval"
+  ],
+  "schema_version": 4,
+  "tou_windows": {
+    "Alpha": [
+      "08:00-20:00"
+    ],
+    "Beta": [
+      "20:00-08:00"
+    ]
+  }
+}

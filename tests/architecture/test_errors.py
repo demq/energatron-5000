@@ -69,6 +69,8 @@ EXPECTED_WARNINGS = frozenset(
         "W_OFFERS_MISSING_SNAPSHOT",  # P4 spec §8, §12
         "W_BACKTEST_OUTSIDE_TOLERANCE",  # P4 spec §10, §12
         "W_BACKTEST_NO_TARIFF",  # P4 spec §10, §12
+        "W_GAS_GAP",  # P5 spec §7, §11
+        "W_GAS_PARTIAL_YEAR",  # P5 spec §9.3, §11
     }
 )
 

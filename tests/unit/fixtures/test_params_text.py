@@ -6,7 +6,16 @@ from decimal import Decimal
 import yaml
 
 from energatron.core.models.params import Params
-from tests.fixtures.params_text import DISTRIBUTOR, RETAILERS, ZONE, params_v2_text, params_v3_text, params_v4_text
+from tests.fixtures.params_text import (
+    DISTRIBUTOR,
+    GAS_DISTRIBUTOR,
+    RETAILERS,
+    ZONE,
+    params_v2_text,
+    params_v3_text,
+    params_v4_text,
+    params_v5_text,
+)
 from tests.fixtures.pipeline_workspace import WINDOWS
 
 
@@ -14,9 +23,9 @@ def read(text: str) -> Params:
     return Params.from_document(yaml.safe_load(text))
 
 
-def test_v2_text_is_still_a_version_2_document_that_reads_as_v4() -> None:
+def test_v2_text_is_still_a_version_2_document_that_reads_as_the_current_version() -> None:
     assert yaml.safe_load(params_v2_text())["schema_version"] == 2
-    assert read(params_v2_text()).schema_version == 4
+    assert read(params_v2_text()).schema_version == Params.SCHEMA_VERSION
 
 
 def test_v3_text_without_a_region_has_null_zone_and_windows() -> None:
@@ -69,3 +78,17 @@ def test_v4_text_takes_its_v3_settings_and_tariffs_in_force() -> None:
     assert params.analysis.reference_months == 6
     assert params.offers.controlled_load is True
     assert [found.offer for found in params.backtest.tariffs] == [tariffs[0]["offer"]]
+
+
+def test_v5_text_is_a_version_5_document_with_the_gas_keys() -> None:
+    assert yaml.safe_load(params_v5_text())["schema_version"] == 5
+    params = read(params_v5_text())
+    assert params.offers.gas_distributor is None
+    assert params.offers.fuel_types == ("ELECTRICITY", "GAS")
+    gas_tariffs = [{"offer": "TEST9@EME~20251001T000000Z~0123abcd", "from": "2025-10-01", "to": None}]
+    filled = read(params_v5_text(region=True, gas_tariffs=gas_tariffs, reference_bills=3, gas_tolerance="0.10"))
+    assert filled.offers.gas_distributor == GAS_DISTRIBUTOR
+    assert filled.offers.distributor == DISTRIBUTOR
+    assert [found.offer for found in filled.backtest.gas_tariffs] == ["TEST9@EME~20251001T000000Z~0123abcd"]
+    assert filled.gas.reference_bills == 3
+    assert str(filled.validation.gas_bills.tolerance) == "0.10"

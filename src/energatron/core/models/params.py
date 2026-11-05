@@ -4,10 +4,11 @@ Version 2 adds `meter.*` (the time basis and the local zone) and `validation.*` 
 that `validate_timebase` fits). Version 3 adds `analysis.*` (the usage profile's settings, and the date-ranged TOU
 window sets its split uses). Version 4 adds `offers.*` (what `fetch-offers` lists and `normalise_offers` keeps),
 `pricing.*` (GST, the discount conditions assumed met, the demand block), `backtest.*` (the tariffs in force) and
-`validation.backtest` (P4 spec §4.1). The zone, the windows, the CDR retailers and the distributor are
-region-specific, so core holds no default for them: `pipeline sync` copies them from the region profile
-(`Params.defaults(profile)` for a new file), and a migrated document carries `null` until then. `prepare_stage`
-refuses a stage that reads one while it is `null`.
+`validation.backtest` (P4 spec §4.1). Version 5 adds `GAS` to the fuels, `offers.gas_distributor`, `gas.*` (the gas
+reference year), `backtest.gas_tariffs` and `validation.gas_bills` (P5 spec §4.1). The zone, the windows, the CDR
+retailers and the two distributors are region-specific, so core holds no default for them: `pipeline sync` copies
+them from the region profile (`Params.defaults(profile)` for a new file), and a migrated document carries `null` until
+then. `prepare_stage` refuses a stage that reads one while it is `null`.
 
 Each phase that adds keys bumps the version and adds a migration that inserts its defaults. `pipeline sync` rewrites
 an older file, because DVC reads declared keys from the file itself; energatron's readers still upgrade it in memory
@@ -44,6 +45,7 @@ REGION_FIELDS: Final = (
     FIRST_SET_WINDOWS,
     "offers.retailers",
     "offers.distributor",
+    "offers.gas_distributor",
 )
 """The keys that hold region data and may be `null` until `pipeline sync` fills them. A `[n]` is a list index."""
 
@@ -77,10 +79,26 @@ class BacktestValidation(FrozenModel):
     invoice_window_days: Annotated[int, Field(strict=True, ge=0, le=62)]
 
 
+def _non_negative_decimal(field: str) -> Callable[[Decimal], Decimal]:
+    def check(value: Decimal) -> Decimal:
+        if not value.is_finite() or value < 0:
+            raise ValueError(f"{field}: a decimal of 0 or more")
+        return value
+
+    return check
+
+
+class GasBillsValidation(FrozenModel):
+    """How closely a gas bill record must recompute (P5 spec §6): dollars per line and per bill, MJ per read."""
+
+    tolerance: Annotated[Decimal, AfterValidator(_non_negative_decimal("validation.gas_bills.tolerance"))]
+
+
 class ValidationParams(FrozenModel):
     meter: MeterValidation
     timebase: TimebaseValidation
     backtest: BacktestValidation
+    gas_bills: GasBillsValidation
 
 
 type Weekday = Literal["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
@@ -208,7 +226,7 @@ class AnalysisParams(FrozenModel):
 
 # `offers`, `pricing` and `backtest` (P4 spec §4.1)
 
-type Fuel = Literal["ELECTRICITY"]  # P5 adds "GAS"; DUAL waits for P6
+type Fuel = Literal["ELECTRICITY", "GAS"]  # DUAL waits for P6
 type CustomerType = Literal["RESIDENTIAL", "BUSINESS"]
 type Condition = Literal["PAY_ON_TIME", "DIRECT_DEBIT"]
 type Eligibility = Literal[
@@ -238,6 +256,7 @@ type Eligibility = Literal[
 
 _Retailers = Annotated[tuple[str, ...], AfterValidator(retailer_bases("offers.retailers"))]
 _Distributor = Annotated[str, AfterValidator(trimmed_text("offers.distributor"))]
+_GasDistributor = Annotated[str, AfterValidator(trimmed_text("offers.gas_distributor"))]
 
 
 def _unique_items[T](field: str) -> Callable[[tuple[T, ...]], tuple[T, ...]]:
@@ -256,6 +275,7 @@ class OffersParams(FrozenModel):
 
     retailers: _Retailers | None  # CDR base URIs; from the region profile, `null` until `pipeline sync`
     distributor: _Distributor | None  # from the region profile, `null` until `pipeline sync`
+    gas_distributor: _GasDistributor | None  # likewise (P5 spec §4.1)
     customer_type: CustomerType
     fuel_types: Annotated[tuple[Fuel, ...], Field(min_length=1), AfterValidator(_unique_items("offers.fuel_types"))]
     unmet_eligibility: Annotated[tuple[Eligibility, ...], AfterValidator(_unique_items("offers.unmet_eligibility"))]
@@ -302,33 +322,52 @@ class TariffInForce(FrozenModel):
     end: Annotated[date | None, Field(alias="to")]
 
 
+def _check_tariffs_in_force(tariffs: tuple[TariffInForce, ...], field: str) -> None:
+    ordered = sorted(tariffs, key=lambda found: found.start)
+    for index, found in enumerate(ordered):
+        if found.end is not None and found.end < found.start:
+            raise InvalidInputError("A tariff in force ends before it starts.", field=field)
+        following = ordered[index + 1] if index + 1 < len(ordered) else None
+        if following is not None and (found.end is None or found.end >= following.start):
+            raise InvalidInputError("Two tariffs in force overlap.", field=field)
+
+
 class BacktestParams(FrozenModel):
-    """The tariffs in force for the backtest (P4 spec §10); ranges must not overlap."""
+    """The tariffs in force for the electricity backtest (P4 spec §10) and the gas backtest (P5 spec §10); within each
+    list, ranges must not overlap."""
 
     tariffs: tuple[TariffInForce, ...]
+    gas_tariffs: tuple[TariffInForce, ...]
 
     @model_validator(mode="after")
     def _ranges_are_valid_and_disjoint(self) -> Self:
-        ordered = sorted(self.tariffs, key=lambda found: found.start)
-        for index, found in enumerate(ordered):
-            if found.end is not None and found.end < found.start:
-                raise InvalidInputError("A tariff in force ends before it starts.", field="backtest.tariffs")
-            following = ordered[index + 1] if index + 1 < len(ordered) else None
-            if following is not None and (found.end is None or found.end >= following.start):
-                raise InvalidInputError("Two tariffs in force overlap.", field="backtest.tariffs")
+        _check_tariffs_in_force(self.tariffs, "backtest.tariffs")
+        _check_tariffs_in_force(self.gas_tariffs, "backtest.gas_tariffs")
         return self
+
+
+class GasParams(FrozenModel):
+    """The gas reference year (P5 spec §4.1, §7): the latest `reference_bills` bills; shorter than `full_year_days`
+    days is a partial year."""
+
+    reference_bills: Annotated[int, Field(strict=True, ge=1)]
+    full_year_days: Annotated[int, Field(strict=True, ge=1, le=366)]
 
 
 _DEFAULT_OFFERS: Final = {
     "customer_type": "RESIDENTIAL",
-    "fuel_types": ("ELECTRICITY",),
+    "fuel_types": ("ELECTRICITY", "GAS"),
     "unmet_eligibility": ("EXISTING_SOLAR", "EXISTING_BATTERY"),
     "controlled_load": False,
 }
 
 
-def _offers_defaults(retailers: tuple[str, ...] | None, distributor: str | None) -> OffersParams:
-    return OffersParams.model_validate({"retailers": retailers, "distributor": distributor, **_DEFAULT_OFFERS})
+def _offers_defaults(
+    retailers: tuple[str, ...] | None, distributor: str | None, gas_distributor: str | None
+) -> OffersParams:
+    return OffersParams.model_validate(
+        {"retailers": retailers, "distributor": distributor, "gas_distributor": gas_distributor, **_DEFAULT_OFFERS}
+    )
 
 
 def _pricing_defaults() -> PricingParams:
@@ -341,13 +380,21 @@ def _backtest_validation_defaults() -> BacktestValidation:
     return BacktestValidation(tolerance_pct=1.0, invoice_window_days=14)
 
 
+def _gas_bills_validation_defaults() -> GasBillsValidation:
+    return GasBillsValidation(tolerance=Decimal("0.05"))
+
+
+def _gas_defaults() -> GasParams:
+    return GasParams(reference_bills=12, full_year_days=334)
+
+
 class Params(Persisted):
     """The workspace's non-personal pipeline settings. `prepare_stage` validates the whole file through this model."""
 
     KIND: ClassVar[str] = "params"
-    SCHEMA_VERSION: ClassVar[int] = 4
+    SCHEMA_VERSION: ClassVar[int] = 5
     kind: Literal["params"] = "params"
-    schema_version: Literal[4] = 4
+    schema_version: Literal[5] = 5
 
     meter: MeterParams
     validation: ValidationParams
@@ -355,6 +402,7 @@ class Params(Persisted):
     offers: OffersParams
     pricing: PricingParams
     backtest: BacktestParams
+    gas: GasParams
 
     @classmethod
     def defaults(cls, profile: RegionProfile) -> Self:
@@ -371,11 +419,13 @@ class Params(Persisted):
                     min_fit_periods=3,
                 ),
                 backtest=_backtest_validation_defaults(),
+                gas_bills=_gas_bills_validation_defaults(),
             ),
             analysis=AnalysisParams.defaults(profile.tou_windows),
-            offers=_offers_defaults(profile.cdr_retailers, profile.distributor),
+            offers=_offers_defaults(profile.cdr_retailers, profile.distributor, profile.gas_distributor),
             pricing=_pricing_defaults(),
-            backtest=BacktestParams(tariffs=()),
+            backtest=BacktestParams(tariffs=(), gas_tariffs=()),
+            gas=_gas_defaults(),
         )
 
 
@@ -413,7 +463,14 @@ def _params_v3_to_v4(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
     validation: Any = doc.get("validation")
     if isinstance(validation, dict):
         validation = {**validation, "backtest": _backtest_validation_defaults().model_dump(mode="json")}
-    offers: Any = _offers_defaults(None, None).model_dump(mode="json")
+    offers: Any = {
+        "retailers": None,
+        "distributor": None,
+        "customer_type": "RESIDENTIAL",
+        "fuel_types": ["ELECTRICITY"],
+        "unmet_eligibility": ["EXISTING_SOLAR", "EXISTING_BATTERY"],
+        "controlled_load": False,
+    }  # the v4 content, written out: the defaults now hold v5's
     pricing: Any = _pricing_defaults().model_dump(mode="json")
     return {
         **doc,
@@ -422,4 +479,31 @@ def _params_v3_to_v4(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
         "offers": offers,
         "pricing": pricing,
         "backtest": {"tariffs": []},
+    }
+
+
+@migration("params", from_version=4)
+def _params_v4_to_v5(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
+    """Add `GAS` to `offers.fuel_types` and insert `offers.gas_distributor` (`null`: no region here), `gas`,
+    `backtest.gas_tariffs` and `validation.gas_bills` with the v5 defaults (P5 spec §4.1)."""
+    offers: Any = doc.get("offers")
+    if isinstance(offers, dict):
+        fuels = offers.get("fuel_types")
+        if isinstance(fuels, list) and fuels and "GAS" not in fuels:  # an empty list stays invalid
+            fuels = [*fuels, "GAS"]
+        offers = {**offers, "fuel_types": fuels, "gas_distributor": None}
+    backtest: Any = doc.get("backtest")
+    if isinstance(backtest, dict):
+        backtest = {**backtest, "gas_tariffs": []}
+    validation: Any = doc.get("validation")
+    if isinstance(validation, dict):
+        validation = {**validation, "gas_bills": _gas_bills_validation_defaults().model_dump(mode="json")}
+    gas: Any = _gas_defaults().model_dump(mode="json")
+    return {
+        **doc,
+        "schema_version": 5,
+        "validation": validation,
+        "offers": offers,
+        "backtest": backtest,
+        "gas": gas,
     }

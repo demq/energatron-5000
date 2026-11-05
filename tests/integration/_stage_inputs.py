@@ -16,12 +16,12 @@ from energatron.core.models.catalog import SourceType
 from energatron.services.stages.registry import STAGES
 from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
 from tests.fixtures.offer_workspace import build_offer_zone
-from tests.fixtures.params_text import params_v4_text
+from tests.fixtures.params_text import params_v5_text
 from tests.fixtures.pipeline_workspace import build_raw_zone, empty_raw_zone
 
 REFERENCE_MONTHS: Final = 5
 """The fixture raw zone covers May to September: five whole local months, so five fit the reference window."""
-PARAMS_YAML: Final = params_v4_text(region=True, reference_months=REFERENCE_MONTHS)
+PARAMS_YAML: Final = params_v5_text(region=True, reference_months=REFERENCE_MONTHS)
 """The region fields are filled, as `pipeline sync` leaves them: `validate_timebase` and `normalise_offers` refuse
 `null` ones."""
 _SOURCE_TS: Final = datetime(2026, 1, 2, 3, 4, 5)

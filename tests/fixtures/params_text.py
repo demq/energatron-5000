@@ -5,14 +5,14 @@ DVC reads declared params from the file itself, so a scratch workspace that runs
 not the v1 stub that the migration would upgrade in memory. By default the zone and windows stay `null`, as after a
 migration; `region=True` fills them the way `pipeline sync` would, with the fixture's zone and windows.
 `params_v3_text` adds the `analysis` block, optionally with a second TOU window set; `params_v4_text` adds the
-`offers`, `pricing`, `backtest` and `validation.backtest` blocks.
+`offers`, `pricing`, `backtest` and `validation.backtest` blocks; `params_v5_text` adds P5's gas keys.
 """
 
 import json
 import re
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 import yaml
 
@@ -24,6 +24,8 @@ RETAILERS: Final = ("alpha", "beta-energy")
 """Made-up CDR base URIs."""
 DISTRIBUTOR: Final = "Test Networks"
 """A made-up distributor."""
+GAS_DISTRIBUTOR: Final = "Test Gas Networks"
+"""A made-up gas distributor."""
 
 _TEMPLATE: Final = """\
 kind: params
@@ -188,3 +190,36 @@ def set_reference_months(params_file: Path, months: int) -> None:
     changed = re.sub(r"(?m)^  reference_months: [0-9]+$", f"  reference_months: {months}", text)
     assert changed != text, "no analysis.reference_months to change"
     params_file.write_text(changed, encoding="utf-8")
+
+
+def params_v5_text(
+    tolerance: float = 0.01,
+    *,
+    region: bool = False,
+    gas_tariffs: Sequence[Mapping[str, str | None]] = (),
+    reference_bills: int = 12,
+    full_year_days: int = 334,
+    gas_tolerance: str = "0.05",
+    fuel_types: Sequence[str] = ("ELECTRICITY", "GAS"),
+    **v4: Any,
+) -> str:
+    """`params.yaml` v5: `params_v4_text` (schema version 5) with P5's keys (P5 spec §4.1).
+
+    `region=True` also fills `offers.gas_distributor` (`GAS_DISTRIBUTOR`); otherwise it is `null`. `gas_tariffs` is
+    `backtest.gas_tariffs`; the other keyword arguments go to `params_v4_text`.
+    """
+    base = params_v4_text(tolerance, region=region, **v4).replace("schema_version: 4", "schema_version: 5", 1)
+    base = base.replace("  fuel_types: [ELECTRICITY]\n", f"  fuel_types: [{', '.join(fuel_types)}]\n", 1)
+    distributor_line = next(line for line in base.splitlines() if line.startswith("  distributor: "))
+    base = base.replace(
+        distributor_line + "\n",
+        f"{distributor_line}\n  gas_distributor: {GAS_DISTRIBUTOR if region else 'null'}\n",
+        1,
+    )
+    marker = "    invoice_window_days: 14\n"
+    base = base.replace(marker, f'{marker}  gas_bills:\n    tolerance: "{gas_tolerance}"\n', 1)
+    tariffs_line = next(line for line in base.splitlines() if line.startswith("  tariffs: "))
+    base = base.replace(
+        tariffs_line + "\n", f"{tariffs_line}\n  gas_tariffs: {json.dumps([dict(found) for found in gas_tariffs])}\n", 1
+    )
+    return base + f"gas:\n  reference_bills: {reference_bills}\n  full_year_days: {full_year_days}\n"

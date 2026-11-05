@@ -311,6 +311,8 @@ class WarningCode(StrEnum):
     W_OFFERS_MISSING_SNAPSHOT = "W_OFFERS_MISSING_SNAPSHOT"  # a current plan has no landed snapshot (P4 spec §8)
     W_BACKTEST_OUTSIDE_TOLERANCE = "W_BACKTEST_OUTSIDE_TOLERANCE"  # a bill outside the tolerance (P4 spec §10)
     W_BACKTEST_NO_TARIFF = "W_BACKTEST_NO_TARIFF"  # no tariff in force, or no period priced (P4 spec §10)
+    W_GAS_GAP = "W_GAS_GAP"  # gas bills that don't follow on from the one before (P5 spec §7)
+    W_GAS_PARTIAL_YEAR = "W_GAS_PARTIAL_YEAR"  # the gas reference is shorter than a year (P5 spec §9.3)
 
 
 class ResultWarning(BaseModel):

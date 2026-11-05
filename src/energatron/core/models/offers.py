@@ -10,14 +10,14 @@ tariff the owner writes in the CDR contract shape, so one mapper serves both (`c
 import base64
 import re
 from datetime import UTC, date, datetime, time
-from typing import Annotated, ClassVar, Final, Literal
+from typing import Annotated, Any, ClassVar, Final, Literal
 
 from pydantic import AfterValidator, ConfigDict, Field
 
 from energatron.core.canonical import JSONValue
 from energatron.core.ids import parse_offer_snapshot_id
 from energatron.core.models._common import DatasetId, FrozenModel, Sha256Hex, UtcDatetime, retailer_bases, trimmed_text
-from energatron.core.persisted import Persisted
+from energatron.core.persisted import Persisted, migration
 
 
 class Fetched(FrozenModel):
@@ -101,6 +101,7 @@ class SelectedPlan(FrozenModel):
 
     base: Base
     plan_id: str
+    fuel_type: Literal["ELECTRICITY", "GAS"]  # the list item's `fuelType` (P5 spec §4.4)
     last_updated: UtcDatetime
     action: FetchAction
     sha256: Sha256Hex | None = None
@@ -108,27 +109,43 @@ class SelectedPlan(FrozenModel):
 
 
 class FetchFilter(FrozenModel):
-    """The local filter of one batch (P4 spec §3.2 step 3). `postcode_applied` says whether a postcode was known."""
+    """The local filter of one batch (P4 spec §3.2 step 3). `postcode_applied` says whether a postcode was known.
+    `distributor` is the electricity distributor, `gas_distributor` the gas one (P5 spec §4.4; `null` in a v1 log)."""
 
     fuel_types: tuple[str, ...]
     customer_type: str
-    distributor: str
+    distributor: str | None
+    gas_distributor: str | None
     postcode_applied: bool
 
 
 class OfferFetchLog(Persisted):
-    """`offer_fetch_log` v1: one `fetch-offers` batch, landed as `offer_cdr_index` (P4 spec §3.3)."""
+    """`offer_fetch_log` v2: one `fetch-offers` batch, landed as `offer_cdr_index` (P4 spec §3.3). Version 2 adds
+    `filter.gas_distributor` and `selected[].fuel_type` (P5 spec §4.4)."""
 
     KIND: ClassVar[str] = "offer_fetch_log"
-    SCHEMA_VERSION: ClassVar[int] = 1
+    SCHEMA_VERSION: ClassVar[int] = 2
     kind: Literal["offer_fetch_log"] = "offer_fetch_log"
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
 
     fetch_batch_id: Annotated[str, Field(pattern=r"^fetch-\d{8}T\d{6}Z$")]
     fetched_at: UtcDatetime
     filter: FetchFilter
     retailers: tuple[RetailerFetch, ...]
     selected: tuple[SelectedPlan, ...]
+
+
+@migration("offer_fetch_log", from_version=1)
+def _offer_fetch_log_v1_to_v2(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
+    """Insert `filter.gas_distributor: null` and `fuel_type: ELECTRICITY` in each selected plan: a v1 batch filtered
+    and selected electricity only."""
+    found: Any = doc.get("filter")
+    if isinstance(found, dict):
+        found = {**found, "gas_distributor": None}
+    selected: Any = doc.get("selected")
+    if isinstance(selected, list):
+        selected = [{**plan, "fuel_type": "ELECTRICITY"} if isinstance(plan, dict) else plan for plan in selected]
+    return {**doc, "schema_version": 2, "filter": found, "selected": selected}
 
 
 # offer_manual (P4 spec §5.3)

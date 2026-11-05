@@ -75,3 +75,16 @@ def test_malformed_fetch_logs_are_rejected_with_a_reason(data: bytes, reason: st
     with pytest.raises(InvalidInputError) as caught:
         OFFER_CDR_INDEX.inspect("fetch-log.json", data)
     assert caught.value.details["reason"] == reason
+
+
+def test_a_v1_fetch_log_upgrades_with_no_gas_distributor_and_electricity_selections() -> None:
+    document = cdr.fetch_log(selected=[cdr.selected("A1@EME")])
+    document["schema_version"] = 1
+    del document["filter"]["gas_distributor"]
+    for plan in document["selected"]:
+        del plan["fuel_type"]
+    log = OfferFetchLog.from_document(document)
+    assert (log.schema_version, log.filter.gas_distributor) == (2, None)
+    assert [plan.fuel_type for plan in log.selected] == ["ELECTRICITY"]
+    info = OFFER_CDR_INDEX.inspect("fetch-log.json", cdr.fetch_log_body(document))
+    assert info.extra["selected"] == 1

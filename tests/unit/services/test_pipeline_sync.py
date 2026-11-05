@@ -116,7 +116,7 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     root = ctx.paths.root
     assert (root / "dvc.yaml").read_bytes() == GOLDEN.read_bytes()
     text = (root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 4\nmeter:\n")
+    assert text.startswith("kind: params\nschema_version: 5\nmeter:\n")
     assert yaml.safe_load(text) == DEFAULTS
     assert DEFAULTS["meter"]["local_tz"] == TEST_REGION.local_tz  # the test region's, not a shipped one
     for source in SourceType:
@@ -263,7 +263,7 @@ def test_an_older_params_file_is_drift_then_rewritten_with_the_zone_and_windows_
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     text = (ctx.paths.root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 4\n")
+    assert text.startswith("kind: params\nschema_version: 5\n")
     assert (
         yaml.safe_load(text) == DEFAULTS
     )  # the v1 file held nothing to keep: the zone and windows come from the profile
@@ -281,6 +281,7 @@ def test_a_missing_params_file_is_written_from_the_defaults_of_the_contexts_prof
         tou_windows={"Gamma": ("00:00-00:00",)},
         distributor="Other Networks",
         cdr_retailers=("gamma",),
+        gas_distributor="Test Gas Networks",
         parsers=(),
     )
     elsewhere = dataclasses.replace(ctx, region=other)
@@ -365,13 +366,15 @@ def v2_defaults() -> dict[str, Any]:
     return doc
 
 
-def test_a_v2_params_file_is_rewritten_to_v4_with_the_first_set_filled_from_the_profile(ctx: ServiceContext) -> None:
+def test_a_v2_params_file_is_rewritten_to_the_current_version_with_the_first_set_filled_from_the_profile(
+    ctx: ServiceContext,
+) -> None:
     prepare_synced(ctx, v2_defaults())
     assert drift_of(ctx) == ["params.yaml"]
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     on_disk = params_on_disk(ctx)
-    assert on_disk["schema_version"] == 4
+    assert on_disk["schema_version"] == 5
     assert on_disk["analysis"]["tou"]["window_sets"] == [FIRST_SET]
     assert on_disk == DEFAULTS
     pipeline_sync.check(ctx)
@@ -524,7 +527,11 @@ def test_written_files_are_world_readable_and_atomic(ctx: ServiceContext) -> Non
 
 @pytest.mark.parametrize(
     ("leaf", "expected"),
-    [("offers.retailers", ["alpha", "beta-energy"]), ("offers.distributor", "Test Networks")],
+    [
+        ("offers.retailers", ["alpha", "beta-energy"]),
+        ("offers.distributor", "Test Networks"),
+        ("offers.gas_distributor", "Test Gas Networks"),
+    ],
 )
 def test_a_null_retailers_or_distributor_value_is_drift_and_is_filled(
     ctx: ServiceContext, leaf: str, expected: Any
@@ -540,7 +547,13 @@ def test_a_null_retailers_or_distributor_value_is_drift_and_is_filled(
 
 
 def test_edited_retailers_and_distributor_survive_with_no_drift(ctx: ServiceContext) -> None:
-    owners = edited(**{"offers.retailers": ["gamma"], "offers.distributor": "Owner Networks"})
+    owners = edited(
+        **{
+            "offers.retailers": ["gamma"],
+            "offers.distributor": "Owner Networks",
+            "offers.gas_distributor": "Owner Gas Networks",
+        }
+    )
     prepare_synced(ctx, owners)
     pipeline_sync.check(ctx)
     assert synced(ctx).params_rewritten is False

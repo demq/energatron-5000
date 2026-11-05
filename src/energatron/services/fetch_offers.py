@@ -42,7 +42,7 @@ from energatron.core.models.offers import (
     RetailerFetch,
     SelectedPlan,
 )
-from energatron.core.models.params import OffersParams, Params
+from energatron.core.models.params import Fuel, OffersParams, Params
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.ports.offers import OfferProvider
 from energatron.services import land as land_service
@@ -117,15 +117,21 @@ def fetch_offers(
     bases = list(retailers) if retailers else list(offers.retailers or ())
     if not bases:
         raise UsageError("No CDR retailers to fetch: name one with --retailer or run `energatron pipeline sync`.")
-    if offers.distributor is None:
+    if "ELECTRICITY" in offers.fuel_types and offers.distributor is None:
         raise InvalidInputError(
             "params.yaml has no value for offers.distributor yet: run `energatron pipeline sync`.",
             field="offers.distributor",
         )
+    if "GAS" in offers.fuel_types and offers.gas_distributor is None:
+        raise InvalidInputError(
+            "params.yaml has no value for offers.gas_distributor yet: run `energatron pipeline sync`.",
+            field="offers.gas_distributor",
+        )
     now = ctx.clock.now().astimezone(UTC).replace(microsecond=0)
     batch = fetch_batch_id(now)
     postcode = ctx.private.premises.postcode
-    rules = _Filter(offers=offers, distributor=offers.distributor, postcode=postcode, now=now)
+    distributors = {"ELECTRICITY": offers.distributor, "GAS": offers.gas_distributor}
+    rules = _Filter(offers=offers, distributors=distributors, postcode=postcode, now=now)
     newest = _newest_landed(ctx)
     staging = ctx.paths.root / "data" / "landing" / f".fetch-{batch}"
     found = [_fetch_base(provider, base, rules, newest, all_details=all_details) for base in bases]
@@ -143,6 +149,7 @@ def fetch_offers(
             fuel_types=tuple(offers.fuel_types),
             customer_type=offers.customer_type,
             distributor=offers.distributor,
+            gas_distributor=offers.gas_distributor,
             postcode_applied=postcode is not None,
         ),
         retailers=tuple(
@@ -221,7 +228,7 @@ def _newest_landed(ctx: ServiceContext) -> dict[str, datetime]:
 @dataclass(frozen=True)
 class _Filter:
     offers: OffersParams
-    distributor: str
+    distributors: Mapping[str, str | None]  # fuel → the distributor its plans must name (P5 spec §4.4)
     postcode: str | None
     now: datetime
 
@@ -230,14 +237,16 @@ class _Filter:
         plan_id, last_updated = item.get("planId"), _instant(item.get("lastUpdated"))
         if not isinstance(plan_id, str) or not plan_id or last_updated is None:
             return "malformed"
-        if item.get("fuelType") not in self.offers.fuel_types:
+        fuel = item.get("fuelType")
+        if fuel not in self.offers.fuel_types:
             return "fuel"
         if item.get("customerType") != self.offers.customer_type:
             return "customer_type"
         geography = item.get("geography")
         geography = geography if isinstance(geography, dict) else {}
         distributors = geography.get("distributors")
-        if not isinstance(distributors, list) or self.distributor not in distributors:
+        wanted = self.distributors.get(fuel) if isinstance(fuel, str) else None
+        if not isinstance(distributors, list) or wanted is None or wanted not in distributors:
             return "distributor"
         if self.postcode is not None:
             included, excluded = geography.get("includedPostcodes"), geography.get("excludedPostcodes")
@@ -298,6 +307,7 @@ def _fetch_base(
                 SelectedPlan(
                     base=base,
                     plan_id=plan_id,
+                    fuel_type=cast(Fuel, item["fuelType"]),  # the filter passed it, so it's a listed fuel
                     last_updated=last_updated,
                     action="unchanged" if unchanged else "fetched",
                 )
