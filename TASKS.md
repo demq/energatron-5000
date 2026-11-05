@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P5.2.2
-- Last commit: energatron-5000 `P5.2.2: add gas bill records and energatron gas-bill new`
-- Checks: tool repo pytest -q 3182 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P5.2.3
+- Last commit: energatron-5000 `P5.2.3: add the gas_bills and gas_profile stages`
+- Checks: tool repo pytest -q 3240 passed; ruff, format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P5.2.3 gas_bills and gas_profile
+- Next: P5.2.4 gas offers
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -550,12 +550,13 @@ gas blocks prorated by days; the tariff in force transcribed from the bill; the 
   - Files: the modules above, tests, golden schemas.
   - Done when: the standard checks pass; a scaffold can't land unfilled, a filled one lands.
   - Handover: `gas_bill_record` v1 (no identifier fields, quoted decimals keep their places, `gst_free` lines), its parser (listed in `sa.yaml`; every source type now has one), `gas-bill new` writing the skeleton to `data/landing/`, `make_gas.py`; self-review. Decision: an existing skeleton → `E_CONFIRMATION_REQUIRED` unless `--force`. Watch: `make_gas.record_text` quotes numbers and dates, which `land` requires.
-- ⬜ **P5.2.3** `gas_bills` and `gas_profile`.
+- ✅ **P5.2.3** `gas_bills` and `gas_profile`.
   - `core/gas_bill.py` (validation, current records, combining estimates, gaps, reference), the two stages, their
     kinds, golden `dvc.yaml`, fixture workspace.
   - Refs: the P5 spec §6, §7, §11, §13; the P2 spec (stage checks pattern).
   - Files: the modules above, tests.
   - Done when: the standard checks pass; every check has a passing and a failing test.
+  - Handover: `core/gas_bill.py` (checks at the printed MJ precision, combining, gaps, reference, monthly), stages `gas_bills` (ten checks, newest record per PDF) and `gas_profile` (three checks, `W_GAS_GAP`), `raw_zone.py` shared reader, gas fixture zone; golden `dvc.yaml` with 13 stages. Different from the spec: `lines.parquet` has `gst_free`, the profile summary `reference_bills`, the `pdfs` input is the gas_bill directory (catalog only read). Watch: a fresh review runs on the commit.
 - ⬜ **P5.2.4** Gas offers: `GasTariff`, `map_cdr_gas`, `offer_manual` v2, `normalise_gas_offers`.
   - `core/gas_tariff.py`, `core/cdr_gas_tariff.py` (every row of §5.2), `offer_manual` v2 (`gasContract`), the shared
     normalise implementation with the fuel filter in `normalise_offers`; `make_cdr` gas contracts.
@@ -587,6 +588,7 @@ P6 bundles, recommendation, decisions · P7 operations. Each starts with its own
 
 ## Log (newest first)
 
+- 2026-11-05 · P5.2.3 · gas_bills and gas_profile stages, core/gas_bill.py, the fixture gas zone (3240 tests); fresh review on the commit · energatron-5000 `P5.2.3: add the gas_bills and gas_profile stages`
 - 2026-11-05 · P5.2.2 · gas_bill_record model and parser, gas-bill new, gas_bill_scaffold_result, make_gas fixtures (3182 tests); self-review pass · energatron-5000 `P5.2.2: add gas bill records and energatron gas-bill new`
 - 2026-11-05 · P5.2.1 · params v5, region v4, offer_fetch_log v2, per-fuel distributor filter, W_GAS_GAP and W_GAS_PARTIAL_YEAR (3143 tests); self-review pass · energatron-5000 `P5.2.1: add params v5, region profile v4 and the per-fuel fetch filter`
 - 2026-11-05 · P5.1.1 · P5 gas spec drafted, fresh review (changes requested, 11 findings applied), approved on the owner's instruction; plan rev 13, D1 rev 6; P5.2-P5.3 written from its §2 · energatron-5000 `P5.1.1: approve the P5 gas spec and apply plan rev 13 and D1 rev 6`

@@ -1,0 +1,18 @@
+{
+  "checks": {
+    "mj_conserved": true
+  },
+  "coverage_end": "2026-09-30",
+  "coverage_start": "2026-08-01",
+  "estimated_periods": 0,
+  "gaps": [],
+  "kind": "gas_profile_summary",
+  "partial_year": true,
+  "periods": 1,
+  "reference_bills": 2,
+  "reference_days": 61,
+  "reference_end": "2026-09-30",
+  "reference_mj": "2000.000000",
+  "reference_start": "2026-08-01",
+  "schema_version": 1
+}

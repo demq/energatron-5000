@@ -252,6 +252,77 @@ BILL_SCHEMA: Final = pa.schema(
 """`bills.parquet` of `backtest` (kind `backtest_bill`, P4 spec §10)."""
 
 
+GAS_BILL_SCHEMA: Final = pa.schema(
+    [
+        ("record_dataset_id", pa.string()),
+        ("pdf_dataset_id", pa.string()),
+        ("issue_date", pa.date32()),
+        ("period_start", pa.date32()),
+        ("period_end", pa.date32()),
+        ("days", pa.int32()),
+        ("mj", FINE),
+        ("end_read_type", pa.string()),
+        ("estimated_reads", pa.int32()),
+        ("subtotal", MONEY),
+        ("gst", MONEY),
+        ("total", MONEY),
+        ("recomputed_total", MONEY),
+    ]
+)
+"""`bills.parquet` of `gas_bills` (kind `gas_bill`, P5 spec §6)."""
+GAS_READ_SCHEMA: Final = pa.schema(
+    [
+        ("record_dataset_id", pa.string()),
+        ("position", pa.int32()),
+        ("read_date", pa.date32()),
+        ("read_type", pa.string()),
+        ("start", FINE),
+        ("end", FINE),
+        ("heating_value", FINE),
+        ("pressure_factor", FINE),
+        ("mj", FINE),
+        ("recomputed_mj", FINE),
+    ]
+)
+"""`reads.parquet` of `gas_bills` (kind `gas_bill_read`)."""
+GAS_LINE_SCHEMA: Final = pa.schema(
+    [
+        ("record_dataset_id", pa.string()),
+        ("position", pa.int32()),
+        ("line", pa.string()),
+        ("label", pa.string()),
+        ("quantity", FINE),
+        ("unit", pa.string()),
+        ("rate", RATE),
+        ("amount", MONEY),
+        ("gst_free", pa.bool_()),
+    ]
+)
+"""`lines.parquet` of `gas_bills` (kind `gas_bill_line`)."""
+GAS_PERIOD_SCHEMA: Final = pa.schema(
+    [
+        ("period_start", pa.date32()),
+        ("period_end", pa.date32()),
+        ("days", pa.int32()),
+        ("mj", FINE),
+        ("mj_per_day", FINE),
+        ("bills", pa.int32()),
+        ("estimated", pa.bool_()),
+        ("in_reference", pa.bool_()),
+    ]
+)
+"""`periods.parquet` of `gas_profile` (kind `gas_period`, P5 spec §7)."""
+GAS_MONTH_SCHEMA: Final = pa.schema(
+    [
+        ("month", pa.string()),
+        ("days_covered", pa.int32()),
+        ("mj", FINE),
+        ("mj_per_day", FINE),
+    ]
+)
+"""`monthly.parquet` of `gas_profile` (kind `gas_month`)."""
+
+
 SUMMARY_FILENAME: Final = "summary.json"
 """The `usage_summary` document beside the nine tables in `usage_profile`'s output."""
 USAGE_TABLES: Final = (

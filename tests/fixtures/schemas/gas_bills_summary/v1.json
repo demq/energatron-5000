@@ -1,0 +1,13 @@
+{
+  "checks": {
+    "blobs_match_catalog": true,
+    "records_valid": true
+  },
+  "current": 2,
+  "first_period_start": "2026-08-01",
+  "kind": "gas_bills_summary",
+  "last_period_end": "2026-09-30",
+  "records": 3,
+  "schema_version": 1,
+  "superseded": 1
+}

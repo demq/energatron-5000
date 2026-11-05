@@ -113,7 +113,7 @@ def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     set_reference_months(scratch.root / "params.yaml", 1)  # forty days from 1 June: June is the one covered month
     land_interval_and_usage(scratch.paths)
     land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,bill\n3,4\n")
-    land(scratch.paths, SourceType.GAS_BILL, b"synthetic,earlier gas\n7,8\n")
+    land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,earlier bill\n7,8\n")  # no stage reads elec_bill
     assert envelope(capsys, "fingerprint", "--json")[0] == 0
     dvc(scratch.root, "repro", "--quiet")
     return scratch
@@ -142,6 +142,8 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
             "normalise_offers",
             "cost_elec",
             "backtest",
+            "gas_bills",
+            "gas_profile",
         ],
         "datasets": 4,
     }
@@ -167,6 +169,8 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
         "backtest",
         "catalog_index",
         "cost_elec",
+        "gas_bills",
+        "gas_profile",
         "localise",
         "merge_interval",
         "normalise_offers",
@@ -179,7 +183,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
 
 
 def test_a_stale_pipeline_is_refused(capsys: pytest.CaptureFixture[str], scratch: Scratch) -> None:
-    land(scratch.paths, SourceType.GAS_BILL, b"synthetic,gas\n5,6\n")  # a new catalog line: catalog_index is stale
+    land(scratch.paths, SourceType.ELEC_BILL, b"synthetic,bill\n5,6\n")  # a new catalog line: catalog_index is stale
     code, result = envelope(capsys, "verify", "--json")
     assert code == 4
     assert result["error"]["code"] == "E_PIPELINE_STALE"
@@ -208,8 +212,7 @@ def test_a_stored_blob_changed_or_removed_by_hand_is_named(
 ) -> None:
     # the interval and usage blobs are left alone: `parse_nem12` and `validate_timebase` read them, so changing one
     # makes that stage stale instead (as the SAPN SUMMARY blobs would, for `validate_meter`; none is landed here)
-    bills = (SourceType.ELEC_BILL, SourceType.GAS_BILL)
-    records = [r for r in JsonlCatalog(scratch.paths).records() if r.source in bills]
+    records = [r for r in JsonlCatalog(scratch.paths).records() if r.source == SourceType.ELEC_BILL]
     changed, removed = (scratch.root / record.stored_path for record in records)
     changed.chmod(0o644)
     changed.write_bytes(changed.read_bytes() + b"altered\n")

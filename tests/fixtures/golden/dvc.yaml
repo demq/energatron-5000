@@ -134,3 +134,25 @@ stages:
       - stages.backtest.stage_sha256
     outs:
     - data/reports/validation/backtest
+  gas_bills:
+    cmd: energatron stage gas_bills
+    deps:
+    - data/raw/gas_bill_record
+    - data/raw/gas_bill
+    params:
+    - validation.gas_bills
+    - pricing.gst_rate
+    - .energatron/code_fingerprint.json:
+      - stages.gas_bills.stage_sha256
+    outs:
+    - data/interim/gas_bills
+  gas_profile:
+    cmd: energatron stage gas_profile
+    deps:
+    - data/interim/gas_bills
+    params:
+    - gas
+    - .energatron/code_fingerprint.json:
+      - stages.gas_profile.stage_sha256
+    outs:
+    - data/marts/gas_profile

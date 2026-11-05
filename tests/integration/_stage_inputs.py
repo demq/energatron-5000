@@ -15,6 +15,7 @@ from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import SourceType
 from energatron.services.stages.registry import STAGES
 from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
+from tests.fixtures.gas_workspace import build_gas_zone
 from tests.fixtures.offer_workspace import build_offer_zone
 from tests.fixtures.params_text import params_v5_text
 from tests.fixtures.pipeline_workspace import build_raw_zone, empty_raw_zone
@@ -138,6 +139,18 @@ def _cost_elec(root: Path) -> None:
     _run_upstream(root, "usage_profile", "normalise_offers")
 
 
+def _gas_bills(root: Path) -> None:
+    """Empty catalogs beside the fixture gas zone: three bill PDFs, their records and one superseded record."""
+    empty_raw_zone(root)
+    build_gas_zone(root)
+
+
+def _gas_profile(root: Path) -> None:
+    """The fixture gas zone with `gas_bills` run: `gas_profile` reads its tables."""
+    _gas_bills(root)
+    _run_upstream(root, "gas_bills")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -150,6 +163,8 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "normalise_offers": _normalise_offers,
     "cost_elec": _cost_elec,
     "backtest": _cost_elec,  # the same inputs: offers, the local table; the raw zone's usage exports give the periods
+    "gas_bills": _gas_bills,
+    "gas_profile": _gas_profile,
 }
 
 

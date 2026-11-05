@@ -182,3 +182,68 @@ total: ""                   # $ including GST
 def skeleton(pdf_dataset_id: str) -> str:
     """The record skeleton for the PDF `pdf_dataset_id`: every value empty, so it can't land until it is filled."""
     return SKELETON.format(pdf_dataset_id=pdf_dataset_id)
+
+
+# The gas tables (P5 spec §6, §7): kinds and columns; their pyarrow schemas live in `services/stages/tables.py`.
+
+_Count = Annotated[int, Field(ge=0)]
+
+GAS_BILL_KIND: Final = "gas_bill"
+GAS_BILL_VERSION: Final = 1
+GAS_BILL_SORT: Final = ("period_start", "record_dataset_id")
+GAS_READ_KIND: Final = "gas_bill_read"
+GAS_READ_VERSION: Final = 1
+GAS_READ_SORT: Final = ("record_dataset_id", "position")
+GAS_LINE_KIND: Final = "gas_bill_line"
+GAS_LINE_VERSION: Final = 1
+GAS_LINE_SORT: Final = ("record_dataset_id", "position")
+GAS_BILLS_FILENAME: Final = "bills.parquet"
+GAS_READS_FILENAME: Final = "reads.parquet"
+GAS_LINES_FILENAME: Final = "lines.parquet"
+GAS_PERIOD_KIND: Final = "gas_period"
+GAS_PERIOD_VERSION: Final = 1
+GAS_PERIOD_SORT: Final = ("period_start",)
+GAS_MONTH_KIND: Final = "gas_month"
+GAS_MONTH_VERSION: Final = 1
+GAS_MONTH_SORT: Final = ("month",)
+GAS_PERIODS_FILENAME: Final = "periods.parquet"
+GAS_MONTHLY_FILENAME: Final = "monthly.parquet"
+GAS_SUMMARY_FILENAME: Final = "summary.json"
+
+
+class GasBillsSummary(Persisted):
+    """`gas_bills_summary` v1 (P5 spec §6): how many records were read, kept and superseded, the dates, the checks."""
+
+    KIND: ClassVar[str] = "gas_bills_summary"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["gas_bills_summary"] = "gas_bills_summary"
+    schema_version: Literal[1] = 1
+
+    records: _Count
+    current: _Count
+    superseded: _Count
+    first_period_start: date | None
+    last_period_end: date | None
+    checks: dict[str, bool]
+
+
+class GasProfileSummary(Persisted):
+    """`gas_profile_summary` v1 (P5 spec §7): coverage, gaps, estimates and the reference year."""
+
+    KIND: ClassVar[str] = "gas_profile_summary"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["gas_profile_summary"] = "gas_profile_summary"
+    schema_version: Literal[1] = 1
+
+    periods: _Count
+    coverage_start: date | None
+    coverage_end: date | None
+    gaps: tuple[tuple[date, date], ...]
+    estimated_periods: _Count
+    reference_start: date | None
+    reference_end: date | None
+    reference_days: _Count
+    reference_bills: _Count
+    reference_mj: Decimal
+    partial_year: bool
+    checks: dict[str, bool]
