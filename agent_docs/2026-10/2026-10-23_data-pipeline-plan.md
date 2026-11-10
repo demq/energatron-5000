@@ -73,6 +73,11 @@
   `current_plans`, else the open backtest range) and `outcomes`; `params` v6 (`recommend`); the run manifest's fields;
   draft runs commit and are marked only in their manifest; no `rec/` tag in P6; `decide` evidence is any landed dataset
   (§9.1, §9.2, §9.4, §10.7, §10.8, §11, §12, §15).
+  2026-11-10 rev 15 — P7 operations spec (`2026-11-10_p7-operations-spec.md`) approved, and its §12 edits applied:
+  `energatron status` (one read-only summary with reminders), `landing list|clear`, `watch` (the weekly job: fetch,
+  run when something new landed, notify when a different plan tops a `switch` recommendation, on failure and for
+  reminders), `schedule install|remove|status` (a per-user launchd agent, owner-installed); `icloud_backup.py` records a
+  passed drill so `status` can say when the quarterly drill is due; the README is the runbook (§6, §12, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -309,6 +314,8 @@ Everything else is managed by DVC.**
   temp dir (or the workspace from its bundle) → `uv sync` (installs the tool) → recreate
   `.dvc/config.local` (one command, documented in the README) → `dvc pull` → `dvc status` is clean →
   `dvc repro` reports nothing to do → `energatron verify` passes, once it exists (no later than P2).
+  `icloud_backup.py` records a passed drill in the workspace's git-ignored `.energatron/drill_state.json`, and
+  `energatron status` reminds (`W_DRILL_DUE`) when none is recorded or the last is over 91 days old (P7 spec §9).
 
 ---
 
@@ -922,7 +929,12 @@ uv run energatron gas-bill new <pdf_dataset_id>      # scaffolds YAML in data/la
 uv run energatron land data/landing/<bill>.yaml --source gas_bill_record
 uv run energatron run
 
-# Refresh offers (manually, or weekly via launchd)
+# Where things stand: pipeline, last run, recommendation, inbox, backup, drill, with reminders (P7)
+uv run energatron status
+uv run energatron landing list                # inbox files, landed or new; `landing clear` deletes the landed ones
+
+# Refresh offers (manually, or weekly: `energatron watch` fetches, runs when needed and notifies;
+# `energatron schedule install` makes it a weekly launchd job, owner-installed)
 uv run energatron fetch-offers                # lands only changed snapshots
 uv run energatron offers diff --since 2026-10-01
 uv run energatron run
@@ -1113,7 +1125,7 @@ added without refactoring the core.
 | **P4 Offers + electricity engine** | CDR client, `fetch-offers`, `offer_manual` schema, normaliser, offer rules, engine, `backtest`, offer diff | Every current SAPN residential plan from configured retailers either normalises (or is approximate) or is excluded with a reason; GST convention verified against a BPID; backtest within ±1% (or deviations explained), made concrete as the P4 spec §13 |
 | **P5 Gas** | Gas bill landing + YAML scaffold, `gas_bills`, `gas_profile`, gas offer normalisation, gas engine | Every bill recomputes within ±$0.05 from its own line items; engine reproduces bills on the plan in force at the time within ±1% |
 | **P6 Bundles, recommendation, decisions** | Bundle rules, ranking, sensitivity, REC JSON + HTML, `energatron run`, `energatron decide`, outcomes report | The recommendation cites offer snapshot IDs, dataset IDs, run ID and commit; a clean-checkout re-run reproduces the same recommendation ID; decision entries link back (made concrete as the P6 spec §14) |
-| **P7 Operations** | README runbooks; optional weekly launchd `fetch-offers`, with a notification when a cheaper plan appears; quarterly restore-drill reminder (the drill ends with `energatron verify`) | One full cycle (new SAPN download → recommendation) completed using only the README |
+| **P7 Operations** | README runbooks; optional weekly launchd `fetch-offers`, with a notification when a cheaper plan appears; quarterly restore-drill reminder (the drill ends with `energatron verify`) | One full cycle (new SAPN download → recommendation) completed using only the README (made concrete as the P7 spec §13) |
 | **P8 Open-source readiness** *(later)* | Workspace template + `energatron init` / `--demo` / `upgrade` / `migrate`; region profiles; `diagnose --redacted`; README quickstart, CONTRIBUTING, release workflow | A new user on a clean Mac gets from README to a demo report in under 15 minutes; the demo end-to-end test runs in CI |
 | **P9 Agent interface** *(later)* | Local MCP server over the services; workspace skills/commands; agent-assisted bill transcription with validators and `extracted_by` | An agent completes a "monthly check-in" using only the tools, without reading `private/` or raw intervals |
 | **P10 Local web UI** *(later)* | `energatron serve`: FastAPI + frontend over the services | All CLI read paths are available in the browser; no new logic outside adapters |

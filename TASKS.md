@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P6.3.1
-- Last commit: energatron-5000 `P6.3.1: record P6 acceptance in the workspace and close P6`; demq-elektric `P6.3.1: add the P6 workspace skills and record the P6 acceptance` (and the sync commit and two `run:` commits)
-- Checks: workspace: two clean runs (20 stages; second all cached, same REC), verify ok (20 stages), dvc status clean, decide dry run ok; tool repo pytest -q 3490 passed, ruff, pyright, lint-imports clean; privacy scans 0 violations
+- Last done: P7.1.1
+- Last commit: energatron-5000 `P7.1.1: approve the P7 operations spec and apply plan rev 15, D1 rev 8 and D2 rev 2`
+- Checks: docs only; pre-commit and privacy scan clean
 - Review: none
-- Next: no ⬜ sub-task; P7 (operations) starts with its spec sub-task (plan §15)
+- Next: P7.2.1 (`energatron landing list|clear`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -525,11 +525,76 @@ Archived verbatim in `agent_docs/2026-11/2026-11-05_tasks-archive-p5.md`: P5.1.1
 
 Archived verbatim in `agent_docs/2026-11/2026-11-10_tasks-archive-p6.md`: P6.1.1, P6.2.1–P6.2.6, P6.3.1, all ✅.
 
-### Later (plan §15)
-P7 operations. It starts with its own spec sub-task.
+### P7: Operations 🔄
+
+Built from the P7 spec (`agent_docs/2026-11/2026-11-10_p7-operations-spec.md`, "the P7 spec") in its §2 order; D1 rev 8
+binds all code. The owner asked (2026-11-10) for P7's tasks to be added and built as far as possible without stopping
+for review or `/done`: the agent plays the owner's part (approvals, reviews, commits), as for P4-P6. Pushing, global
+installs, iCloud, `private/`, installing the launchd agent and deleting inbox files stay the owner's. The spec's
+decisions (Q1-Q8): reminder thresholds are constants; `watch` runs the pipeline after a fetch that landed something and
+never drafts; plan identity decides "a cheaper plan"; notifications carry no figures; `schedule` is an adapter command;
+`icloud_backup.py` records the drill; `landing clear` deletes only bytes already landed; the owner installs the schedule.
+- No P7 change touches a stage, `Params` or the stage closure: no stage reruns because of P7.
+
+#### P7.1 P7 spec ✅
+- ✅ **P7.1.1** Draft the P7 operations spec.
+  - Refs: plan §6, §12, §15; D1 rev 7 §2, §7, §8, §12; D2 §4; D3 §16; the P6 spec.
+  - Files: the new spec; plan rev 15; D1 rev 8; D2 rev 2; the backup runbook.
+  - Done when: the owner approves it (here: the agent, on the owner's instruction of 2026-11-10, after a self-review).
+  - Handover: spec approved 2026-11-10; plan rev 15, D1 rev 8, D2 rev 2. Decision: `watch` fetches, runs when something
+    landed or the run is behind, and notifies by plan identity. Watch: `status` must take no lock and write nothing.
+
+#### P7.2 Build ⬜
+- ⬜ **P7.2.1** `energatron landing list|clear`.
+  - `services/landing.py` (inbox files, landed by sha256 and blob, masked names, clear with re-hash and empty folders),
+    `landing_result` v1, the command (`clear` needs `--yes` unless `--dry-run`).
+  - Refs: the P7 spec §5; D3 §8.2, §16; D1 §8.
+  - Files: `src/energatron/services/landing.py`, `src/energatron/adapters/cli/commands/landing.py`, `app.py`, tests,
+    golden schema.
+  - Done when: the standard checks pass; a hash match whose blob is missing counts as new and is never deleted.
+- ⬜ **P7.2.2** `energatron status` and the drill record.
+  - `core/operations.py` (thresholds, `Facts`, `reminders`), `drill_state` v1, `services/status.py`, `status_result`
+    v1, the command (no lock), the six warnings; `icloud_backup.py` writes `.energatron/drill_state.json` after a
+    passed drill.
+  - Refs: the P7 spec §3, §4, §9, §11; D1 §7, §8.8, §11.4.
+  - Files: `src/energatron/core/{operations.py,errors.py,models/vcs.py,models/workspace.py}`,
+    `src/energatron/services/status.py`, `src/energatron/adapters/cli/commands/status.py`, `app.py`,
+    `scripts/icloud_backup.py`, tests, golden schemas.
+  - Done when: the standard checks pass; each reminder is on and off at its boundary in a test.
+- ⬜ **P7.2.3** `energatron watch` and notifications.
+  - `cheaper_plan` and `notifications` in `core/operations.py`, `services/watch.py`, `watch_result` v1,
+    `adapters/notify.py` and `wiring.notifier()`, the command (`--notify`, `--dry-run`, lock), `test_p7_watch`.
+  - Refs: the P7 spec §6, §7, §11.
+  - Files: the modules above, `src/energatron/adapters/wiring.py`, tests.
+  - Done when: the standard checks pass; `test_p7_watch` sees the cheaper-plan notification, then a quiet second run.
+- ⬜ **P7.2.4** `energatron schedule install|remove|status`.
+  - `launchd_plist` in `core/operations.py`, `adapters/schedule/launchd.py` and `wiring.launchd()`, `schedule_result`
+    v1, the command (macOS only).
+  - Refs: the P7 spec §8.
+  - Files: the modules above, tests.
+  - Done when: the standard checks pass; install, reinstall, remove and status work against a fake `launchctl`.
+- ⬜ **P7.2.5** README runbooks.
+  - `README.md` as the operating manual, `CHANGELOG.md`, `tests/architecture/test_readme.py`.
+  - Refs: the P7 spec §10; plan §12.
+  - Files: `README.md`, `CHANGELOG.md`, `tests/architecture/test_readme.py`.
+  - Done when: the standard checks pass; every `uv run energatron …` line in the README parses against the app.
+
+#### P7.3 Acceptance ⬜
+- ⬜ **P7.3.1** P7 acceptance in the workspace (agent part).
+  - Refs: the P7 spec §13 checks 1-5.
+  - Files: `demq-elektric` (`.gitignore`, `CLAUDE.md`, `.claude/skills/monthly-check-in/SKILL.md`, the `watch`
+    commits, a workspace note); `TASKS.md`.
+  - Done when: §13 checks 1-5 pass or are explained in the workspace note; the pending backup is reported.
+- ⬜ **P7.3.2** Owner: a full cycle from a new SAPN download using only the README, the schedule and a drill.
+  - Why: owner steps (the SAPN portal login, launchd on the owner's account, iCloud).
+  - Refs: the P7 spec §13 checks 6-8; the README.
+  - Files: none in the tool repo; the workspace gets `land` and `run` commits.
+  - Done when: a new download reaches a recommendation via the README alone; `schedule status` shows the agent loaded
+    (if the owner wants the weekly job); `backup --drill` passes and `energatron status` shows the drill not due.
 
 ## Log (newest first)
 
+- 2026-11-10 · P7.1.1 · P7 operations spec drafted and approved on the owner's instruction (self-review); plan rev 15, D1 rev 8, D2 rev 2; P7.2-P7.3 added from its §2 · energatron-5000 `P7.1.1: approve the P7 operations spec and apply plan rev 15, D1 rev 8 and D2 rev 2`
 - 2026-11-10 · P6.3.1 · P6 acceptance in the workspace: params v6 synced, clean `run` (20 stages, REC cited by manifest and commit), rerun all cached with the same ID, `verify` ok, `decide --dry-run` ok, three workspace skills; P6 ticked and archived · demq-elektric `P6.3.1: sync the pipeline to params v6 and the P6 stages`, two `run:` commits, `P6.3.1: add the P6 workspace skills and record the P6 acceptance`; energatron-5000 `P6.3.1: record P6 acceptance in the workspace and close P6`
 - 2026-11-10 · P6.2.5, P6.2.6 · `energatron run` (manifest, commit), `energatron decide`, the `outcomes` stage, `test_p6_pipeline` (3490 tests); self-review · energatron-5000 `P6.2.5-P6.2.6: add energatron run, energatron decide and the outcomes stage`
 - 2026-11-10 · P6.2.4 · `recommend` stage, `recommendation` v1 with its content ID, the HTML page (3453 tests); self-review · energatron-5000 `P6.2.4: add the recommend stage, the recommendation document and its page`

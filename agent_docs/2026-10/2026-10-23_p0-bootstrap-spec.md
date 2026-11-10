@@ -2,6 +2,9 @@
 
 - **Created:** 2026-10-23
 - **Status:** Approved 2026-10-23 (owner, `/done`); its §15 edits are in the plan as rev 8
+- **Revisions:** 2026-11-10 rev 2 (P7.1.1, P7 spec §9): `icloud_backup.py` writes `.energatron/drill_state.json`
+  (`drill_state` v1, git-ignored) in the workspace after a passed restore drill (`drill` or `backup --drill`), so
+  `energatron status` can remind when the quarterly drill is due; the drill itself still leaves the workspace untouched
 - **Deliverable:** D2 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 7 ("the plan") and
   [`2026-10-23_core-architecture-spec.md`](2026-10-23_core-architecture-spec.md) ("D1", binding for all code)

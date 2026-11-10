@@ -84,6 +84,10 @@ Run `backup --drill`. The drill clones the tool and the newest bundle into a scr
 file from iCloud, and checks the clone matches the live workspace. Expect every line `PASS` or `SKIP`, then
 exit 0. Paste the summary into the agent session; it has counts only.
 
+After a passed drill the script records the time in the workspace's `.energatron/drill_state.json` (git-ignored).
+`uv run energatron status` reads it and warns `W_DRILL_DUE` when no drill is recorded or the last one is over 91
+days old (P7 spec §9).
+
 ## When something fails
 
 | Output | What to do |

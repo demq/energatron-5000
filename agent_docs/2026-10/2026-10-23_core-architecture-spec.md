@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -19,6 +19,9 @@
   2026-11-10 rev 7 (P6.1.1): the changes the P6 spec (`2026-11-10_p6-recommendation-spec.md`) §13 lists: the P6
   modules, stages and commands, `StageRun.stage_sha256`, the recommendation payload, run manifest and decision schema,
   and the three P6 warnings, edited in place
+  2026-11-10 rev 8 (P7.1.1): the additive changes the P7 spec (`2026-11-10_p7-operations-spec.md`) §12 lists: the P7
+  modules and commands, the notifier and launchd adapters in wiring, the six P7 warnings and two git-ignored workspace
+  files, edited in place
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -146,7 +149,8 @@ src/energatron/
 │   ├── usage.py  charts.py  usage_report.py  models/usage.py                                      P3
 │   ├── tariff.py  cdr_tariff.py  offer_rules.py  engine.py  retailer_txn.py  models/costs.py      P4
 │   ├── gas_tariff.py  cdr_gas_tariff.py  gas_engine.py  gas_bill.py  models/gas.py               P5
-│   └── ranking.py  bundle_rules.py  recommendation_report.py  models/recommend.py                 P6
+│   ├── ranking.py  bundle_rules.py  recommendation_report.py  models/recommend.py                 P6
+│   └── operations.py  (reminders, the cheaper-plan test, notifications, the launchd plist)          P7
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
 ├── services/                use cases; local file I/O only at paths passed in
@@ -161,9 +165,12 @@ src/energatron/
 │   ├── fetch_offers.py  offer_diff.py  stages/{normalise_offers,cost_elec,backtest}.py            P4
 │   ├── gas_bill.py  stages/{gas_bills,gas_profile,normalise_gas_offers,cost_gas,backtest_gas}.py   P5
 │   ├── run.py  decide.py  stages/{sensitivity,bundles,recommend,outcomes}.py                      P6
-│   └── compare.py  explain.py  migrate.py                                                        P7+
+│   ├── status.py  landing.py  watch.py                                                           P7
+│   └── compare.py  explain.py  migrate.py                                                        P8+
 ├── adapters/
 │   ├── wiring.py            composition root: build_context() (P0), code_fingerprint() (P1)       P0
+│   │                        notifier(), launchd() (P7)
+│   ├── notify.py  schedule/launchd.py  (P7 spec §7, §8)                                       P7
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
 │   ├── storage/             jsonl_catalog.py, fs_blobs.py                                         P1
 │   ├── sources/             registry.py, plus one module per source type                          P1
@@ -742,6 +749,8 @@ class EnergatronError(Exception):
   - Warnings added in P5: `W_GAS_GAP`, `W_GAS_PARTIAL_YEAR` (P5 spec §11).
   - Warnings added in P6: `W_SENSITIVITY_UNAVAILABLE`, `W_REC_NO_CURRENT_PLAN`, `W_REC_CURRENT_NOT_PRICED` (P6 spec
     §11).
+  - Warnings added in P7: `W_LANDING_NEW`, `W_LANDING_LANDED`, `W_RUN_BEHIND`, `W_OFFERS_STALE`, `W_RECHECK_DUE`,
+    `W_DRILL_DUE` (P7 spec §11).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
@@ -1396,7 +1405,8 @@ Added to the plan's Revisions header as rev 7, with these edits in place:
   provenance included; Parquet files carry both as metadata.
 - §7: the workspace contains `.energatron/workspace.toml` (marker and non-personal settings),
   `.energatron/local.toml` (git-ignored, machine-specific), `.energatron/lock` (git-ignored) and
-  `.energatron/tmp/` (git-ignored scratch: the repro log, `verify` outputs).
+  `.energatron/tmp/` (git-ignored scratch: the repro log, `verify` outputs). P7 adds `.energatron/drill_state.json`
+  (the last passed restore drill) and `.energatron/logs/` (the scheduled `watch` log), both git-ignored.
 - §12 (restore drill) and §15 (P7's quarterly drill): after `dvc repro` reports everything up to date, run
   `uv run energatron verify` once it exists (§11.4; D4 schedules it, no later than P2).
 - §4: the package calls git and DVC as subprocesses and doesn't depend on DVC.
