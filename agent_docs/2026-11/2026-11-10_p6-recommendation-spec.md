@@ -210,13 +210,16 @@ An **option** is a pair (electricity tariff or none, gas tariff or none) with a 
 ### 6.1 Inputs and params
 
 `bundles` = `data/marts/costs/bundles`, `elec` = `data/marts/costs/elec`, `gas` = `data/marts/costs/gas`, `offers` =
-`data/marts/offers`, `gas_offers` = `data/marts/offers_gas`, `profile` = `data/marts/usage_profile`, `gas_profile` =
-`data/marts/gas_profile`, `catalog` = `data/marts/catalog`, `private_config` = `private/config.toml`. Params:
-`recommend`, `backtest`. Output `recommendation` = `data/reports/recommendations` (`recommendation.json`, `index.html`).
+`data/marts/offers`, `gas_offers` = `data/marts/offers_gas`, `catalog` = `data/marts/catalog`, `rules` =
+`config/bundle_rules.local` (and package data `bundle_rules`, for the current pair), `private_config` =
+`private/config.toml`. Params: `recommend`, `backtest`. Output `recommendation` = `data/reports/recommendations`
+(`recommendation.json`, `index.html`). The usage window comes from the two cost marts' summaries, which priced it
+(P6.2.4; the draft read the two profiles instead).
 
 ### 6.2 What it decides
 
-- **as_of** = the later of the two offers marts' `as_of`; neither → the check `as_of_known` fails.
+- **as_of** = the later of the two offers marts' `as_of`; neither → the check `as_of_known` fails when any fuel has
+  candidates (with none, e.g. before the first `fetch-offers`, the document has no ID and no option, and passes).
 - **recheck_by** = the earlier of `as_of + recheck_days` and the first `price_reset` date after `as_of`.
 - **Priced lists:** per fuel, every candidate (§3.2) from the cost stage's `conditions_met` totals: snapshot, plan ID,
   brand, display name, source, status, approximations, notes (eligibility and conditions as the normaliser recorded

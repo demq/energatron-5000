@@ -91,4 +91,5 @@ def test_no_blob_is_written_outside_the_raw_zone(zone: RawZone, tmp_path: Path) 
         Path(folder, "README.md")
         for folder in ("config/offer_rules.local", "config/bundle_rules.local", "data/runs", "data/decisions")
     }
+    readmes.add(Path("private", "config.toml"))  # synthetic, written when missing
     assert all(path.parts[:2] == ("data", "raw") or path in readmes for path in files)

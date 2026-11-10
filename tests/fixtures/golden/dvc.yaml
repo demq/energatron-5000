@@ -226,3 +226,21 @@ stages:
       - stages.bundles.stage_sha256
     outs:
     - data/marts/costs/bundles
+  recommend:
+    cmd: energatron stage recommend
+    deps:
+    - data/marts/costs/bundles
+    - data/marts/costs/elec
+    - data/marts/costs/gas
+    - data/marts/offers
+    - data/marts/offers_gas
+    - data/marts/catalog
+    - config/bundle_rules.local
+    - private/config.toml
+    params:
+    - recommend
+    - backtest
+    - .energatron/code_fingerprint.json:
+      - stages.recommend.stage_sha256
+    outs:
+    - data/reports/recommendations

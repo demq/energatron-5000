@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P6.2.3
-- Last commit: energatron-5000 `P6.2.3: add core/ranking and the bundles stage`
-- Checks: pytest -q 3429 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P6.2.4
+- Last commit: energatron-5000 `P6.2.4: add the recommend stage, the recommendation document and its page`
+- Checks: pytest -q 3453 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P6.2.4 (`recommend`: the recommendation document, its ID and page)
+- Next: P6.2.5 (`energatron run`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -572,12 +572,17 @@ current plan falls back to the open backtest range; bundle rules are curated YAM
   - Handover: `core/ranking.py` (history, candidates, pairs with rules, options, action, recheck date, verdicts) and
     `bundles` (five variations, unavailable ones fall back to base per fuel, three checks), `bundle_option` and
     `bundles_summary`; eighteen stages; self-review. Watch: a same-brand independent pair keeps the same-brand form.
-- ⬜ **P6.2.4** `recommend`: the recommendation document, its ID and page.
+- ✅ **P6.2.4** `recommend`: the recommendation document, its ID and page.
   - `core/models/recommend.py` (`recommendation`), the current plan, action and sensitivity verdicts in
     `core/ranking.py`, `core/recommendation_report.py`, the stage.
   - Refs: the P6 spec §6, §7; D1 §6.3.
   - Files: the modules above, tests, golden HTML.
   - Done when: the standard checks pass; the ID is stable across runs and changes with a cited input.
+  - Handover: `recommendation` v1, the ID over the document without ID and checks, `core/recommendation_report.py`
+    (golden HTML), `recommend` (current plan from private config else the open backtest range, savings, action,
+    verdicts, four checks); nineteen stages; fixture workspaces get a synthetic private config. Different from the spec:
+    the usage window comes from the cost-mart summaries and bundle rules are an input (spec §6.1 edited); with no
+    candidates (no offers yet) the document has no ID and passes. Watch: `verify`'s hand-edit test now edits a leaf.
 - ⬜ **P6.2.5** `energatron run`.
   - `services/run.py`, `run_manifest`, `run_result`, the command (lock, `--draft`, `--json`).
   - Refs: the P6 spec §8; plan §9.4; D1 §4.4, §4.5, §8.8.
@@ -602,6 +607,7 @@ P7 operations. It starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-10 · P6.2.4 · `recommend` stage, `recommendation` v1 with its content ID, the HTML page (3453 tests); self-review · energatron-5000 `P6.2.4: add the recommend stage, the recommendation document and its page`
 - 2026-11-10 · P6.2.3 · `core/ranking.py` and the `bundles` stage (options per variation, bundle rules, history excluded) (3429 tests); self-review · energatron-5000 `P6.2.3: add core/ranking and the bundles stage`
 - 2026-11-10 · P6.2.1, P6.2.2 · params v6, `StageRun.stage_sha256`, bundle rules, P6 folders in `pipeline sync`, three warnings, shared costing helpers; `sensitivity` stage (3395 tests); self-review · energatron-5000 `P6.2.1-P6.2.2: add params v6, bundle rules, the P6 folders and the sensitivity stage`
 - 2026-11-10 · P6.1.1 · P6 bundles, recommendation and decisions spec drafted and approved on the owner's instruction (self-review); plan rev 14, D1 rev 7; P6.2-P6.3 added from its §2 · energatron-5000 `P6.1.1: approve the P6 recommendation spec and apply plan rev 14 and D1 rev 7`

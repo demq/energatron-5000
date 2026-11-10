@@ -26,7 +26,7 @@ from energatron.services.stages.registry import STAGES
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
 from tests.fixtures.make_sources import make_retailer_usage_from_nem12
 from tests.fixtures.params_text import set_reference_months
-from tests.fixtures.pipeline_workspace import LABELS, WINDOWS, make_record
+from tests.fixtures.pipeline_workspace import LABELS, SYNTHETIC_PRIVATE_TOML, WINDOWS, make_record
 from tests.fixtures.synthetic import SYNTHETIC_NMI
 from tests.integration._scratch import Scratch, dvc, make_scratch
 
@@ -34,7 +34,8 @@ pytestmark = pytest.mark.integration
 
 BIN = Path(sys.executable).parent
 SOURCE_TS = datetime(2026, 1, 2, 3, 4, 5)
-OUTPUT = Path("data") / "marts" / "catalog"
+OUTPUT = Path("data") / "reports" / "usage"
+"""A leaf output: no stage reads the usage report, so changing it by hand leaves every other stage current."""
 
 
 def envelope(capsys: pytest.CaptureFixture[str], *argv: str) -> tuple[int, dict[str, Any]]:
@@ -110,6 +111,7 @@ def scratch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capt
     monkeypatch.setenv("PATH", f"{BIN}{os.pathsep}{os.environ.get('PATH', '')}")
     scratch = make_scratch(tmp_path, remote=False)
     monkeypatch.chdir(scratch.root)
+    scratch.write("private/config.toml", SYNTHETIC_PRIVATE_TOML)  # `recommend` reads it
     assert envelope(capsys, "pipeline", "sync", "--json")[0] == 0
     set_reference_months(scratch.root / "params.yaml", 1)  # forty days from 1 June: June is the one covered month
     land_interval_and_usage(scratch.paths)
@@ -170,13 +172,13 @@ def test_an_output_changed_by_hand_and_committed_to_dvc_is_not_reproducible(
     provenance = scratch.root / OUTPUT / "_provenance.json"
     provenance.chmod(0o644)
     provenance.write_text(provenance.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-    dvc(scratch.root, "commit", "--force", "--quiet", "catalog_index")
+    dvc(scratch.root, "commit", "--force", "--quiet", "usage_report")
     assert json.loads(dvc(scratch.root, "status", "--json")) == {}
     code, result = envelope(capsys, "verify", "--json")
     assert code == 7
     error = result["error"]
     assert error["code"] == "E_CHECK_FAILED"
-    assert error["details"] == {"reason": "not_reproducible", "stages": ["catalog_index"], "datasets": []}
+    assert error["details"] == {"reason": "not_reproducible", "stages": ["usage_report"], "datasets": []}
     assert not scratch_dir(scratch).exists()
 
 

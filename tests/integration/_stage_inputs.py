@@ -19,6 +19,7 @@ from tests.fixtures.gas_workspace import build_gas_zone
 from tests.fixtures.offer_workspace import build_offer_zone
 from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import build_raw_zone, empty_raw_zone
+from tests.unit.adapters._workspace import MINIMAL_PRIVATE_TOML
 
 REFERENCE_MONTHS: Final = 5
 """The fixture raw zone covers May to September: five whole local months, so five fit the reference window."""
@@ -180,6 +181,15 @@ def _bundles(root: Path) -> None:
     _run_upstream(root, "cost_elec", "cost_gas", "sensitivity")
 
 
+def _recommend(root: Path) -> None:
+    """Everything `bundles` needs, with `bundles` and `catalog_index` run, and a synthetic private config (no current
+    plans, so the empty backtest ranges leave none): `recommend` reads them."""
+    _bundles(root)
+    _run_upstream(root, "bundles", "catalog_index")
+    (root / "private").mkdir(exist_ok=True)
+    (root / "private" / "config.toml").write_text(MINIMAL_PRIVATE_TOML, encoding="utf-8")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -199,6 +209,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "backtest_gas": _backtest_gas,
     "sensitivity": _sensitivity,
     "bundles": _bundles,
+    "recommend": _recommend,
 }
 
 

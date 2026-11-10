@@ -195,9 +195,21 @@ def land_blob(
     return Dataset(source, record.dataset_id, filename, record.stored_path, record.sha256)
 
 
+SYNTHETIC_PRIVATE_TOML: Final = f"""\
+kind = "private_config"
+schema_version = 1
+salt = "0123456789abcdef0123456789abcdef"
+
+[premises]
+nmi = "{SYNTHETIC_NMI}"
+"""
+"""A synthetic private config naming the fixtures' NMI and nothing else (no current plans)."""
+
+
 def empty_raw_zone(root: Path) -> None:
     """A raw directory with an empty catalog for every source type, and the folders `pipeline sync` creates: the local
-    offer-rules folder (a `normalise_offers` dependency, P4 spec §4.3) and P6's three (P6 spec §3.4)."""
+    offer-rules folder (a `normalise_offers` dependency, P4 spec §4.3) and P6's three (P6 spec §3.4); and a synthetic
+    private config when there is none."""
     for source in SourceType:
         directory = root / "data" / "raw" / source.value
         directory.mkdir(parents=True, exist_ok=True)
@@ -214,6 +226,10 @@ def empty_raw_zone(root: Path) -> None:
         readme = root / folder / "README.md"
         if not readme.exists():  # `pipeline sync` may have written and tracked it already
             readme.write_text(text, encoding="utf-8")
+    private = root / "private" / "config.toml"
+    if not private.exists():  # every workspace has one (P0); `recommend` reads it (P6 spec §6.1)
+        private.parent.mkdir(parents=True, exist_ok=True)
+        private.write_text(SYNTHETIC_PRIVATE_TOML, encoding="utf-8")
 
 
 def build_raw_zone(root: Path, *, year: int = YEAR) -> RawZone:
