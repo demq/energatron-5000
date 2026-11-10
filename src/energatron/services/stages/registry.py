@@ -21,6 +21,7 @@ from energatron.services.stages import (
     merge_interval,
     normalise_gas_offers,
     normalise_offers,
+    outcomes,
     parse_nem12,
     recommend,
     sensitivity,
@@ -67,6 +68,7 @@ STAGES: Final[Mapping[str, StageSpec]] = _build(
         sensitivity.SPEC,
         bundles.SPEC,
         recommend.SPEC,
+        outcomes.SPEC,
     ]
 )
 """Every stage, in `dvc.yaml` order."""

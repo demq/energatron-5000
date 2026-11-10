@@ -1,0 +1,20 @@
+{
+  "kind": "outcomes_summary",
+  "schema_version": 1,
+  "decisions": [
+    "DEC-20250101-01"
+  ],
+  "outcomes": {
+    "DEC-20250101-01": {
+      "gas": {
+        "bills": 2,
+        "actual": "150.00",
+        "projected": "148.00",
+        "diff_pct": 1.35
+      }
+    }
+  },
+  "checks": {
+    "decisions_valid": true
+  }
+}

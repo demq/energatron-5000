@@ -1,0 +1,23 @@
+{
+  "kind": "decision",
+  "schema_version": 1,
+  "decision_id": "DEC-20250101-01",
+  "decided_at": "2025-01-01T00:00:00Z",
+  "recommendation_id": "REC-20250101-0123abcd",
+  "run_id": "run-20250101T000000Z-a1b2c3d",
+  "switch_date": "2025-01-01",
+  "choices": {
+    "electricity": {
+      "offer_snapshot_id": "SYN-E~20250101T000000Z~0123abcd",
+      "annual_ongoing": "1200.00",
+      "annual_year1": "1200.00"
+    },
+    "gas": {
+      "offer_snapshot_id": "SYN-G~20250101T000000Z~0123abcd",
+      "annual_ongoing": "600.00",
+      "annual_year1": "600.00"
+    }
+  },
+  "evidence": [],
+  "note": null
+}

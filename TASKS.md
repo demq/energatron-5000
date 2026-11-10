@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P6.2.4
-- Last commit: energatron-5000 `P6.2.4: add the recommend stage, the recommendation document and its page`
-- Checks: pytest -q 3453 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P6.2.6
+- Last commit: energatron-5000 `P6.2.5-P6.2.6: add energatron run, energatron decide and the outcomes stage`
+- Checks: pytest -q 3490 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P6.2.5 (`energatron run`)
+- Next: P6.3.1 (P6 acceptance in the workspace, and the three workspace skills)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -540,7 +540,7 @@ current plan falls back to the open backtest range; bundle rules are curated YAM
   - Handover: spec approved 2026-11-10; plan rev 14, D1 rev 7. Decision: sensitivity as its own stage repricing every
     tariff. Watch: `recommend` reads `private/config.toml` as a stage input (only public snapshot IDs leave it).
 
-#### P6.2 Build ⬜
+#### P6.2 Build ✅
 - ✅ **P6.2.1** Foundations: `Params` v6, `StageRun.stage_sha256`, `bundle_rule`, the new workspace directories.
   - `core/models/params.py` v6 (`recommend`, migration v5 to v6); `StageRun.stage_sha256`; `core/bundle_rules.py` and
     package data `bundle_rules/` (readme only); `pipeline sync` creates `config/bundle_rules.local/`, `data/runs/` and
@@ -583,17 +583,26 @@ current plan falls back to the open backtest range; bundle rules are curated YAM
     verdicts, four checks); nineteen stages; fixture workspaces get a synthetic private config. Different from the spec:
     the usage window comes from the cost-mart summaries and bundle rules are an input (spec §6.1 edited); with no
     candidates (no offers yet) the document has no ID and passes. Watch: `verify`'s hand-edit test now edits a leaf.
-- ⬜ **P6.2.5** `energatron run`.
+- ✅ **P6.2.5** `energatron run`.
   - `services/run.py`, `run_manifest`, `run_result`, the command (lock, `--draft`, `--json`).
   - Refs: the P6 spec §8; plan §9.4; D1 §4.4, §4.5, §8.8.
   - Files: `src/energatron/services/run.py`, `src/energatron/adapters/cli/commands/run.py`, `app.py`, tests.
   - Done when: the standard checks pass; `run --json` prints one document.
-- ⬜ **P6.2.6** `energatron decide`, `outcomes` and the end-to-end test.
+  - Handover: `services/run.py` and `energatron run [--draft]` (sync check, dirty config and dirty tool refused
+    unless draft, repro, `run_manifest` v1 in `data/runs/`, commit of `dvc.lock`, fingerprint, `data/runs.dvc` and
+    dirty `.gitignore`s, `W_BACKUP_PENDING`), `run_result` v1; committed with P6.2.6. Watch: tests call the service
+    with a clean `ToolState` because the development checkout is dirty while building.
+- ✅ **P6.2.6** `energatron decide`, `outcomes` and the end-to-end test.
   - `services/decide.py`, `decision`, `decide_result`, the command; the `outcomes` stage (`outcome_bill`,
     `outcomes_summary`); `test_p6_pipeline` (run, decide, run, verify); the determinism test's REC check.
   - Refs: the P6 spec §9, §10, §12.
   - Files: the modules above, tests.
   - Done when: the standard checks pass.
+  - Handover: `services/decide.py` and `energatron decide` (current REC only, a clean run must name it, choices from
+    `priced`, evidence must be landed, `DEC-<local date>-nn`, `--dry-run`), `decision`/`decide_result` v1; the
+    `outcomes` stage (twenty stages); `test_p6_pipeline` (fetch, run, decide, run again with the same REC and only
+    `outcomes` rerun, verify, `run --json` one document, draft-only refusal) (3490 tests); self-review. Decision: the
+    reminder to set `current_plans` is in the human output, not the result. P6.2 complete.
 
 #### P6.3 Acceptance ⬜
 - ⬜ **P6.3.1** P6 acceptance in the workspace, and the three workspace skills.
@@ -607,6 +616,7 @@ P7 operations. It starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-10 · P6.2.5, P6.2.6 · `energatron run` (manifest, commit), `energatron decide`, the `outcomes` stage, `test_p6_pipeline` (3490 tests); self-review · energatron-5000 `P6.2.5-P6.2.6: add energatron run, energatron decide and the outcomes stage`
 - 2026-11-10 · P6.2.4 · `recommend` stage, `recommendation` v1 with its content ID, the HTML page (3453 tests); self-review · energatron-5000 `P6.2.4: add the recommend stage, the recommendation document and its page`
 - 2026-11-10 · P6.2.3 · `core/ranking.py` and the `bundles` stage (options per variation, bundle rules, history excluded) (3429 tests); self-review · energatron-5000 `P6.2.3: add core/ranking and the bundles stage`
 - 2026-11-10 · P6.2.1, P6.2.2 · params v6, `StageRun.stage_sha256`, bundle rules, P6 folders in `pipeline sync`, three warnings, shared costing helpers; `sensitivity` stage (3395 tests); self-review · energatron-5000 `P6.2.1-P6.2.2: add params v6, bundle rules, the P6 folders and the sensitivity stage`

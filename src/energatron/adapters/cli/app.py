@@ -17,6 +17,7 @@ import typer
 from energatron.adapters import wiring
 from energatron.adapters.cli.commands import (
     backup,
+    decide,
     denylist,
     fetch_offers,
     fingerprint,
@@ -24,6 +25,7 @@ from energatron.adapters.cli.commands import (
     land,
     offers,
     pipeline,
+    run,
     stage,
     verify,
     version,
@@ -62,6 +64,8 @@ app.command("land")(land.land)
 app.command("fetch-offers")(fetch_offers.fetch_offers)
 app.add_typer(offers.app, name="offers")
 app.add_typer(gas_bill.app, name="gas-bill")
+app.command("run")(run.run)
+app.command("decide")(decide.decide)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

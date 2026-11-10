@@ -1,0 +1,16 @@
+{
+  "kind": "run_manifest",
+  "schema_version": 1,
+  "run_id": "run-20261110T090000Z-a1b2c3d",
+  "draft": false,
+  "started_at": "2026-11-10T09:00:00Z",
+  "finished_at": "2026-11-10T09:03:00Z",
+  "workspace_head": "a1b2c3d000000000000000000000000000000000",
+  "tool": {"energatron_version": "0.1.0", "install": "editable", "tool_commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "tool_dirty": false},
+  "stages": {"ran": ["recommend"], "restored": [], "cached": ["catalog_index"]},
+  "datasets": ["sapn_interval-20261023T100345-3fa9c2e1"],
+  "fetch_batches": ["fetch-20261101T000000Z"],
+  "recommendation_id": "REC-20261101-0123abcd",
+  "action": "stay",
+  "robust": true
+}

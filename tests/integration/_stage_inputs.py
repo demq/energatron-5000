@@ -4,6 +4,7 @@
 without one fails both tests. Builders write into a fresh workspace root: `params.yaml` and the stage's inputs.
 """
 
+import json
 from collections.abc import Callable, Mapping
 from datetime import datetime
 from pathlib import Path
@@ -190,6 +191,34 @@ def _recommend(root: Path) -> None:
     (root / "private" / "config.toml").write_text(MINIMAL_PRIVATE_TOML, encoding="utf-8")
 
 
+SYNTHETIC_DECISION: Final = {
+    "kind": "decision",
+    "schema_version": 1,
+    "decision_id": "DEC-20250101-01",
+    "decided_at": "2025-01-01T00:00:00Z",
+    "recommendation_id": "REC-20250101-0123abcd",
+    "run_id": "run-20250101T000000Z-a1b2c3d",
+    "switch_date": "2025-01-01",
+    "choices": {
+        "electricity": {"offer_snapshot_id": "SYN-E~20250101T000000Z~0123abcd", "annual_ongoing": "1200.00",
+                        "annual_year1": "1200.00"},
+        "gas": {"offer_snapshot_id": "SYN-G~20250101T000000Z~0123abcd", "annual_ongoing": "600.00",
+                "annual_year1": "600.00"},
+    },
+    "evidence": [],
+    "note": None,
+}  # fmt: skip
+"""A synthetic decision switching both fuels before any fixture bill."""
+
+
+def _outcomes(root: Path) -> None:
+    """The backtest's bill periods, the gas bills and one synthetic decision: `outcomes` reads the three."""
+    _cost_elec(root)
+    build_gas_zone(root)
+    _run_upstream(root, "backtest", "gas_bills")
+    (root / "data" / "decisions" / "DEC-20250101-01.json").write_text(json.dumps(SYNTHETIC_DECISION), encoding="utf-8")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -210,6 +239,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "sensitivity": _sensitivity,
     "bundles": _bundles,
     "recommend": _recommend,
+    "outcomes": _outcomes,
 }
 
 

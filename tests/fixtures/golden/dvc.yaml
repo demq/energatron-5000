@@ -244,3 +244,14 @@ stages:
       - stages.recommend.stage_sha256
     outs:
     - data/reports/recommendations
+  outcomes:
+    cmd: energatron stage outcomes
+    deps:
+    - data/decisions
+    - data/reports/validation/backtest
+    - data/interim/gas_bills
+    params:
+    - .energatron/code_fingerprint.json:
+      - stages.outcomes.stage_sha256
+    outs:
+    - data/reports/outcomes

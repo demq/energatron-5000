@@ -278,6 +278,20 @@ BUNDLE_OPTION_SCHEMA: Final = pa.schema(
     ]
 )
 """`options.parquet` of `bundles` (kind `bundle_option`, P6 spec §5.3)."""
+OUTCOME_BILL_SCHEMA: Final = pa.schema(
+    [
+        ("decision_id", pa.string()),
+        ("fuel", pa.string()),
+        ("period_start", pa.date32()),
+        ("period_end", pa.date32()),
+        ("days", pa.int32()),
+        ("actual", MONEY),
+        ("projected", MONEY),
+        ("diff", MONEY),
+        ("diff_pct", pa.float64()),
+    ]
+)
+"""`outcomes.parquet` of `outcomes` (kind `outcome_bill`, P6 spec §10)."""
 GAS_BACKTEST_BILL_SCHEMA: Final = pa.schema(
     [
         ("period_start", pa.date32()),

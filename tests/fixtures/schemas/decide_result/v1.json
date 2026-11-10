@@ -1,0 +1,10 @@
+{
+  "kind": "decide_result",
+  "schema_version": 1,
+  "decision_id": "DEC-20261110-01",
+  "recommendation_id": "REC-20261101-0123abcd",
+  "run_id": "run-20261110T090000Z-a1b2c3d",
+  "path": "data/decisions/DEC-20261110-01.json",
+  "commit": null,
+  "dry_run": true
+}

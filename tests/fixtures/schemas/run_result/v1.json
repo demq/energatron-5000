@@ -1,0 +1,13 @@
+{
+  "kind": "run_result",
+  "schema_version": 1,
+  "run_id": "run-20261110T090000Z-a1b2c3d",
+  "draft": false,
+  "recommendation_id": "REC-20261101-0123abcd",
+  "action": "stay",
+  "robust": true,
+  "ran": 1,
+  "restored": 0,
+  "cached": 18,
+  "commit": "ffffffffffffffffffffffffffffffffffffffff"
+}

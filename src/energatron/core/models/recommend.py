@@ -8,7 +8,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Annotated, ClassVar, Final, Literal
 
-from pydantic import Field
+from pydantic import AwareDatetime, Field
 
 from energatron.core.canonical import JSONValue
 from energatron.core.models._common import FrozenModel
@@ -196,3 +196,103 @@ class Recommendation(Persisted):
         """What the ID hashes: the document without `recommendation_id` and `checks` (§7.3)."""
         dumped: dict[str, JSONValue] = self.model_dump(mode="json")
         return {key: value for key, value in dumped.items() if key not in ("recommendation_id", "checks")}
+
+
+# `energatron run` (P6 spec §8)
+
+
+class ToolState(FrozenModel):
+    """The tool a run used, from the live code fingerprint (D1 §11.2)."""
+
+    energatron_version: str
+    install: str
+    tool_commit: str | None
+    tool_dirty: bool
+
+
+class RunStages(FrozenModel):
+    """The `ReproReport` of the run, each list in `dvc.yaml` order."""
+
+    ran: list[str]
+    restored: list[str]
+    cached: list[str]
+
+
+class RunManifest(Persisted):
+    """`run_manifest` v1 (P6 spec §8.2): `data/runs/<run_id>.json`. Immutable: written once, never rewritten."""
+
+    KIND: ClassVar[str] = "run_manifest"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["run_manifest"] = "run_manifest"
+    schema_version: Literal[1] = 1
+
+    run_id: str
+    draft: bool
+    started_at: AwareDatetime
+    finished_at: AwareDatetime
+    workspace_head: str
+    tool: ToolState
+    stages: RunStages
+    datasets: list[str]
+    fetch_batches: list[str]
+    recommendation_id: str | None
+    action: Action | None
+    robust: bool | None
+
+
+# `energatron decide` (P6 spec §9)
+
+
+class Choice(FrozenModel):
+    """A chosen plan and the projection the recommendation priced it at (base scenario, GST-inclusive)."""
+
+    offer_snapshot_id: str
+    annual_ongoing: Decimal
+    annual_year1: Decimal
+
+
+class Decision(Persisted):
+    """`decision` v1 (P6 spec §9.2): `data/decisions/<DEC-id>.json`. Immutable: written once, never rewritten."""
+
+    KIND: ClassVar[str] = "decision"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["decision"] = "decision"
+    schema_version: Literal[1] = 1
+
+    decision_id: str
+    decided_at: AwareDatetime
+    recommendation_id: str
+    run_id: str
+    switch_date: date
+    choices: dict[Fuel, Choice | None]
+    evidence: list[str]
+    note: str | None
+
+
+# `outcomes` (P6 spec §10)
+
+OUTCOME_BILL_KIND: Final = "outcome_bill"
+OUTCOME_BILL_VERSION: Final = 1
+OUTCOME_BILL_SORT: Final = ("decision_id", "fuel", "period_start")
+OUTCOMES_FILENAME: Final = "outcomes.parquet"
+OUTCOMES_SUMMARY_FILENAME: Final = "summary.json"
+
+
+class FuelOutcome(FrozenModel):
+    bills: _Count
+    actual: Decimal
+    projected: Decimal
+    diff_pct: float | None  # (actual - projected) / projected, in percent; None when nothing was projected
+
+
+class OutcomesSummary(Persisted):
+    """`outcomes_summary` v1 (P6 spec §10): per decision and fuel, the bills after the switch against the projection."""
+
+    KIND: ClassVar[str] = "outcomes_summary"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["outcomes_summary"] = "outcomes_summary"
+    schema_version: Literal[1] = 1
+
+    decisions: list[str]
+    outcomes: dict[str, dict[Fuel, FuelOutcome]]
+    checks: dict[str, bool]
