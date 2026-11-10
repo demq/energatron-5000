@@ -74,6 +74,12 @@ EXPECTED_WARNINGS = frozenset(
         "W_SENSITIVITY_UNAVAILABLE",  # P6 spec §4, §11
         "W_REC_NO_CURRENT_PLAN",  # P6 spec §6.3, §11
         "W_REC_CURRENT_NOT_PRICED",  # P6 spec §6.3, §11
+        "W_LANDING_NEW",
+        "W_LANDING_LANDED",
+        "W_RUN_BEHIND",
+        "W_OFFERS_STALE",
+        "W_RECHECK_DUE",
+        "W_DRILL_DUE",
     }
 )
 

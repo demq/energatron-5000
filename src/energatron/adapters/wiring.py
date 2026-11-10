@@ -32,11 +32,12 @@ from energatron.adapters.workspace import (
     read_workspace_config,
 )
 from energatron.core.errors import InternalError, InvalidInputError, SchemaTooNewError
-from energatron.core.models.provenance import CodeFingerprint, StageCode
+from energatron.core.models.provenance import CodeFingerprint, StageCode, stale_stages
 from energatron.core.models.region import RegionProfile
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.ports.clock import Clock
 from energatron.services.context import ServiceContext
+from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 from energatron.services.stages.registry import STAGES, get_stage
 
 
@@ -119,6 +120,19 @@ def load_region_profile(name: str) -> RegionProfile:
 def code_fingerprint() -> CodeFingerprint:
     """The live code fingerprint: one code entry per registered stage, in `dvc.yaml` order (D1 §11.1, §11.2)."""
     return compute_fingerprint(STAGES)
+
+
+def code_state(paths: WorkspacePaths) -> tuple[list[str], bool]:
+    """`(stale stage names, tool_dirty)`: the live fingerprint against the workspace's recorded one (P7 spec §4).
+
+    An invalid or missing recorded file makes every stage stale.
+    """
+    live = code_fingerprint()
+    try:
+        recorded = read_fingerprint(paths.root / CODE_FINGERPRINT_PATH)
+    except InvalidInputError:
+        recorded = None
+    return stale_stages(live, recorded), live.tool_dirty
 
 
 def stage_code(name: str) -> StageCode:

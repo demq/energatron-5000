@@ -316,6 +316,12 @@ class WarningCode(StrEnum):
     W_SENSITIVITY_UNAVAILABLE = "W_SENSITIVITY_UNAVAILABLE"  # a sensitivity variation can't be priced (P6 spec §4)
     W_REC_NO_CURRENT_PLAN = "W_REC_NO_CURRENT_PLAN"  # a fuel with candidates has no current plan (P6 spec §6.3)
     W_REC_CURRENT_NOT_PRICED = "W_REC_CURRENT_NOT_PRICED"  # the named current plan isn't priced (P6 spec §6.3)
+    W_LANDING_NEW = "W_LANDING_NEW"  # the inbox holds files not landed yet (P7 spec §3.3)
+    W_LANDING_LANDED = "W_LANDING_LANDED"  # the inbox holds files already landed (P7 spec §3.3)
+    W_RUN_BEHIND = "W_RUN_BEHIND"  # the last clean run is behind the workspace (P7 spec §3.3)
+    W_OFFERS_STALE = "W_OFFERS_STALE"  # no offers fetched recently (P7 spec §3.1)
+    W_RECHECK_DUE = "W_RECHECK_DUE"  # the recommendation's recheck date has come (P7 spec §3.3)
+    W_DRILL_DUE = "W_DRILL_DUE"  # the quarterly restore drill is due (P7 spec §3.1)
 
 
 class ResultWarning(BaseModel):

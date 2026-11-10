@@ -520,3 +520,28 @@ def test_backup_drill_runs_the_drill_after_the_backup(folders: Folders, tool_cop
     assert ran.code == 0, ran.out
     assert "OK    no new commits; bundle unchanged (2 kept, 1 removed)" in ran.lines
     assert json.loads(record.read_text(encoding="utf-8"))["argv"] == ["--workspace", str(folders.workspace.resolve())]
+
+
+def test_a_passed_drill_is_recorded_for_status(folders: Folders, tool_copy: Path, tmp_path: Path) -> None:
+    from energatron.core.models.vcs import DrillState
+
+    set_up_workspace(folders)
+    (tool_copy.parent / "restore_drill.py").write_text(RECORDER, encoding="utf-8")
+    fake_uv(tmp_path / "bin", "")
+    env = {**env_with(tmp_path / "bin"), "DRILL_RECORD": str(tmp_path / "record.json")}
+    ran = run(tool_copy, *folders.args("drill"), env=env)
+    assert ran.code == 0, ran.out
+    assert "OK    drill recorded in .energatron/drill_state.json" in ran.lines
+    record = folders.workspace / ".energatron" / "drill_state.json"
+    state = DrillState.from_document(json.loads(record.read_text(encoding="utf-8")))  # the model accepts it
+    assert state.at.tzinfo is not None and state.at.microsecond == 0
+    assert not list(record.parent.glob("*.partial"))
+
+
+def test_a_failed_drill_records_nothing(folders: Folders, tool_copy: Path, tmp_path: Path) -> None:
+    set_up_workspace(folders)
+    (tool_copy.parent / "restore_drill.py").write_text(RECORDER, encoding="utf-8")
+    fake_uv(tmp_path / "bin", "")
+    env = {**env_with(tmp_path / "bin"), "DRILL_RECORD": str(tmp_path / "record.json"), "DRILL_EXIT": "1"}
+    assert run(tool_copy, *folders.args("drill"), env=env).code == 1
+    assert not (folders.workspace / ".energatron" / "drill_state.json").exists()

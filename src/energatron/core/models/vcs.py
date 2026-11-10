@@ -41,3 +41,15 @@ class BackupStatus(FrozenModel):
     last_backup_at: UtcDatetime | None
     refs_backed_up: bool  # the current refs hash equals the marker's
     commits_not_backed_up: int | None = Field(ge=0)  # None with no marker, or when the old head no longer exists
+
+
+class DrillState(Persisted):
+    """`.energatron/drill_state.json`: when the last restore drill passed (P7 spec §9). Written by
+    `scripts/icloud_backup.py` after a passed drill; git-ignored and machine-specific, like `backup_state.json`."""
+
+    KIND: ClassVar[str] = "drill_state"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["drill_state"] = "drill_state"
+    schema_version: Literal[1] = 1
+
+    at: UtcDatetime

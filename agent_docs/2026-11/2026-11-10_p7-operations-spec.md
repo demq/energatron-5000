@@ -65,8 +65,9 @@ notifications other than macOS, scheduling anything but `watch`, scheduled backu
 | 6 | P7.3.1 Acceptance (agent part) | in the real workspace: `.gitignore`, `CLAUDE.md` commands, the `monthly-check-in` skill on `status`; the README cycle on the data at hand; `watch` once; `schedule install --dry-run` | §13 |
 | 7 | P7.3.2 Owner: the cycle with a new download, the schedule and a drill | owner steps: a fresh SAPN download through the README, `schedule install`, `icloud_backup.py backup --drill` | §13 |
 
-No P7 change touches a stage, `Params` or the stage closure, so no stage's code entry changes and no `dvc repro` reruns
-because of P7.
+No P7 change touches a stage or `Params`, but the six warning codes go into `core/errors.py`, which every stage
+imports: P7.2.2 changes every stage's code entry once, and the next `energatron run` in a workspace reruns all stages
+(same outputs).
 
 ---
 

@@ -28,6 +28,7 @@ from energatron.adapters.cli.commands import (
     pipeline,
     run,
     stage,
+    status,
     verify,
     version,
 )
@@ -68,6 +69,7 @@ app.add_typer(gas_bill.app, name="gas-bill")
 app.command("run")(run.run)
 app.command("decide")(decide.decide)
 app.add_typer(landing.app, name="landing")
+app.command("status")(status.status)
 
 
 def main(argv: Sequence[str] | None = None) -> int:

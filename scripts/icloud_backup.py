@@ -14,7 +14,8 @@ Usage:  uv run energatron-5000/scripts/icloud_backup.py [options] <command>
   step0   one-off safety copy of the workspace's data/landing/ and legacy/, with a verified SHA256SUMS
   backup  `uv run energatron backup` in the workspace (dvc push, then a verified git bundle); --drill also
           runs the restore drill afterwards
-  drill   the restore drill (scripts/restore_drill.py); options after `--` are passed on to it
+  drill   the restore drill (scripts/restore_drill.py); options after `--` are passed on to it. A passed drill
+          is recorded in the workspace's .energatron/drill_state.json (git-ignored), which `energatron status` reads
 
 Options (before the command):
   --backups-dir DIR  the Backups folder. Default: the folder that holds `backup.bundle_dir` in the workspace's
@@ -40,7 +41,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 TOOL = Path(__file__).resolve().parents[1]
@@ -270,7 +271,26 @@ def cmd_drill(backups: Path, workspace: Path, args: list[str]) -> int:
     drill = TOOL / "scripts" / "restore_drill.py"
     if not drill.is_file():
         raise SetupError("scripts/restore_drill.py doesn't exist yet (P0 step 2)")
-    return subprocess.run([sys.executable, str(drill), "--workspace", str(workspace), *args], cwd=PARENT).returncode
+    code = subprocess.run([sys.executable, str(drill), "--workspace", str(workspace), *args], cwd=PARENT).returncode
+    if code == 0:
+        record_drill(workspace)
+    return code
+
+
+def record_drill(workspace: Path) -> None:
+    """After a passed drill: `.energatron/drill_state.json` (`drill_state` v1, P7 spec §9), so `energatron status`
+    knows when the next one is due. Git-ignored, like `backup_state.json`. Written atomically; a failure only warns."""
+    at = datetime.now(UTC).replace(microsecond=0).strftime("%Y-%m-%dT%H:%M:%SZ")
+    text = json.dumps({"at": at, "kind": "drill_state", "schema_version": 1}, sort_keys=True, indent=2) + "\n"
+    target = workspace / ".energatron" / "drill_state.json"
+    try:
+        partial = target.with_name(target.name + ".partial")
+        partial.write_text(text, encoding="utf-8")
+        os.replace(partial, target)
+    except OSError as exc:
+        say("WARN", f"the drill passed but its record couldn't be written: {oserror(exc)}")
+        return
+    say("OK", "drill recorded in .energatron/drill_state.json")
 
 
 def main(argv: list[str] | None = None) -> int:

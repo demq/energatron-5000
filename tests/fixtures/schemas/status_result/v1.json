@@ -1,0 +1,30 @@
+{
+  "backup": {"commits_not_backed_up": 1, "last_backup_at": "2026-11-09T00:00:00Z", "refs_backed_up": false},
+  "datasets_not_in_last_clean_run": 1,
+  "decisions": {"count": 1, "latest": "DEC-20261105-01"},
+  "drill": {"days_since": 10, "due": false, "last_drill_at": "2026-11-01T00:00:00Z"},
+  "kind": "status_result",
+  "landing": {"files": 2, "landed": 1, "new": 1},
+  "last_clean_run_id": "run-20261102T000000Z-a1b2c3d",
+  "last_run": {
+    "action": "switch",
+    "draft": false,
+    "finished_at": "2026-11-02T00:05:00Z",
+    "recommendation_id": "REC-20261101-0123abcd",
+    "robust": true,
+    "run_id": "run-20261102T000000Z-a1b2c3d"
+  },
+  "offers": {"days_since": 10, "last_fetch_at": "2026-11-01T01:00:00Z"},
+  "pipeline": {"code_stale": [], "drift": [], "synced": true, "tool_dirty": false},
+  "recommendation": {
+    "action": "switch",
+    "as_of": "2026-11-01",
+    "recheck_by": "2027-02-01",
+    "recommendation_id": "REC-20261101-0123abcd",
+    "robust": true,
+    "top": {"electricity": "Synthetic Saver", "gas": null}
+  },
+  "reminders": ["W_LANDING_NEW", "W_RUN_BEHIND", "W_BACKUP_PENDING", "W_LANDING_LANDED"],
+  "schema_version": 1,
+  "today": "2026-11-11"
+}

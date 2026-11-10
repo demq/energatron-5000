@@ -49,6 +49,16 @@ class WorkspacePaths(BaseModel):
         return self.energatron_dir / "backup_state.json"
 
     @property
+    def drill_state(self) -> Path:
+        """`.energatron/drill_state.json`: when the last restore drill passed (P7 spec §9)."""
+        return self.energatron_dir / "drill_state.json"
+
+    @property
+    def logs_dir(self) -> Path:
+        """`.energatron/logs/`: git-ignored; the scheduled `watch` writes its log here (P7 spec §8)."""
+        return self.energatron_dir / "logs"
+
+    @property
     def lock(self) -> Path:
         """`.energatron/lock`: the workspace lock (D1 §8.8)."""
         return self.energatron_dir / "lock"
