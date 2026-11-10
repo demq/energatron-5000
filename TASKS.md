@@ -97,52 +97,54 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P6.2.6
-- Last commit: energatron-5000 `P6.2.5-P6.2.6: add energatron run, energatron decide and the outcomes stage`
-- Checks: pytest -q 3490 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P6.3.1
+- Last commit: energatron-5000 `P6.3.1: record P6 acceptance in the workspace and close P6`; demq-elektric `P6.3.1: add the P6 workspace skills and record the P6 acceptance` (and the sync commit and two `run:` commits)
+- Checks: workspace: two clean runs (20 stages; second all cached, same REC), verify ok (20 stages), dvc status clean, decide dry run ok; tool repo pytest -q 3490 passed, ruff, pyright, lint-imports clean; privacy scans 0 violations
 - Review: none
-- Next: P6.3.1 (P6 acceptance in the workspace, and the three workspace skills)
+- Next: no ⬜ sub-task; P7 (operations) starts with its spec sub-task (plan §15)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P5 are done and accepted. P5 (gas) was run end to end by the agent on the owner's instruction of 2026-11-05:
-  spec, build (P5.2.1-P5.2.6, two fresh reviews, findings fixed) and acceptance in the workspace.
-- The workspace has sixteen stages, one landed gas bill (PDF and its agent transcription), 73 current SA metro gas
-  plans and the bill's plan as an `offer_manual`; `verify` ok. Backup pending (owner).
+- P0-P6 are done. P6 (bundles, recommendation, decisions) was added and run end to end by the agent on the owner's
+  instruction of 2026-11-10: spec (self-reviewed), build P6.2.1-P6.2.6, acceptance in the workspace.
+- The workspace has twenty stages, `energatron run` / `decide`, two run manifests and a current recommendation; no
+  decision is recorded. Backup pending (owner).
 - The tool repo is on GitHub (private, `origin`); nothing was pushed this session.
 
 **Read first** (for the next session)
-- No ⬜ sub-task is left. Next is P6 (bundles, recommendation, decisions): add its spec sub-task from plan §15.
-- Results with figures: `demq-elektric/agent_docs/2026-11/2026-11-05_p5-acceptance-gas.md` and the P4 note (never copy).
+- No ⬜ sub-task is left. Next is P7 (operations): add its spec sub-task from plan §15.
+- The P6 spec (`agent_docs/2026-11/2026-11-10_p6-recommendation-spec.md`) and, for figures, the workspace note
+  `demq-elektric/agent_docs/2026-11/2026-11-10_p6-acceptance-recommendation.md` (never copy).
 
 **Facts**
-- SA metro gas distributor in CDR: `AGN Metro/Barossa/Peterborough` (exact match). Gas rates have no `measureUnit`: MJ.
-- Gas bills are transcribed by hand or agent (`transcribe-gas-bill` workspace skill); the PDF is evidence only.
-- The gas reference is the latest 12 bills; with one bill it is a partial year (`W_GAS_PARTIAL_YEAR`).
-- CDR supply, usage and demand prices exclude GST; fees are taken as published (GST-inclusive).
-- A `params.yaml` date must be quoted. Privacy scan: `uv run python scripts/privacy_guard.py --mode tool --figures
-  <changed files> TASKS.md`.
+- `energatron run` is now the supported way to run the pipeline: it refreshes the fingerprint, refuses dirty config or
+  a dirty tool without `--draft`, writes `data/runs/<run_id>.json` and commits `run: <run_id> <REC-id>`.
+- The current plan per fuel is `current_plans` in the private config, else the open backtest range (today: backtest).
+- `recommend` reads `private/config.toml` as a stage input; only public snapshot IDs leave it.
+- Stage warnings inside `run` (e.g. `W_SENSITIVITY_UNAVAILABLE`) are not surfaced in the run result; run a stage alone
+  to see them.
+- SA metro gas distributor in CDR: `AGN Metro/Barossa/Peterborough`. CDR prices exclude GST; fees as published.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing; no global installs.
 
 **Open questions for the owner**
 - **Before any push:** commits 4edaf38 and 3948b6d (P5.2.3, local only) hold a few numbers copied from the gas bill
-  (two MJ read values in a docstring and a test, and the heating value), removed from the tree in P5.2.5. The rules
-  forbid an agent rewriting history; decide whether to rewrite those two commits before pushing.
+  (removed from the tree in P5.2.5). The rules forbid an agent rewriting history; decide whether to rewrite them.
+- Decide whether to switch (the recommendation says switch, robust); `record-decision` records it. After a switch,
+  set `current_plans` in `private/config.toml` and add the new plans to `backtest.tariffs` / `gas_tariffs`.
+- The top electricity option is wholesale-linked and priced from its estimate; more gas bills would firm up the gas side.
 - Add the gas account number to `private/config.toml` (`accounts.gas`), then `energatron denylist`.
-- Eligibility: list types the household doesn't meet (e.g. `SENIOR_CARD`) in `offers.unmet_eligibility`.
-- From P4: the double-billed month; `elec_bill` support for the retailer PDFs; a one-off percentage discount rule
-  effect; a checked source for the fee GST convention.
-- From P3: the browser look at the usage report; the second TOU window set; `demand_minutes` in `UsageSummary`.
+- Eligibility: list unmet types (e.g. `SENIOR_CARD`) in `offers.unmet_eligibility`.
+- From P4/P3: the double-billed month; `elec_bill` PDFs; a one-off discount rule effect; the fee GST source; the usage
+  report browser look; `demand_minutes` in `UsageSummary`.
 
 **Watch out**
 - `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected.
-- A tool change touching `src/energatron/` makes the workspace's code entries stale: re-run `fingerprint` before any
-  `dvc repro`, and commit it with `dvc.lock`.
+- A full `run` after a tool change reruns all twenty stages (~4.5 minutes in the workspace).
 - `energatron land` makes its own commit; dry-run it first (`--dry-run --json`).
-- Never put a number read from a real bill into a test or docstring, even as an example (P5.2.3 did; see above).
+- Never put a number read from a real bill into a test or docstring, even as an example.
 - Later cleanup: `core/cdr_tariff.py` shares helpers with the gas mapping through public aliases; rename them once.
-- pytest takes ~2 minutes in parallel (`-n0` serially). Agents never read `demq-elektric/private/`.
+- pytest takes ~2.5 minutes in parallel (`-n0` serially). Agents never read `demq-elektric/private/`.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -519,103 +521,16 @@ Archived verbatim in `agent_docs/2026-11/2026-11-05_tasks-archive-p4.md`: P4.1.1
 
 Archived verbatim in `agent_docs/2026-11/2026-11-05_tasks-archive-p5.md`: P5.1.1, P5.2.1–P5.2.6, P5.3.1, all ✅.
 
-### P6: Bundles, recommendation, decisions 🔄
+### P6: Bundles, recommendation, decisions ✅
 
-Built from the P6 spec (`agent_docs/2026-11/2026-11-10_p6-recommendation-spec.md`, "the P6 spec") in its §2 order; D1
-rev 7 binds all code. The owner asked (2026-11-10) for P6's tasks to be added and built as far as possible without
-stopping for review or `/done`: the agent plays the owner's part (approvals, reviews, commits), as for P4 and P5.
-Pushing, global installs, iCloud, `private/` and real plan decisions stay the owner's. The spec's decisions (Q1-Q8):
-sensitivity reprices every tariff in its own stage; history = manual offers named only by closed backtest ranges; the
-current plan falls back to the open backtest range; bundle rules are curated YAML shipped empty; one
-`recommendation.json`; no fact-sheet source type; draft runs commit; no `rec/` tags.
-- P6.2.1 changes every stage's code entry (`Params` v6, `runner.py`); re-run `fingerprint` in a workspace before any
-  `dvc repro` (or use `energatron run` once it exists).
-- Each stage sub-task adds its stage to `STAGES`, the golden `tests/fixtures/golden/dvc.yaml` and the fixture workspace.
-
-#### P6.1 P6 spec ✅
-- ✅ **P6.1.1** Draft the P6 bundles, recommendation and decisions spec.
-  - Refs: plan §9.4, §10.7, §10.8, §11, §14.5, §15; D1 rev 6 §6.3, §9.4, §14; the P4 and P5 specs.
-  - Files: the new spec; plan rev 14; D1 rev 7.
-  - Done when: the owner approves it (here: the agent, on the owner's instruction of 2026-11-10, after a self-review).
-  - Handover: spec approved 2026-11-10; plan rev 14, D1 rev 7. Decision: sensitivity as its own stage repricing every
-    tariff. Watch: `recommend` reads `private/config.toml` as a stage input (only public snapshot IDs leave it).
-
-#### P6.2 Build ✅
-- ✅ **P6.2.1** Foundations: `Params` v6, `StageRun.stage_sha256`, `bundle_rule`, the new workspace directories.
-  - `core/models/params.py` v6 (`recommend`, migration v5 to v6); `StageRun.stage_sha256`; `core/bundle_rules.py` and
-    package data `bundle_rules/` (readme only); `pipeline sync` creates `config/bundle_rules.local/`, `data/runs/` and
-    `data/decisions/` (tracked); the three P6 warnings; the billing-period helpers moved into `costing.py`; golden
-    schemas; `params_v6_text`.
-  - Refs: the P6 spec §3, §5.1, §11; D1 rev 7 §5, §9.2.
-  - Files: `src/energatron/core/{models/params.py,bundle_rules.py,errors.py}`, `src/energatron/bundle_rules/`,
-    `src/energatron/services/{pipeline_sync.py,stages/runner.py,stages/costing.py,stages/cost_elec.py}`, tests and
-    fixtures.
-  - Done when: the standard checks pass; a v5 `params.yaml` syncs to v6.
-  - Handover: params v6 (`recommend`), `StageRun.stage_sha256`, `bundle_rule` v1 with loader and an empty curated
-    `bundle_rules/`, `pipeline sync` creates and tracks `data/runs` and `data/decisions` (readmes) and
-    `config/bundle_rules.local`, three warnings, the period and energy helpers moved into `costing.py`; self-review.
-    Watch: DVC-driven tests need `params_v6_text` (DVC reads `recommend` from the file).
-- ✅ **P6.2.2** `sensitivity`.
-  - The stage and its kinds (`sensitivity_total`, `sensitivity_summary`); golden `dvc.yaml`; fixture workspace.
-  - Refs: the P6 spec §4.
-  - Files: `src/energatron/services/stages/{sensitivity,registry,tables}.py`, `src/energatron/core/models/recommend.py`,
-    tests.
-  - Done when: the standard checks pass; every check passes and fails in a test.
-  - Handover: `sensitivity` (usage ±, the earlier window per fuel, ranks per fuel and variation, `energy_scaled`,
-    `W_SENSITIVITY_UNAVAILABLE`), `sensitivity_total`/`sensitivity_summary`, seventeen stages; committed with P6.2.1.
-    Watch: stage-list tests now use `list(STAGES)`; the fixture zone has too little history for `alt_window`.
-- ✅ **P6.2.3** `bundles` and `core/ranking.py`.
-  - Candidates and history, options, rule effects; the stage and its kinds (`bundle_option`, `bundles_summary`).
-  - Refs: the P6 spec §3.2, §5.
-  - Files: `src/energatron/core/ranking.py`, the stage, tests.
-  - Done when: the standard checks pass.
-  - Handover: `core/ranking.py` (history, candidates, pairs with rules, options, action, recheck date, verdicts) and
-    `bundles` (five variations, unavailable ones fall back to base per fuel, three checks), `bundle_option` and
-    `bundles_summary`; eighteen stages; self-review. Watch: a same-brand independent pair keeps the same-brand form.
-- ✅ **P6.2.4** `recommend`: the recommendation document, its ID and page.
-  - `core/models/recommend.py` (`recommendation`), the current plan, action and sensitivity verdicts in
-    `core/ranking.py`, `core/recommendation_report.py`, the stage.
-  - Refs: the P6 spec §6, §7; D1 §6.3.
-  - Files: the modules above, tests, golden HTML.
-  - Done when: the standard checks pass; the ID is stable across runs and changes with a cited input.
-  - Handover: `recommendation` v1, the ID over the document without ID and checks, `core/recommendation_report.py`
-    (golden HTML), `recommend` (current plan from private config else the open backtest range, savings, action,
-    verdicts, four checks); nineteen stages; fixture workspaces get a synthetic private config. Different from the spec:
-    the usage window comes from the cost-mart summaries and bundle rules are an input (spec §6.1 edited); with no
-    candidates (no offers yet) the document has no ID and passes. Watch: `verify`'s hand-edit test now edits a leaf.
-- ✅ **P6.2.5** `energatron run`.
-  - `services/run.py`, `run_manifest`, `run_result`, the command (lock, `--draft`, `--json`).
-  - Refs: the P6 spec §8; plan §9.4; D1 §4.4, §4.5, §8.8.
-  - Files: `src/energatron/services/run.py`, `src/energatron/adapters/cli/commands/run.py`, `app.py`, tests.
-  - Done when: the standard checks pass; `run --json` prints one document.
-  - Handover: `services/run.py` and `energatron run [--draft]` (sync check, dirty config and dirty tool refused
-    unless draft, repro, `run_manifest` v1 in `data/runs/`, commit of `dvc.lock`, fingerprint, `data/runs.dvc` and
-    dirty `.gitignore`s, `W_BACKUP_PENDING`), `run_result` v1; committed with P6.2.6. Watch: tests call the service
-    with a clean `ToolState` because the development checkout is dirty while building.
-- ✅ **P6.2.6** `energatron decide`, `outcomes` and the end-to-end test.
-  - `services/decide.py`, `decision`, `decide_result`, the command; the `outcomes` stage (`outcome_bill`,
-    `outcomes_summary`); `test_p6_pipeline` (run, decide, run, verify); the determinism test's REC check.
-  - Refs: the P6 spec §9, §10, §12.
-  - Files: the modules above, tests.
-  - Done when: the standard checks pass.
-  - Handover: `services/decide.py` and `energatron decide` (current REC only, a clean run must name it, choices from
-    `priced`, evidence must be landed, `DEC-<local date>-nn`, `--dry-run`), `decision`/`decide_result` v1; the
-    `outcomes` stage (twenty stages); `test_p6_pipeline` (fetch, run, decide, run again with the same REC and only
-    `outcomes` rerun, verify, `run --json` one document, draft-only refusal) (3490 tests); self-review. Decision: the
-    reminder to set `current_plans` is in the human output, not the result. P6.2 complete.
-
-#### P6.3 Acceptance ⬜
-- ⬜ **P6.3.1** P6 acceptance in the workspace, and the three workspace skills.
-  - Refs: the P6 spec §14; plan §14.5, §15.
-  - Files: `demq-elektric` (`params.yaml`, `dvc.yaml`, `dvc.lock`, pointers, readmes, `.claude/skills/`, a workspace
-    note); `TASKS.md`.
-  - Done when: §14's checks pass or are explained in the workspace note; the pending backup is reported.
+Archived verbatim in `agent_docs/2026-11/2026-11-10_tasks-archive-p6.md`: P6.1.1, P6.2.1–P6.2.6, P6.3.1, all ✅.
 
 ### Later (plan §15)
 P7 operations. It starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-10 · P6.3.1 · P6 acceptance in the workspace: params v6 synced, clean `run` (20 stages, REC cited by manifest and commit), rerun all cached with the same ID, `verify` ok, `decide --dry-run` ok, three workspace skills; P6 ticked and archived · demq-elektric `P6.3.1: sync the pipeline to params v6 and the P6 stages`, two `run:` commits, `P6.3.1: add the P6 workspace skills and record the P6 acceptance`; energatron-5000 `P6.3.1: record P6 acceptance in the workspace and close P6`
 - 2026-11-10 · P6.2.5, P6.2.6 · `energatron run` (manifest, commit), `energatron decide`, the `outcomes` stage, `test_p6_pipeline` (3490 tests); self-review · energatron-5000 `P6.2.5-P6.2.6: add energatron run, energatron decide and the outcomes stage`
 - 2026-11-10 · P6.2.4 · `recommend` stage, `recommendation` v1 with its content ID, the HTML page (3453 tests); self-review · energatron-5000 `P6.2.4: add the recommend stage, the recommendation document and its page`
 - 2026-11-10 · P6.2.3 · `core/ranking.py` and the `bundles` stage (options per variation, bundle rules, history excluded) (3429 tests); self-review · energatron-5000 `P6.2.3: add core/ranking and the bundles stage`
