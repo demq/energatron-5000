@@ -77,7 +77,8 @@
   `energatron status` (one read-only summary with reminders), `landing list|clear`, `watch` (the weekly job: fetch,
   run when something new landed, notify when a different plan tops a `switch` recommendation, on failure and for
   reminders), `schedule install|remove|status` (a per-user launchd agent, owner-installed); `icloud_backup.py` records a
-  passed drill so `status` can say when the quarterly drill is due; the README is the runbook (§6, §12, §15).
+  passed drill so `status` can say when the quarterly drill is due; the README is the runbook; §12's `offers diff`
+  line corrected (it has no `--since`) (§6, §12, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -936,7 +937,7 @@ uv run energatron landing list                # inbox files, landed or new; `lan
 # Refresh offers (manually, or weekly: `energatron watch` fetches, runs when needed and notifies;
 # `energatron schedule install` makes it a weekly launchd job, owner-installed)
 uv run energatron fetch-offers                # lands only changed snapshots
-uv run energatron offers diff --since 2026-10-01
+uv run energatron offers diff                 # each plan's two newest snapshots; --plan <plan ID> for one
 uv run energatron run
 
 # Record a decision

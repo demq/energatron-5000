@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.2.4
-- Last commit: energatron-5000 `P7.2.4: add energatron schedule for the weekly watch`
-- Checks: pytest -q 3563 passed; ruff, pyright, lint-imports clean
+- Last done: P7.2.5
+- Last commit: energatron-5000 `P7.2.5: rewrite the README as the runbook and check its commands`
+- Checks: pytest -q 3565 passed; ruff, pyright, lint-imports clean
 - Review: none
-- Next: P7.2.5 (README runbooks)
+- Next: P7.3.1 (P7 acceptance in the workspace, agent part)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -544,7 +544,7 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
   - Handover: spec approved 2026-11-10; plan rev 15, D1 rev 8, D2 rev 2. Decision: `watch` fetches, runs when something
     landed or the run is behind, and notifies by plan identity. Watch: `status` must take no lock and write nothing.
 
-#### P7.2 Build ⬜
+#### P7.2 Build ✅
 - ✅ **P7.2.1** `energatron landing list|clear`.
   - `services/landing.py` (inbox files, landed by sha256 and blob, masked names, clear with re-hash and empty folders),
     `landing_result` v1, the command (`clear` needs `--yes` unless `--dry-run`).
@@ -577,11 +577,12 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
   - Files: the modules above, tests.
   - Done when: the standard checks pass; install, reinstall, remove and status work against a fake `launchctl`.
   - Handover: `adapters/schedule/launchd.py` (`Launchd`: plist written atomically, `bootout` then `bootstrap` into `gui/<uid>`, `print` for loaded, `~` in shown paths) and `wiring.launchd()`, `energatron schedule install|remove|status` (macOS only, no lock; `install` creates `.energatron/logs/`), `schedule_result` v1 in `services/schedule.py` (kind only, spec §8 edited); self-review. Watch: dry-run human output prints the plist with `~` for the home folder.
-- ⬜ **P7.2.5** README runbooks.
+- ✅ **P7.2.5** README runbooks.
   - `README.md` as the operating manual, `CHANGELOG.md`, `tests/architecture/test_readme.py`.
   - Refs: the P7 spec §10; plan §12.
   - Files: `README.md`, `CHANGELOG.md`, `tests/architecture/test_readme.py`.
   - Done when: the standard checks pass; every `uv run energatron …` line in the README parses against the app.
+  - Handover: README rewritten as the operating manual (set-up, the monthly cycle, gas bills, offers, deciding, the weekly check and schedule, backups and the drill, after a tool update, reminders and error codes, agents, development), `test_readme` (every `uv run energatron` line parses: command path, declared options, required argument), CHANGELOG P7 entry, plan §12's `offers diff` line corrected (no `--since`); self-review. Watch: the workspace skill `monthly-check-in` still says `offers diff --since` (fix in P7.3.1). P7.2 complete.
 
 #### P7.3 Acceptance ⬜
 - ⬜ **P7.3.1** P7 acceptance in the workspace (agent part).
@@ -598,6 +599,7 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
 
 ## Log (newest first)
 
+- 2026-11-10 · P7.2.5 · README runbooks with `test_readme`, CHANGELOG (3565 tests); self-review; P7.2 complete · energatron-5000 `P7.2.5: rewrite the README as the runbook and check its commands`
 - 2026-11-10 · P7.2.4 · `energatron schedule install|remove|status` over launchd, `schedule_result` v1 (3563 tests); self-review · energatron-5000 `P7.2.4: add energatron schedule for the weekly watch`
 - 2026-11-10 · P7.2.3 · `energatron watch` and notifications, `test_p7_watch` (3555 tests); self-review · energatron-5000 `P7.2.3: add energatron watch and macOS notifications`
 - 2026-11-10 · P7.2.2 · `energatron status` with six reminder warnings, `drill_state` record from `icloud_backup.py`, `core/operations.py` (3540 tests); self-review · energatron-5000 `P7.2.2: add energatron status, its reminders and the drill record`
