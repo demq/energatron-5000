@@ -23,6 +23,7 @@ from energatron.adapters.cli.commands import (
     fingerprint,
     gas_bill,
     land,
+    landing,
     offers,
     pipeline,
     run,
@@ -66,6 +67,7 @@ app.add_typer(offers.app, name="offers")
 app.add_typer(gas_bill.app, name="gas-bill")
 app.command("run")(run.run)
 app.command("decide")(decide.decide)
+app.add_typer(landing.app, name="landing")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

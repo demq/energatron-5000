@@ -1,0 +1,13 @@
+{
+  "action": "clear",
+  "dry_run": false,
+  "files": [
+    {"dataset_id": "gas_bill-20261005T013000Z-0123abcd", "name": "bill.pdf", "removed": true, "status": "landed"},
+    {"dataset_id": null, "name": "<n>_<n>_detailed.csv", "removed": false, "status": "new"}
+  ],
+  "kind": "landing_result",
+  "landed": 1,
+  "new": 1,
+  "removed": 1,
+  "schema_version": 1
+}

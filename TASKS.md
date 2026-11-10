@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.1.1
-- Last commit: energatron-5000 `P7.1.1: approve the P7 operations spec and apply plan rev 15, D1 rev 8 and D2 rev 2`
-- Checks: docs only; pre-commit and privacy scan clean
+- Last done: P7.2.1
+- Last commit: energatron-5000 `P7.2.1: add energatron landing list and clear`
+- Checks: pytest -q 3503 passed; ruff, pyright, lint-imports clean
 - Review: none
-- Next: P7.2.1 (`energatron landing list|clear`)
+- Next: P7.2.2 (`energatron status` and the drill record)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -545,13 +545,14 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
     landed or the run is behind, and notifies by plan identity. Watch: `status` must take no lock and write nothing.
 
 #### P7.2 Build ⬜
-- ⬜ **P7.2.1** `energatron landing list|clear`.
+- ✅ **P7.2.1** `energatron landing list|clear`.
   - `services/landing.py` (inbox files, landed by sha256 and blob, masked names, clear with re-hash and empty folders),
     `landing_result` v1, the command (`clear` needs `--yes` unless `--dry-run`).
   - Refs: the P7 spec §5; D3 §8.2, §16; D1 §8.
   - Files: `src/energatron/services/landing.py`, `src/energatron/adapters/cli/commands/landing.py`, `app.py`, tests,
     golden schema.
   - Done when: the standard checks pass; a hash match whose blob is missing counts as new and is never deleted.
+  - Handover: `services/landing.py` (inbox files incl. subfolders, landed = catalogued sha256 whose blob still matches, masked names, `clear` re-hashes before deleting and removes empty subfolders), `landing_result` v1, `energatron landing list|clear` (`clear` locks and needs `--yes`; `list` takes no lock); self-review. Watch: a synthetic all-letter NMI is masked only through the private config (a real one is all digits).
 - ⬜ **P7.2.2** `energatron status` and the drill record.
   - `core/operations.py` (thresholds, `Facts`, `reminders`), `drill_state` v1, `services/status.py`, `status_result`
     v1, the command (no lock), the six warnings; `icloud_backup.py` writes `.energatron/drill_state.json` after a
@@ -594,6 +595,7 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
 
 ## Log (newest first)
 
+- 2026-11-10 · P7.2.1 · `landing list|clear`, `landing_result` v1 (3503 tests); self-review · energatron-5000 `P7.2.1: add energatron landing list and clear`
 - 2026-11-10 · P7.1.1 · P7 operations spec drafted and approved on the owner's instruction (self-review); plan rev 15, D1 rev 8, D2 rev 2; P7.2-P7.3 added from its §2 · energatron-5000 `P7.1.1: approve the P7 operations spec and apply plan rev 15, D1 rev 8 and D2 rev 2`
 - 2026-11-10 · P6.3.1 · P6 acceptance in the workspace: params v6 synced, clean `run` (20 stages, REC cited by manifest and commit), rerun all cached with the same ID, `verify` ok, `decide --dry-run` ok, three workspace skills; P6 ticked and archived · demq-elektric `P6.3.1: sync the pipeline to params v6 and the P6 stages`, two `run:` commits, `P6.3.1: add the P6 workspace skills and record the P6 acceptance`; energatron-5000 `P6.3.1: record P6 acceptance in the workspace and close P6`
 - 2026-11-10 · P6.2.5, P6.2.6 · `energatron run` (manifest, commit), `energatron decide`, the `outcomes` stage, `test_p6_pipeline` (3490 tests); self-review · energatron-5000 `P6.2.5-P6.2.6: add energatron run, energatron decide and the outcomes stage`
