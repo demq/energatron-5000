@@ -66,7 +66,8 @@ uv run energatron land data/landing/
 ```
 
    `land` makes its own commit (`land: <ids>`). Landing the same bytes again is a no-op. Retailer usage exports and
-   transaction CSVs land the same way.
+   transaction CSVs land the same way. A bill PDF matches several parsers (`E_AMBIGUOUS_SOURCE`): name its source,
+   e.g. `uv run energatron land data/landing/<bill>.pdf --source elec_bill`.
 3. **Run** the pipeline. It refuses to start with uncommitted config or tool changes; commit them first:
 
 ```bash
