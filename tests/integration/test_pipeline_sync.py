@@ -76,6 +76,10 @@ def test_sync_writes_the_golden_dvc_yaml_and_dvc_repro_runs_catalog_index(
         *(f"data/raw/{source}.dvc" for source in SOURCES),
         "data/raw/.gitignore",
         "config/offer_rules.local/README.md",
+        "config/bundle_rules.local/README.md",
+        "data/runs.dvc",
+        "data/decisions.dvc",
+        "data/.gitignore",
     ]
     assert (scratch.root / "dvc.yaml").read_bytes() == GOLDEN.read_bytes()
     for pointer in data["pointer_files"]:
@@ -111,7 +115,15 @@ def test_check_fails_on_an_unsynced_workspace_naming_the_drift(
     code, result = envelope(capsys, "pipeline", "sync", "--check", "--json")
     assert code == 4
     assert result["error"]["code"] == "E_PIPELINE_NOT_SYNCED"
-    assert result["error"]["details"]["drift"] == ["dvc.yaml", "params.yaml", "catalogs", "config/offer_rules.local"]
+    assert result["error"]["details"]["drift"] == [
+        "dvc.yaml",
+        "params.yaml",
+        "catalogs",
+        "config/offer_rules.local",
+        "config/bundle_rules.local",
+        "data/runs",
+        "data/decisions",
+    ]
 
 
 def test_the_pipeline_sync_hook_rejects_a_commit_of_a_hand_edited_dvc_yaml(

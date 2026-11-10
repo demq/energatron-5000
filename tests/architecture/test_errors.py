@@ -71,6 +71,9 @@ EXPECTED_WARNINGS = frozenset(
         "W_BACKTEST_NO_TARIFF",  # P4 spec §10, §12
         "W_GAS_GAP",  # P5 spec §7, §11
         "W_GAS_PARTIAL_YEAR",  # P5 spec §9.3, §11
+        "W_SENSITIVITY_UNAVAILABLE",  # P6 spec §4, §11
+        "W_REC_NO_CURRENT_PLAN",  # P6 spec §6.3, §11
+        "W_REC_CURRENT_NOT_PRICED",  # P6 spec §6.3, §11
     }
 )
 

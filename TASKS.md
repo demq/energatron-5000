@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P6.1.1
-- Last commit: energatron-5000 `P6.1.1: approve the P6 recommendation spec and apply plan rev 14 and D1 rev 7`
-- Checks: privacy scan 0 violations (docs only)
+- Last done: P6.2.2
+- Last commit: energatron-5000 `P6.2.1-P6.2.2: add params v6, bundle rules, the P6 folders and the sensitivity stage`
+- Checks: pytest -q 3395 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P6.2.1 (foundations: params v6, `StageRun.stage_sha256`, bundle rules, new workspace directories)
+- Next: P6.2.3 (`bundles` and `core/ranking.py`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -541,7 +541,7 @@ current plan falls back to the open backtest range; bundle rules are curated YAM
     tariff. Watch: `recommend` reads `private/config.toml` as a stage input (only public snapshot IDs leave it).
 
 #### P6.2 Build ⬜
-- ⬜ **P6.2.1** Foundations: `Params` v6, `StageRun.stage_sha256`, `bundle_rule`, the new workspace directories.
+- ✅ **P6.2.1** Foundations: `Params` v6, `StageRun.stage_sha256`, `bundle_rule`, the new workspace directories.
   - `core/models/params.py` v6 (`recommend`, migration v5 to v6); `StageRun.stage_sha256`; `core/bundle_rules.py` and
     package data `bundle_rules/` (readme only); `pipeline sync` creates `config/bundle_rules.local/`, `data/runs/` and
     `data/decisions/` (tracked); the three P6 warnings; the billing-period helpers moved into `costing.py`; golden
@@ -551,12 +551,19 @@ current plan falls back to the open backtest range; bundle rules are curated YAM
     `src/energatron/services/{pipeline_sync.py,stages/runner.py,stages/costing.py,stages/cost_elec.py}`, tests and
     fixtures.
   - Done when: the standard checks pass; a v5 `params.yaml` syncs to v6.
-- ⬜ **P6.2.2** `sensitivity`.
+  - Handover: params v6 (`recommend`), `StageRun.stage_sha256`, `bundle_rule` v1 with loader and an empty curated
+    `bundle_rules/`, `pipeline sync` creates and tracks `data/runs` and `data/decisions` (readmes) and
+    `config/bundle_rules.local`, three warnings, the period and energy helpers moved into `costing.py`; self-review.
+    Watch: DVC-driven tests need `params_v6_text` (DVC reads `recommend` from the file).
+- ✅ **P6.2.2** `sensitivity`.
   - The stage and its kinds (`sensitivity_total`, `sensitivity_summary`); golden `dvc.yaml`; fixture workspace.
   - Refs: the P6 spec §4.
   - Files: `src/energatron/services/stages/{sensitivity,registry,tables}.py`, `src/energatron/core/models/recommend.py`,
     tests.
   - Done when: the standard checks pass; every check passes and fails in a test.
+  - Handover: `sensitivity` (usage ±, the earlier window per fuel, ranks per fuel and variation, `energy_scaled`,
+    `W_SENSITIVITY_UNAVAILABLE`), `sensitivity_total`/`sensitivity_summary`, seventeen stages; committed with P6.2.1.
+    Watch: stage-list tests now use `list(STAGES)`; the fixture zone has too little history for `alt_window`.
 - ⬜ **P6.2.3** `bundles` and `core/ranking.py`.
   - Candidates and history, options, rule effects; the stage and its kinds (`bundle_option`, `bundles_summary`).
   - Refs: the P6 spec §3.2, §5.
@@ -592,6 +599,7 @@ P7 operations. It starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-10 · P6.2.1, P6.2.2 · params v6, `StageRun.stage_sha256`, bundle rules, P6 folders in `pipeline sync`, three warnings, shared costing helpers; `sensitivity` stage (3395 tests); self-review · energatron-5000 `P6.2.1-P6.2.2: add params v6, bundle rules, the P6 folders and the sensitivity stage`
 - 2026-11-10 · P6.1.1 · P6 bundles, recommendation and decisions spec drafted and approved on the owner's instruction (self-review); plan rev 14, D1 rev 7; P6.2-P6.3 added from its §2 · energatron-5000 `P6.1.1: approve the P6 recommendation spec and apply plan rev 14 and D1 rev 7`
 - 2026-11-05 · P5.3.1 · P5 acceptance in the workspace: gas bill landed and transcribed, 73 gas plans, 47/25/2 normalised/approximate/excluded, backtest within, verify ok; P5 ticked and archived · energatron-5000 `P5.3.1: record P5 acceptance in the workspace and close P5`
 - 2026-11-05 · P5.2.6 · fresh-review findings of P5.2.4-P5.2.6 fixed (2 should-fix, 2 of 4 nits) · energatron-5000 `P5.2.6: fix the review findings in the gas offers and costs`

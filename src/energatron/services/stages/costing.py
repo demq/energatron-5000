@@ -4,19 +4,22 @@ this module sits in each of their module sets.
 """
 
 import json
-from collections.abc import Iterable
+import math
+from collections.abc import Iterable, Sequence
+from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import cast
+from typing import Final, cast
 
 import pandas as pd
 
-from energatron.core.engine import LineItem, Pricing
+from energatron.core.engine import Bill, LineItem, Pricing
 from energatron.core.errors import InvalidInputError, SchemaTooNewError
 from energatron.core.models.costs import TARIFFS_FILENAME, GasOfferTariffs, OfferTariffs
 from energatron.core.models.meter import LOCAL_KIND, LOCAL_VERSION
 from energatron.core.models.params import PricingParams
-from energatron.services.stages.tables import LOCAL_SCHEMA, load_table
+from energatron.core.models.usage import UsageSummary
+from energatron.services.stages.tables import LOCAL_SCHEMA, SUMMARY_FILENAME, load_table
 
 INTERVALS_FILENAME = "intervals.parquet"
 
@@ -96,3 +99,55 @@ def rank(totals: list[dict[str, object]], scenarios: Iterable[str]) -> None:
 def cheapest(totals: Iterable[dict[str, object]], scenario: str, count: int = 3) -> list[str]:
     ranked = sorted((row for row in totals if row["scenario"] == scenario), key=lambda row: cast(int, row["rank"]))
     return [cast(str, row["offer_snapshot_id"]) for row in ranked[:count]]
+
+
+# Billing periods over the usage profile's reference window (P4 spec §9; shared with `sensitivity`, P6 spec §3.5)
+
+
+def usage_summary(directory: Path) -> UsageSummary:
+    try:
+        return UsageSummary.from_document(json.loads((directory / SUMMARY_FILENAME).read_bytes()))
+    except OSError, ValueError, InvalidInputError, SchemaTooNewError:
+        raise InvalidInputError("The usage profile has no valid summary.json.", input="profile") from None
+
+
+def window(summary: UsageSummary, suffix: str | None) -> tuple[str, str] | None:
+    found = summary.suffixes.get(suffix) if suffix is not None else None
+    if found is None or found.window_start is None or found.window_end is None:
+        return None
+    return found.window_start, found.window_end
+
+
+def months(first: str, last: str) -> list[tuple[date, date]]:
+    """The calendar months from `first` to `last` (`YYYY-MM`, inclusive) as `(first day, last day)`."""
+    year, month = int(first[:4]), int(first[5:])
+    end = (int(last[:4]), int(last[5:]))
+    months: list[tuple[date, date]] = []
+    while (year, month) <= end:
+        start = date(year, month, 1)
+        following = date(year + month // 12, month % 12 + 1, 1)
+        months.append((start, following - timedelta(days=1)))
+        year, month = following.year, following.month
+    return months
+
+
+def has_rows(rows: pd.DataFrame, period: tuple[date, date]) -> bool:
+    dates = rows["local_date"]
+    return bool(((dates >= period[0]) & (dates <= period[1])).any())
+
+
+ENERGY_TOLERANCE_KWH: Final = 1e-4
+
+
+def energy_conserved(
+    bill: Bill, rows: pd.DataFrame, periods: Sequence[tuple[date, date]], *, tolerance: float = ENERGY_TOLERANCE_KWH
+) -> bool:
+    """The usage lines' quantities add up to the metered energy of each period."""
+    for first, last in periods:
+        metered = math.fsum(rows[(rows["local_date"] >= first) & (rows["local_date"] <= last)]["kwh"].tolist())
+        billed = math.fsum(
+            float(line.quantity) for line in bill.lines if line.line == "usage" and line.period_start == first
+        )
+        if abs(billed - metered) > tolerance:
+            return False
+    return True

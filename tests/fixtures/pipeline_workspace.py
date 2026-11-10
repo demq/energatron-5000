@@ -196,8 +196,8 @@ def land_blob(
 
 
 def empty_raw_zone(root: Path) -> None:
-    """A raw directory with an empty catalog for every source type, and the local offer-rules folder `pipeline sync`
-    creates (a `normalise_offers` dependency, P4 spec §4.3)."""
+    """A raw directory with an empty catalog for every source type, and the folders `pipeline sync` creates: the local
+    offer-rules folder (a `normalise_offers` dependency, P4 spec §4.3) and P6's three (P6 spec §3.4)."""
     for source in SourceType:
         directory = root / "data" / "raw" / source.value
         directory.mkdir(parents=True, exist_ok=True)
@@ -205,6 +205,15 @@ def empty_raw_zone(root: Path) -> None:
     rules = root / "config" / "offer_rules.local"
     rules.mkdir(parents=True, exist_ok=True)
     (rules / "README.md").write_text("Local offer rules (none).\n", encoding="utf-8")
+    for folder, text in (
+        ("config/bundle_rules.local", "Local bundle rules (none).\n"),
+        ("data/runs", "Run manifests.\n"),
+        ("data/decisions", "Decisions.\n"),
+    ):  # the folders `pipeline sync` creates for P6 (P6 spec §3.4)
+        (root / folder).mkdir(parents=True, exist_ok=True)
+        readme = root / folder / "README.md"
+        if not readme.exists():  # `pipeline sync` may have written and tracked it already
+            readme.write_text(text, encoding="utf-8")
 
 
 def build_raw_zone(root: Path, *, year: int = YEAR) -> RawZone:

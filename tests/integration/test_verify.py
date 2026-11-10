@@ -22,6 +22,7 @@ from energatron.core.canonical import sha256_hex
 from energatron.core.ids import dataset_id
 from energatron.core.models.catalog import CatalogRecord, SourceType
 from energatron.core.models.workspace import WorkspacePaths
+from energatron.services.stages.registry import STAGES
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
 from tests.fixtures.make_sources import make_retailer_usage_from_nem12
 from tests.fixtures.params_text import set_reference_months
@@ -130,24 +131,7 @@ def test_a_current_pipeline_passes(capsys: pytest.CaptureFixture[str], scratch: 
     assert result["data"] == {
         "kind": "verify_result",
         "schema_version": 1,
-        "stages": [
-            "catalog_index",
-            "parse_nem12",
-            "merge_interval",
-            "validate_meter",
-            "validate_timebase",
-            "localise",
-            "usage_profile",
-            "usage_report",
-            "normalise_offers",
-            "cost_elec",
-            "backtest",
-            "gas_bills",
-            "gas_profile",
-            "normalise_gas_offers",
-            "cost_gas",
-            "backtest_gas",
-        ],
+        "stages": list(STAGES),
         "datasets": 4,
     }
     assert not scratch_dir(scratch).exists()
@@ -168,24 +152,7 @@ def test_a_stale_fingerprint_is_refused(capsys: pytest.CaptureFixture[str], scra
     code, result = envelope(capsys, "verify", "--json")
     assert code == 4
     assert result["error"]["code"] == "E_FINGERPRINT_STALE"
-    assert result["error"]["details"]["stages"] == [
-        "backtest",
-        "backtest_gas",
-        "catalog_index",
-        "cost_elec",
-        "cost_gas",
-        "gas_bills",
-        "gas_profile",
-        "localise",
-        "merge_interval",
-        "normalise_gas_offers",
-        "normalise_offers",
-        "parse_nem12",
-        "usage_profile",
-        "usage_report",
-        "validate_meter",
-        "validate_timebase",
-    ]
+    assert result["error"]["details"]["stages"] == sorted(STAGES)
 
 
 def test_a_stale_pipeline_is_refused(capsys: pytest.CaptureFixture[str], scratch: Scratch) -> None:

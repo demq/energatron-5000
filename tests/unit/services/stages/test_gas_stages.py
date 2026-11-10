@@ -29,7 +29,7 @@ from energatron.services.stages.runner import StageResult, prepare_stage, run_st
 from tests.fixtures import make_gas as gas
 from tests.fixtures.gas_workspace import GasZone, bill_records, build_gas_zone
 from tests.fixtures.make_sources import make_pdf
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import empty_raw_zone, land_blob, make_record
 
 BILL_CHECKS = [
@@ -79,7 +79,7 @@ def failed_checks(root: Path, name: str = "gas_bills") -> list[str]:
 def root(tmp_path: Path) -> Path:
     workspace = tmp_path / "workspace"
     empty_raw_zone(workspace)
-    (workspace / "params.yaml").write_text(params_v5_text(region=True), encoding="utf-8")
+    (workspace / "params.yaml").write_text(params_v6_text(region=True), encoding="utf-8")
     return workspace
 
 

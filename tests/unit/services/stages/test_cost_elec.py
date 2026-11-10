@@ -15,7 +15,7 @@ import pytest
 
 from energatron.core.errors import CheckFailedError
 from energatron.core.models.costs import CostSummary
-from energatron.services.stages import cost_elec
+from energatron.services.stages import cost_elec, costing
 from tests.integration._stage_inputs import REFERENCE_MONTHS, build_inputs, run_stage_named
 
 CHECKS = ["one_consumption_register", "window_present", "lines_sum", "energy_conserved"]
@@ -144,7 +144,7 @@ def test_lost_energy_fails_energy_conserved(root: Path, monkeypatch: pytest.Monk
 
 
 def test_months_cross_the_year_end() -> None:
-    assert cost_elec._months("2025-11", "2026-01") == [  # pyright: ignore[reportPrivateUsage]
+    assert costing.months("2025-11", "2026-01") == [
         (date(2025, 11, 1), date(2025, 11, 30)),
         (date(2025, 12, 1), date(2025, 12, 31)),
         (date(2026, 1, 1), date(2026, 1, 31)),

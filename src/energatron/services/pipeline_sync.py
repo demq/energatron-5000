@@ -12,7 +12,10 @@
   value is the owner's and is kept.
 - Every source without a catalog gets an empty one, and the directories created are tracked (`dvc add`).
 - The local offer-rules directory `config/offer_rules.local/` (a `normalise_offers` dependency, P4 spec §6) is created
-  with a `README.md` when it is missing. It is git-tracked config, never DVC.
+  with a `README.md` when it is missing. It is git-tracked config, never DVC. So is `config/bundle_rules.local/` (a
+  `bundles` dependency, P6 spec §3.4).
+- `data/runs/` and `data/decisions/` (the run manifests and decisions, P6 spec §3.4) are created with a `README.md`
+  when missing and tracked with `dvc add`; the readme keeps each directory non-empty.
 - Nothing is committed: the result lists the pointer files to commit.
 
 `check` writes nothing and fails with `E_PIPELINE_NOT_SYNCED` naming the drift; `land` and the workspace's
@@ -67,6 +70,46 @@ cites: []                   # offer snapshot IDs the rule was derived from
 Offer details are public; never put an identifier or a figure about this household here.
 """
 
+BUNDLE_RULES_DIR: Final = "config/bundle_rules.local"
+BUNDLE_RULES_README: Final = f"{BUNDLE_RULES_DIR}/README.md"
+_BUNDLE_RULES_README_TEXT: Final = """\
+# Local bundle rules
+
+One YAML file per rule (`kind: bundle_rule`, `schema_version: 1`), read by the `bundles` stage after the curated rules
+that ship with energatron. A rule here with the same `id` as a curated one replaces it.
+
+```yaml
+kind: bundle_rule
+schema_version: 1
+id: my-dual-fuel-rule       # kebab-case, unique
+description: Why this rule exists.
+brand: <brand>              # both tariffs' brand, case-insensitive
+electricity_plan: null      # a regex on the electricity plan ID, or null for any
+gas_plan: null              # a regex on the gas plan ID, or null for any
+effect: {annual_credit: "<dollars a year>"}   # or {percent_off: "<percent>"}
+verified_on: "YYYY-MM-DD"
+cites: []                   # offer snapshot IDs the rule was read from
+```
+
+Offer details are public; never put an identifier or a figure about this household here.
+"""
+RUNS_DIR: Final = "data/runs"
+DECISIONS_DIR: Final = "data/decisions"
+_RECORD_READMES: Final = {
+    RUNS_DIR: """\
+# Run manifests
+
+One `run-<UTC time>-<head>.json` (`kind: run_manifest`) per `energatron run`: the stages that ran, the datasets and
+offer batches it saw, and the recommendation it produced (P6 spec §8.2). Written by `energatron run`; never edited.
+""",
+    DECISIONS_DIR: """\
+# Decisions
+
+One `DEC-<date>-<n>.json` (`kind: decision`) per `energatron decide`: the recommendation acted on, the plans chosen
+with their projections, and the switch date (P6 spec §9.2). Written by `energatron decide`; never edited.
+""",
+}
+
 type ParamsState = Literal["missing", "older", "drifted", "current"]  # "older", "drifted": rewritten
 
 
@@ -95,6 +138,8 @@ class _Plan:
     params_text: str | None  # the text to write, or None when the file is current
     missing: list[SourceType]
     rules_dir_missing: bool
+    bundle_rules_dir_missing: bool
+    records_missing: list[str]  # of RUNS_DIR, DECISIONS_DIR
 
 
 def check(ctx: ServiceContext) -> None:
@@ -110,6 +155,8 @@ def check(ctx: ServiceContext) -> None:
             (PARAMS_YAML, plan.params_text is not None),
             ("catalogs", bool(plan.missing)),
             (RULES_DIR, plan.rules_dir_missing),
+            (BUNDLE_RULES_DIR, plan.bundle_rules_dir_missing),
+            *((directory, True) for directory in plan.records_missing),
         )
         if drifted
     ]
@@ -143,9 +190,22 @@ def sync(ctx: ServiceContext, *, dry_run: bool = False) -> PipelineSyncResult:
             if _read_bytes(ignore) != before and RAW_GITIGNORE not in pointers:
                 pointers.append(RAW_GITIGNORE)
         if plan.rules_dir_missing:
-            _make_rules_dir(root / RULES_DIR)
+            _make_dir(root / RULES_DIR)
             _write(root / RULES_README, _RULES_README_TEXT, RULES_README)
             pointers.append(RULES_README)
+        if plan.bundle_rules_dir_missing:
+            _make_dir(root / BUNDLE_RULES_DIR)
+            _write(root / BUNDLE_RULES_README, _BUNDLE_RULES_README_TEXT, BUNDLE_RULES_README)
+            pointers.append(BUNDLE_RULES_README)
+        if plan.records_missing:
+            for directory in plan.records_missing:
+                _make_dir(root / directory)
+                _write(root / directory / "README.md", _RECORD_READMES[directory], f"{directory}/README.md")
+            ignore = root / "data" / ".gitignore"
+            before = _read_bytes(ignore)
+            pointers.extend(ctx.vcs.track(plan.records_missing))
+            if _read_bytes(ignore) != before and "data/.gitignore" not in pointers:
+                pointers.append("data/.gitignore")
     result = PipelineSyncResult(
         dvc_yaml_written=plan.dvc_yaml is not None,
         params_written=plan.params_state == "missing",
@@ -178,6 +238,8 @@ def _plan(ctx: ServiceContext) -> _Plan:
         params_text=params_text,
         missing=ctx.catalog.missing_sources(),
         rules_dir_missing=not (root / RULES_DIR).is_dir(),
+        bundle_rules_dir_missing=not (root / BUNDLE_RULES_DIR).is_dir(),
+        records_missing=[directory for directory in (RUNS_DIR, DECISIONS_DIR) if not (root / directory).is_dir()],
     )
 
 
@@ -265,10 +327,10 @@ def _write(path: Path, text: str, name: str) -> None:
         ) from None
 
 
-def _make_rules_dir(path: Path) -> None:
+def _make_dir(path: Path) -> None:
     try:
         make_dirs(path)
     except OSError:
         raise StorageError(
-            f"{RULES_DIR} couldn't be created.", location="workspace", hint="check that the workspace is writable"
+            f"{path.name} couldn't be created.", location="workspace", hint="check that the workspace is writable"
         ) from None

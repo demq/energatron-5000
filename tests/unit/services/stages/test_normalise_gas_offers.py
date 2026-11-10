@@ -28,7 +28,7 @@ from tests.fixtures.offer_workspace import (
     OfferZone,
     build_offer_zone,
 )
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import empty_raw_zone, land_blob, make_record
 
 CHECKS = [
@@ -57,7 +57,7 @@ def normalise(root: Path, stage: str = "normalise_gas_offers") -> StageResult:
 def zone(tmp_path: Path) -> OfferZone:
     root = tmp_path / "workspace"
     empty_raw_zone(root)
-    (root / "params.yaml").write_text(params_v5_text(region=True), encoding="utf-8")
+    (root / "params.yaml").write_text(params_v6_text(region=True), encoding="utf-8")
     return build_offer_zone(root)
 
 
@@ -121,7 +121,7 @@ def test_a_selected_gas_plan_without_a_snapshot_is_warned_here(zone: OfferZone) 
 
 def test_no_offer_data_gives_empty_outputs(tmp_path: Path) -> None:
     empty_raw_zone(tmp_path)
-    (tmp_path / "params.yaml").write_text(params_v5_text(region=True), encoding="utf-8")
+    (tmp_path / "params.yaml").write_text(params_v6_text(region=True), encoding="utf-8")
     normalise(tmp_path)
     assert GasOfferTariffs.from_document(json.loads((tmp_path / OUT / "tariffs.json").read_bytes())).tariffs == ()
 

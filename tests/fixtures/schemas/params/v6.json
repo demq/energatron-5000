@@ -1,0 +1,156 @@
+{
+  "analysis": {
+    "band_percentiles": [
+      10,
+      50,
+      90
+    ],
+    "base_load": {
+      "from": "01:00",
+      "percentile": 10,
+      "to": "05:00"
+    },
+    "coverage_threshold": 0.95,
+    "demand_minutes": 30,
+    "reference_months": 12,
+    "seasons": {
+      "DJF": [
+        12,
+        1,
+        2
+      ],
+      "JJA": [
+        6,
+        7,
+        8
+      ],
+      "MAM": [
+        3,
+        4,
+        5
+      ],
+      "SON": [
+        9,
+        10,
+        11
+      ]
+    },
+    "tou": {
+      "window_sets": [
+        {
+          "effective_from": null,
+          "windows": {
+            "Alpha": [
+              "08:00-20:00"
+            ],
+            "Beta": [
+              "20:00-02:00",
+              "02:00-08:00"
+            ]
+          }
+        },
+        {
+          "effective_from": "2030-01-01",
+          "windows": {
+            "Alpha": [
+              "07:00-21:00"
+            ],
+            "Beta": [
+              "21:00-07:00"
+            ]
+          }
+        }
+      ]
+    },
+    "weekend": [
+      "saturday",
+      "sunday"
+    ]
+  },
+  "backtest": {
+    "gas_tariffs": [
+      {
+        "from": "2025-10-01",
+        "offer": "TEST9@EME~20251001T000000Z~0123abcd",
+        "to": null
+      }
+    ],
+    "tariffs": [
+      {
+        "from": "2025-07-01",
+        "offer": "TEST1@EME~20250701T000000Z~0123abcd",
+        "to": null
+      }
+    ]
+  },
+  "gas": {
+    "full_year_days": 334,
+    "reference_bills": 12
+  },
+  "kind": "params",
+  "meter": {
+    "local_tz": "Test/Zone",
+    "timebase": "nem_aest"
+  },
+  "offers": {
+    "controlled_load": false,
+    "customer_type": "RESIDENTIAL",
+    "distributor": "Test Networks",
+    "fuel_types": [
+      "ELECTRICITY",
+      "GAS"
+    ],
+    "gas_distributor": "Test Gas Networks",
+    "retailers": [
+      "alpha",
+      "beta-energy"
+    ],
+    "unmet_eligibility": [
+      "EXISTING_SOLAR",
+      "EXISTING_BATTERY"
+    ]
+  },
+  "pricing": {
+    "assume_conditions_met": [
+      "PAY_ON_TIME",
+      "DIRECT_DEBIT"
+    ],
+    "demand_minutes": 30,
+    "gst_rate": "0.10"
+  },
+  "schema_version": 6,
+  "validation": {
+    "backtest": {
+      "invoice_window_days": 14,
+      "tolerance_pct": 1.0
+    },
+    "gas_bills": {
+      "tolerance": "0.05"
+    },
+    "meter": {
+      "total_tolerance_kwh": 0.01
+    },
+    "timebase": {
+      "min_fit_periods": 3,
+      "register_tolerance_kwh": 0.05,
+      "register_tolerance_pct": 0.1,
+      "total_tolerance_kwh": 0.05,
+      "windows": {
+        "Alpha": [
+          "08:00-20:00"
+        ],
+        "Beta": [
+          "20:00-02:00",
+          "02:00-08:00"
+        ]
+      }
+    }
+  },
+  "recommend": {
+    "top": 5,
+    "usage_scale_pct": "10",
+    "min_saving": "50",
+    "recheck_days": 90,
+    "price_reset": "07-01"
+  }
+}

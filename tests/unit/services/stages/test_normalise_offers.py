@@ -31,7 +31,7 @@ from tests.fixtures.offer_workspace import (
     OfferZone,
     build_offer_zone,
 )
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import empty_raw_zone, land_blob
 
 CHECKS = [
@@ -63,7 +63,7 @@ def normalise(root: Path) -> StageResult:
 def template(tmp_path_factory: pytest.TempPathFactory) -> OfferZone:
     root = tmp_path_factory.mktemp("offers")
     empty_raw_zone(root)
-    (root / "params.yaml").write_text(params_v5_text(region=True))
+    (root / "params.yaml").write_text(params_v6_text(region=True))
     return build_offer_zone(root)
 
 
@@ -158,7 +158,7 @@ def test_the_outputs_are_byte_identical_on_a_rerun(zone: OfferZone) -> None:
 
 def test_no_offer_data_gives_empty_outputs(tmp_path: Path) -> None:
     empty_raw_zone(tmp_path)
-    (tmp_path / "params.yaml").write_text(params_v5_text(region=True))
+    (tmp_path / "params.yaml").write_text(params_v6_text(region=True))
     normalise(tmp_path)
     assert rows(tmp_path) == {}
     assert tariffs(tmp_path).as_of is None
@@ -194,13 +194,13 @@ def test_an_invalid_local_rule_fails_rules_valid(zone: OfferZone) -> None:
 
 
 def test_a_household_with_controlled_load_keeps_the_controlled_load_variant(zone: OfferZone) -> None:
-    (zone.root / "params.yaml").write_text(params_v5_text(region=True, controlled_load=True))
+    (zone.root / "params.yaml").write_text(params_v6_text(region=True, controlled_load=True))
     normalise(zone.root)
     assert rows(zone.root)[CL_ID]["status"] == "normalised"
 
 
 def test_null_retailers_are_invalid_input(zone: OfferZone) -> None:
-    (zone.root / "params.yaml").write_text(params_v5_text(region=False))
+    (zone.root / "params.yaml").write_text(params_v6_text(region=False))
     with pytest.raises(InvalidInputError):
         normalise(zone.root)
 

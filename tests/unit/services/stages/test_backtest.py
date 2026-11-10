@@ -23,7 +23,7 @@ from energatron.core.models.costs import BacktestResult
 from energatron.services.stages import backtest
 from tests.fixtures.make_sources import make_retailer_txn_csv
 from tests.fixtures.offer_workspace import MANUAL_ID
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import land_blob
 from tests.integration._stage_inputs import REFERENCE_MONTHS, build_inputs, run_stage_named
 
@@ -51,7 +51,7 @@ def manual_snapshot(root: Path) -> str:
 
 def configure(root: Path, *tariffs: dict[str, Any]) -> None:
     (root / "params.yaml").write_text(
-        params_v5_text(region=True, reference_months=REFERENCE_MONTHS, tariffs=list(tariffs))
+        params_v6_text(region=True, reference_months=REFERENCE_MONTHS, tariffs=list(tariffs))
     )
 
 

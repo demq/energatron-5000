@@ -179,6 +179,9 @@ def paths(tmp_path: Path) -> WorkspacePaths:
         paths.root, "params.yaml", yaml.safe_dump(Params.defaults(TEST_REGION).model_dump(mode="json"), sort_keys=False)
     )
     write(paths.root, "config/offer_rules.local/README.md", "local rules\n")
+    write(paths.root, "config/bundle_rules.local/README.md", "local bundle rules\n")
+    write(paths.root, "data/runs/README.md", "runs\n")
+    write(paths.root, "data/decisions/README.md", "decisions\n")
     catalog = JsonlCatalog(paths)
     for source in SourceType:
         catalog.initialise(source)

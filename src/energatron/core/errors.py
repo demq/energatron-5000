@@ -313,6 +313,9 @@ class WarningCode(StrEnum):
     W_BACKTEST_NO_TARIFF = "W_BACKTEST_NO_TARIFF"  # no tariff in force, or no period priced (P4 spec §10)
     W_GAS_GAP = "W_GAS_GAP"  # gas bills that don't follow on from the one before (P5 spec §7)
     W_GAS_PARTIAL_YEAR = "W_GAS_PARTIAL_YEAR"  # the gas reference is shorter than a year (P5 spec §9.3)
+    W_SENSITIVITY_UNAVAILABLE = "W_SENSITIVITY_UNAVAILABLE"  # a sensitivity variation can't be priced (P6 spec §4)
+    W_REC_NO_CURRENT_PLAN = "W_REC_NO_CURRENT_PLAN"  # a fuel with candidates has no current plan (P6 spec §6.3)
+    W_REC_CURRENT_NOT_PRICED = "W_REC_CURRENT_NOT_PRICED"  # the named current plan isn't priced (P6 spec §6.3)
 
 
 class ResultWarning(BaseModel):

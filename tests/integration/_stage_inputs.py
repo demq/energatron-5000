@@ -17,12 +17,12 @@ from energatron.services.stages.registry import STAGES
 from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
 from tests.fixtures.gas_workspace import build_gas_zone
 from tests.fixtures.offer_workspace import build_offer_zone
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import build_raw_zone, empty_raw_zone
 
 REFERENCE_MONTHS: Final = 5
 """The fixture raw zone covers May to September: five whole local months, so five fit the reference window."""
-PARAMS_YAML: Final = params_v5_text(region=True, reference_months=REFERENCE_MONTHS)
+PARAMS_YAML: Final = params_v6_text(region=True, reference_months=REFERENCE_MONTHS)
 """The region fields are filled, as `pipeline sync` leaves them: `validate_timebase` and `normalise_offers` refuse
 `null` ones."""
 _SOURCE_TS: Final = datetime(2026, 1, 2, 3, 4, 5)
@@ -165,6 +165,15 @@ def _backtest_gas(root: Path) -> None:
     _run_upstream(root, "gas_bills", "normalise_gas_offers")
 
 
+def _sensitivity(root: Path) -> None:
+    """The fixture raw, offer and gas zones with every upstream stage of both cost stages run: `sensitivity` reads the
+    offers marts, the local table and both profiles."""
+    _usage_profile(root)
+    build_offer_zone(root)
+    build_gas_zone(root)
+    _run_upstream(root, "usage_profile", "normalise_offers", "gas_bills", "gas_profile", "normalise_gas_offers")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -182,6 +191,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "normalise_gas_offers": _normalise_offers,  # the fixture offer zone holds gas plans and a gas manual offer
     "cost_gas": _cost_gas,
     "backtest_gas": _backtest_gas,
+    "sensitivity": _sensitivity,
 }
 
 

@@ -31,6 +31,14 @@ from tests.unit.services.test_context import TEST_REGION, build
 
 GOLDEN = Path(__file__).resolve().parents[2] / "fixtures" / "golden" / "dvc.yaml"
 RULES_DIR = "config/offer_rules.local"
+BUNDLE_RULES_DIR = "config/bundle_rules.local"
+RECORD_DIRS = ["data/runs", "data/decisions"]
+NEW_DIRS_POINTERS = [
+    f"{BUNDLE_RULES_DIR}/README.md",
+    "data/runs.dvc",
+    "data/decisions.dvc",
+    "data/.gitignore",
+]
 PARAMS_V1 = "kind: params\nschema_version: 1\n"
 DEFAULTS = Params.defaults(TEST_REGION).model_dump(mode="json")
 ALL_SOURCES = sorted(source.value for source in SourceType)
@@ -49,13 +57,13 @@ class TrackingVcs:
 
     def track(self, paths: Sequence[str]) -> list[str]:
         self.tracked.append(list(paths))
-        ignore = self.paths.root / "data" / "raw" / ".gitignore"
-        lines = ignore.read_text(encoding="utf-8").splitlines() if ignore.exists() else []
         for path in paths:
+            ignore = self.paths.root / Path(path).parent / ".gitignore"
+            lines = ignore.read_text(encoding="utf-8").splitlines() if ignore.exists() else []
             line = f"/{Path(path).name}"
             if line not in lines:
                 lines.append(line)
-        ignore.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
+            ignore.write_text("".join(f"{line}\n" for line in lines), encoding="utf-8")
         return [f"{path}.dvc" for path in paths]
 
     def commit(self, paths: Sequence[str], message: str) -> str:
@@ -116,7 +124,7 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     root = ctx.paths.root
     assert (root / "dvc.yaml").read_bytes() == GOLDEN.read_bytes()
     text = (root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 5\nmeter:\n")
+    assert text.startswith("kind: params\nschema_version: 6\nmeter:\n")
     assert yaml.safe_load(text) == DEFAULTS
     assert DEFAULTS["meter"]["local_tz"] == TEST_REGION.local_tz  # the test region's, not a shipped one
     for source in SourceType:
@@ -125,13 +133,17 @@ def test_a_fresh_workspace_gets_dvc_yaml_params_and_every_catalog(ctx: ServiceCo
     assert result.params_written is True
     assert result.params_rewritten is False
     assert result.catalogs_created == ALL_SOURCES
-    assert vcs.tracked == [[f"data/raw/{source}" for source in ALL_SOURCES]]
+    assert vcs.tracked == [[f"data/raw/{source}" for source in ALL_SOURCES], RECORD_DIRS]
     assert result.pointer_files == [
         *(f"data/raw/{source}.dvc" for source in ALL_SOURCES),
         "data/raw/.gitignore",
         f"{RULES_DIR}/README.md",
+        *NEW_DIRS_POINTERS,
     ]
     assert "offer_rule" in (root / RULES_DIR / "README.md").read_text(encoding="utf-8")
+    assert "bundle_rule" in (root / BUNDLE_RULES_DIR / "README.md").read_text(encoding="utf-8")
+    assert "run_manifest" in (root / "data/runs/README.md").read_text(encoding="utf-8")
+    assert "decision" in (root / "data/decisions/README.md").read_text(encoding="utf-8")
     assert result.dry_run is False
     pipeline_sync.check(ctx)  # in sync now
 
@@ -160,7 +172,7 @@ def test_a_second_sync_writes_and_tracks_nothing(ctx: ServiceContext, vcs: Track
     assert (again.dvc_yaml_written, again.params_written, again.params_rewritten) == (False, False, False)
     assert again.catalogs_created == []
     assert again.pointer_files == []
-    assert len(vcs.tracked) == 1
+    assert len(vcs.tracked) == 2
 
 
 # dvc.yaml
@@ -249,6 +261,9 @@ def prepare_synced(ctx: ServiceContext, params: dict[str, Any] | str) -> None:
     for source in SourceType:
         write(ctx.paths.root, f"data/raw/{source.value}/_catalog.jsonl", "")
     write(ctx.paths.root, f"{RULES_DIR}/README.md", "the owner's own words\n")
+    write(ctx.paths.root, f"{BUNDLE_RULES_DIR}/README.md", "the owner's own words\n")
+    for directory in RECORD_DIRS:
+        write(ctx.paths.root, f"{directory}/README.md", "readme\n")
     write(ctx.paths.root, "params.yaml", params if isinstance(params, str) else dump(params))
 
 
@@ -263,7 +278,7 @@ def test_an_older_params_file_is_drift_then_rewritten_with_the_zone_and_windows_
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     text = (ctx.paths.root / "params.yaml").read_text(encoding="utf-8")
-    assert text.startswith("kind: params\nschema_version: 5\n")
+    assert text.startswith("kind: params\nschema_version: 6\n")
     assert (
         yaml.safe_load(text) == DEFAULTS
     )  # the v1 file held nothing to keep: the zone and windows come from the profile
@@ -374,7 +389,7 @@ def test_a_v2_params_file_is_rewritten_to_the_current_version_with_the_first_set
     result = synced(ctx)
     assert (result.params_written, result.params_rewritten) == (False, True)
     on_disk = params_on_disk(ctx)
-    assert on_disk["schema_version"] == 5
+    assert on_disk["schema_version"] == 6
     assert on_disk["analysis"]["tou"]["window_sets"] == [FIRST_SET]
     assert on_disk == DEFAULTS
     pipeline_sync.check(ctx)
@@ -450,7 +465,7 @@ def test_only_missing_catalogs_are_created_and_tracked(ctx: ServiceContext, vcs:
     result = synced(ctx)
     expected = [source for source in ALL_SOURCES if source != "sapn_interval"]
     assert result.catalogs_created == expected
-    assert vcs.tracked == [[f"data/raw/{source}" for source in expected]]
+    assert vcs.tracked == [[f"data/raw/{source}" for source in expected], RECORD_DIRS]
     assert "data/raw/.gitignore" in result.pointer_files
 
 
@@ -464,7 +479,7 @@ def test_the_gitignore_is_listed_only_when_it_changed(ctx: ServiceContext) -> No
     write(ctx.paths.root, "data/raw/.gitignore", "".join(f"/{source}\n" for source in ALL_SOURCES))
     result = synced(ctx)
     assert "data/raw/.gitignore" not in result.pointer_files
-    assert len(result.pointer_files) == len(ALL_SOURCES) + 1  # and the rules readme
+    assert len(result.pointer_files) == len(ALL_SOURCES) + 1 + len(NEW_DIRS_POINTERS)  # and the readmes
 
 
 # --check and --dry-run
@@ -472,7 +487,7 @@ def test_the_gitignore_is_listed_only_when_it_changed(ctx: ServiceContext) -> No
 
 def test_check_lists_every_kind_of_drift_in_order(ctx: ServiceContext) -> None:
     before = snapshot(ctx.paths.root)
-    assert drift_of(ctx) == ["dvc.yaml", "params.yaml", "catalogs", RULES_DIR]
+    assert drift_of(ctx) == ["dvc.yaml", "params.yaml", "catalogs", RULES_DIR, BUNDLE_RULES_DIR, *RECORD_DIRS]
     assert snapshot(ctx.paths.root) == before
 
 
@@ -481,7 +496,7 @@ def test_check_passes_on_a_synced_workspace_and_writes_nothing(ctx: ServiceConte
     before = snapshot(ctx.paths.root)
     pipeline_sync.check(ctx)
     assert snapshot(ctx.paths.root) == before
-    assert len(vcs.tracked) == 1
+    assert len(vcs.tracked) == 2
 
 
 def test_a_dry_run_writes_and_tracks_nothing_but_reports_what_it_would_do(
@@ -598,3 +613,23 @@ def test_a_dry_run_creates_no_rules_directory(ctx: ServiceContext) -> None:
     result = pipeline_sync.sync(ctx, dry_run=True)
     assert result.pointer_files == []
     assert not (ctx.paths.root / RULES_DIR).exists()
+
+
+def test_missing_bundle_rules_and_record_directories_are_drift_and_are_created(
+    ctx: ServiceContext, vcs: TrackingVcs
+) -> None:
+    prepare_synced(ctx, DEFAULTS)
+    for directory in (BUNDLE_RULES_DIR, *RECORD_DIRS):
+        (ctx.paths.root / directory / "README.md").unlink()
+        (ctx.paths.root / directory).rmdir()
+    assert drift_of(ctx) == [BUNDLE_RULES_DIR, *RECORD_DIRS]
+    result = synced(ctx)
+    assert vcs.tracked == [RECORD_DIRS]
+    assert result.pointer_files == NEW_DIRS_POINTERS
+    pipeline_sync.check(ctx)
+
+
+def test_a_dry_run_creates_no_record_directory(ctx: ServiceContext, vcs: TrackingVcs) -> None:
+    pipeline_sync.sync(ctx, dry_run=True)
+    assert vcs.tracked == []
+    assert not any((ctx.paths.root / directory).exists() for directory in (BUNDLE_RULES_DIR, *RECORD_DIRS))

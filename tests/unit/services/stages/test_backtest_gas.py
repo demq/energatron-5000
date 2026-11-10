@@ -22,7 +22,7 @@ from energatron.services.stages.runner import StageResult, prepare_stage, run_st
 from tests.fixtures import make_cdr as cdr
 from tests.fixtures import make_gas as gas
 from tests.fixtures.gas_workspace import build_gas_zone
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import empty_raw_zone, land_blob
 
 OUT = Path("data/reports/validation/backtest_gas")
@@ -60,7 +60,7 @@ def workspace(tmp_path: Path, tariffs: list[dict[str, str | None]], *, rate: str
     build_gas_zone(root)
     snapshot = land_manual(root, rate=rate)
     entries = [{**entry, "offer": snapshot if entry["offer"] == "MANUAL" else entry["offer"]} for entry in tariffs]
-    (root / "params.yaml").write_text(params_v5_text(region=True, gas_tariffs=entries), encoding="utf-8")
+    (root / "params.yaml").write_text(params_v6_text(region=True, gas_tariffs=entries), encoding="utf-8")
     run(root, "gas_bills")
     run(root, "normalise_gas_offers")
     return root

@@ -18,7 +18,7 @@ from energatron.services.stages.registry import get_stage
 from energatron.services.stages.runner import StageResult, prepare_stage, run_stage
 from tests.fixtures.gas_workspace import build_gas_zone
 from tests.fixtures.offer_workspace import build_offer_zone
-from tests.fixtures.params_text import params_v5_text
+from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import empty_raw_zone
 
 OUT = Path("data/marts/costs/gas")
@@ -39,7 +39,7 @@ def run(root: Path, name: str) -> StageResult:
 def root(tmp_path: Path) -> Path:
     workspace = tmp_path / "workspace"
     empty_raw_zone(workspace)
-    (workspace / "params.yaml").write_text(params_v5_text(region=True), encoding="utf-8")
+    (workspace / "params.yaml").write_text(params_v6_text(region=True), encoding="utf-8")
     build_gas_zone(workspace)
     build_offer_zone(workspace)
     for name in ("gas_bills", "gas_profile", "normalise_gas_offers"):
@@ -92,7 +92,7 @@ def test_the_outputs_are_byte_identical_on_a_rerun(root: Path) -> None:
 
 def test_no_gas_bills_give_empty_outputs_that_pass(tmp_path: Path) -> None:
     empty_raw_zone(tmp_path)
-    (tmp_path / "params.yaml").write_text(params_v5_text(region=True), encoding="utf-8")
+    (tmp_path / "params.yaml").write_text(params_v6_text(region=True), encoding="utf-8")
     build_offer_zone(tmp_path)
     for name in ("gas_bills", "gas_profile", "normalise_gas_offers"):
         run(tmp_path, name)

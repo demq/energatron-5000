@@ -223,3 +223,21 @@ def params_v5_text(
         tariffs_line + "\n", f"{tariffs_line}\n  gas_tariffs: {json.dumps([dict(found) for found in gas_tariffs])}\n", 1
     )
     return base + f"gas:\n  reference_bills: {reference_bills}\n  full_year_days: {full_year_days}\n"
+
+
+def params_v6_text(
+    tolerance: float = 0.01,
+    *,
+    top: int = 5,
+    usage_scale_pct: str = "10",
+    min_saving: str = "50",
+    recheck_days: int = 90,
+    price_reset: str = "07-01",
+    **v5: Any,
+) -> str:
+    """`params.yaml` v6: `params_v5_text` (schema version 6) with the `recommend` block (P6 spec §3.1)."""
+    base = params_v5_text(tolerance, **v5).replace("schema_version: 5", "schema_version: 6", 1)
+    return base + (
+        f'recommend:\n  top: {top}\n  usage_scale_pct: "{usage_scale_pct}"\n  min_saving: "{min_saving}"\n'
+        f'  recheck_days: {recheck_days}\n  price_reset: "{price_reset}"\n'
+    )

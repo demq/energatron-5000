@@ -39,6 +39,8 @@ BIN = Path(sys.executable).parent
 ALL_STAGES = list(STAGES)
 WINTER = [datetime(2025, month, 1) for month in range(5, 11)]
 DOWNSTREAM = ["usage_profile", "usage_report"]
+P6_AFTER_PROFILE = [name for name in ("sensitivity", "bundles", "recommend") if name in STAGES]
+"""The P6 stages that read the usage profile, directly or through `cost_elec`."""
 PROFILE = Path("data") / "marts" / "usage_profile"
 REPORT = Path("data") / "reports" / "usage"
 FINGERPRINT = Path(".energatron") / "code_fingerprint.json"
@@ -143,8 +145,13 @@ def test_changing_the_reference_months_makes_the_two_p3_stages_stale_and_nothing
 ) -> None:
     runner(scratch).repro()
     set_reference_months(scratch.root / "params.yaml", REFERENCE_MONTHS - 1)
-    assert stale(scratch) == ["usage_profile"]  # DVC reports the report once the marts it reads have changed
-    assert runner(scratch).repro().ran == [*DOWNSTREAM, "cost_elec"]  # cost_elec reads the profile's summary
+    assert stale(scratch) == ["usage_profile", "sensitivity"]  # both declare analysis.reference_months; DVC reports
+    # the report once the marts it reads have changed
+    assert runner(scratch).repro().ran == [
+        *DOWNSTREAM,
+        "cost_elec",
+        *P6_AFTER_PROFILE,
+    ]  # cost_elec reads the profile's summary
     summary = UsageSummary.from_document(json.loads((scratch.root / PROFILE / "summary.json").read_text()))
     assert summary.suffixes["E1"].window_start == "2025-06"
 
@@ -171,7 +178,11 @@ def test_editing_a_window_sets_start_changes_the_time_of_use_tables_and_the_repo
 
     set_second_window_set(scratch, "2025-07-15")
     assert stale(scratch) == ["usage_profile"]
-    assert runner(scratch).repro().ran == [*DOWNSTREAM, "cost_elec"]  # cost_elec reads the profile's summary
+    assert runner(scratch).repro().ran == [
+        *DOWNSTREAM,
+        "cost_elec",
+        *P6_AFTER_PROFILE,
+    ]  # cost_elec reads the profile's summary
     middle_tou = tou_rows(scratch)
     middle_page = (scratch.root / REPORT / "index.html").read_bytes()
     assert middle_tou != before_tou
@@ -179,7 +190,11 @@ def test_editing_a_window_sets_start_changes_the_time_of_use_tables_and_the_repo
     assert {row["window_set"] for row in middle_tou} == {0, 1}
 
     set_second_window_set(scratch, "2025-08-01")
-    assert runner(scratch).repro().ran == [*DOWNSTREAM, "cost_elec"]  # cost_elec reads the profile's summary
+    assert runner(scratch).repro().ran == [
+        *DOWNSTREAM,
+        "cost_elec",
+        *P6_AFTER_PROFILE,
+    ]  # cost_elec reads the profile's summary
     assert tou_rows(scratch) != middle_tou
     assert (scratch.root / REPORT / "index.html").read_bytes() != middle_page
 

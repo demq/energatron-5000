@@ -249,6 +249,17 @@ GAS_COST_TOTAL_SCHEMA: Final = pa.schema(
     ]
 )
 """`totals.parquet` of `cost_gas` (kind `gas_cost_total`, P5 spec §9.3)."""
+SENSITIVITY_TOTAL_SCHEMA: Final = pa.schema(
+    [
+        ("fuel", pa.string()),
+        ("variation", pa.string()),
+        ("offer_snapshot_id", pa.string()),
+        ("annual_ongoing", MONEY),
+        ("annual_year1", MONEY),
+        ("rank", pa.int32()),
+    ]
+)
+"""`totals.parquet` of `sensitivity` (kind `sensitivity_total`, P6 spec §4)."""
 GAS_BACKTEST_BILL_SCHEMA: Final = pa.schema(
     [
         ("period_start", pa.date32()),

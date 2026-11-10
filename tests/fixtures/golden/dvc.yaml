@@ -194,3 +194,20 @@ stages:
       - stages.backtest_gas.stage_sha256
     outs:
     - data/reports/validation/backtest_gas
+  sensitivity:
+    cmd: energatron stage sensitivity
+    deps:
+    - data/marts/offers
+    - data/marts/offers_gas
+    - data/interim/elec_interval_local
+    - data/marts/usage_profile
+    - data/marts/gas_profile
+    params:
+    - pricing
+    - analysis.reference_months
+    - gas
+    - recommend
+    - .energatron/code_fingerprint.json:
+      - stages.sensitivity.stage_sha256
+    outs:
+    - data/marts/costs/sensitivity

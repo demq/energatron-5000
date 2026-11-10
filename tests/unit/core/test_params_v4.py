@@ -63,7 +63,7 @@ def with_block(block: str, **changes: Any) -> dict[str, Any]:
 
 def test_a_valid_v4_document_validates() -> None:
     params = Params.from_document(doc_v4())
-    assert params.schema_version == 5
+    assert params.schema_version == 6
     assert params.offers.retailers == ("alpha", "beta-energy")
     assert params.offers.distributor == "Test Networks"
     assert params.offers.customer_type == "RESIDENTIAL"
@@ -81,7 +81,7 @@ def test_a_valid_v4_document_validates() -> None:
 def test_the_gst_rate_dumps_as_a_decimal_string() -> None:
     dumped = Params.from_document(doc_v4()).model_dump(mode="json")
     assert dumped["pricing"]["gst_rate"] == "0.10"
-    assert list(dumped)[-4:] == ["offers", "pricing", "backtest", "gas"]
+    assert list(dumped)[-5:] == ["offers", "pricing", "backtest", "gas", "recommend"]
 
 
 def test_the_region_fields_include_the_retailers_and_the_distributor() -> None:
@@ -190,7 +190,7 @@ def test_a_v3_document_reads_as_v4_with_null_region_fields_and_keeps_its_values(
     doc = doc_v3()
     doc["meter"]["timebase"] = "local_wall"
     params = Params.from_document(doc)
-    assert params.schema_version == 5
+    assert params.schema_version == 6
     assert params.meter.timebase == "local_wall"
     assert params.offers.retailers is None
     assert params.offers.distributor is None

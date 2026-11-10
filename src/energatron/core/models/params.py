@@ -5,7 +5,8 @@ that `validate_timebase` fits). Version 3 adds `analysis.*` (the usage profile's
 window sets its split uses). Version 4 adds `offers.*` (what `fetch-offers` lists and `normalise_offers` keeps),
 `pricing.*` (GST, the discount conditions assumed met, the demand block), `backtest.*` (the tariffs in force) and
 `validation.backtest` (P4 spec §4.1). Version 5 adds `GAS` to the fuels, `offers.gas_distributor`, `gas.*` (the gas
-reference year), `backtest.gas_tariffs` and `validation.gas_bills` (P5 spec §4.1). The zone, the windows, the CDR
+reference year), `backtest.gas_tariffs` and `validation.gas_bills` (P5 spec §4.1). Version 6 adds `recommend.*` (P6 spec
+§3.1). The zone, the windows, the CDR
 retailers and the two distributors are region-specific, so core holds no default for them: `pipeline sync` copies
 them from the region profile (`Params.defaults(profile)` for a new file), and a migrated document carries `null` until
 then. `prepare_stage` refuses a stage that reads one while it is `null`.
@@ -15,6 +16,7 @@ an older file, because DVC reads declared keys from the file itself; energatron'
 (D1 §5).
 """
 
+import re
 from collections.abc import Callable
 from datetime import date
 from decimal import Decimal
@@ -354,6 +356,42 @@ class GasParams(FrozenModel):
     full_year_days: Annotated[int, Field(strict=True, ge=1, le=366)]
 
 
+_MM_DD: Final = re.compile(r"(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])")
+
+
+def _mm_dd(value: str) -> str:
+    if _MM_DD.fullmatch(value) is None:
+        raise ValueError("a month and day, MM-DD")
+    try:
+        date(2000, int(value[:2]), int(value[3:]))  # a leap year, so 02-29 is valid
+    except ValueError:
+        raise ValueError("a month and day, MM-DD") from None
+    return value
+
+
+def _percent(value: Decimal) -> Decimal:
+    if not value.is_finite() or not Decimal(0) < value < Decimal(100):
+        raise ValueError("recommend.usage_scale_pct: a decimal above 0 and below 100")
+    return value
+
+
+class RecommendParams(FrozenModel):
+    """The recommendation's settings (P6 spec §3.1): options shown, the sensitivity's usage scale, the smallest saving
+    worth a switch (dollars a year, GST-inclusive), and the recheck horizon."""
+
+    top: Annotated[int, Field(strict=True, ge=1)]
+    usage_scale_pct: Annotated[Decimal, AfterValidator(_percent)]
+    min_saving: Annotated[Decimal, AfterValidator(_non_negative_decimal("recommend.min_saving"))]
+    recheck_days: Annotated[int, Field(strict=True, ge=1)]
+    price_reset: Annotated[str, AfterValidator(_mm_dd)]
+
+
+def _recommend_defaults() -> RecommendParams:
+    return RecommendParams(
+        top=5, usage_scale_pct=Decimal("10"), min_saving=Decimal("50"), recheck_days=90, price_reset="07-01"
+    )
+
+
 _DEFAULT_OFFERS: Final = {
     "customer_type": "RESIDENTIAL",
     "fuel_types": ("ELECTRICITY", "GAS"),
@@ -392,9 +430,9 @@ class Params(Persisted):
     """The workspace's non-personal pipeline settings. `prepare_stage` validates the whole file through this model."""
 
     KIND: ClassVar[str] = "params"
-    SCHEMA_VERSION: ClassVar[int] = 5
+    SCHEMA_VERSION: ClassVar[int] = 6
     kind: Literal["params"] = "params"
-    schema_version: Literal[5] = 5
+    schema_version: Literal[6] = 6
 
     meter: MeterParams
     validation: ValidationParams
@@ -403,6 +441,7 @@ class Params(Persisted):
     pricing: PricingParams
     backtest: BacktestParams
     gas: GasParams
+    recommend: RecommendParams
 
     @classmethod
     def defaults(cls, profile: RegionProfile) -> Self:
@@ -426,6 +465,7 @@ class Params(Persisted):
             pricing=_pricing_defaults(),
             backtest=BacktestParams(tariffs=(), gas_tariffs=()),
             gas=_gas_defaults(),
+            recommend=_recommend_defaults(),
         )
 
 
@@ -507,3 +547,10 @@ def _params_v4_to_v5(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
         "backtest": backtest,
         "gas": gas,
     }
+
+
+@migration("params", from_version=5)
+def _params_v5_to_v6(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
+    """Insert `recommend` with the v6 defaults (P6 spec §3.1)."""
+    recommend: Any = _recommend_defaults().model_dump(mode="json")
+    return {**doc, "schema_version": 6, "recommend": recommend}

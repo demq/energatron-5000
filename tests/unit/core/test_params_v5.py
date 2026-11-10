@@ -31,7 +31,7 @@ def with_block(block: str, **changes: Any) -> dict[str, Any]:
 
 def test_a_valid_v5_document_validates() -> None:
     params = Params.from_document(doc_v5())
-    assert params.schema_version == 5
+    assert params.schema_version == 6
     assert params.offers.fuel_types == ("ELECTRICITY", "GAS")
     assert params.offers.gas_distributor == "Test Gas Networks"
     assert (params.gas.reference_bills, params.gas.full_year_days) == (12, 334)
@@ -39,7 +39,7 @@ def test_a_valid_v5_document_validates() -> None:
     assert params.validation.gas_bills.tolerance == Decimal("0.05")
     dumped = params.model_dump(mode="json")
     assert dumped["validation"]["gas_bills"] == {"tolerance": "0.05"}
-    assert list(dumped)[-1] == "gas"
+    assert list(dumped)[-2:] == ["gas", "recommend"]
 
 
 def test_the_gas_distributor_is_a_region_field_that_may_be_null() -> None:

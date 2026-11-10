@@ -7,19 +7,15 @@ annual totals with a rank per scenario (`totals.parquet`) and `summary.json`. Wo
 usage-derived costs, never written to the tool repo.
 """
 
-import json
-import math
 from collections.abc import Sequence
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
-from pathlib import Path
 from typing import Final, cast
 
 import pandas as pd
 
 from energatron.core.canonical import JSONValue
 from energatron.core.engine import Bill, prepare_usage, price
-from energatron.core.errors import InvalidInputError, SchemaTooNewError
 from energatron.core.models.costs import (
     COST_LINE_KIND,
     COST_LINE_SORT,
@@ -33,12 +29,11 @@ from energatron.core.models.costs import (
     TOTALS_FILENAME,
     CostSummary,
 )
-from energatron.core.models.usage import UsageSummary
 from energatron.core.tariff import Tariff
 from energatron.services.files import write_json, write_parquet
 from energatron.services.stages import costing
 from energatron.services.stages.runner import StageRun, StageSpec
-from energatron.services.stages.tables import COST_LINE_SCHEMA, COST_TOTAL_SCHEMA, SUMMARY_FILENAME
+from energatron.services.stages.tables import COST_LINE_SCHEMA, COST_TOTAL_SCHEMA
 
 CHEAPEST: Final = 3
 ENERGY_TOLERANCE_KWH: Final = 1e-4
@@ -48,14 +43,14 @@ def _run(run: StageRun) -> None:
     pricing = costing.pricing_of(run.params["pricing"])
     tariffs = costing.load_tariffs(run.input("offers"), input="offers").tariffs
     local = costing.load_local(run.input("local"), input="local")
-    summary = _usage_summary(run.input("profile"))
+    summary = costing.usage_summary(run.input("profile"))
     suffixes = costing.consumption_suffixes(local)
     one_register = len(suffixes) == 1
     suffix = suffixes[0] if one_register else None
-    window = _window(summary, suffix)
-    periods = _months(*window) if window is not None else []
+    window = costing.window(summary, suffix)
+    periods = costing.months(*window) if window is not None else []
     rows = local[local["suffix"] == suffix] if suffix is not None else local.iloc[0:0]
-    present = [period for period in periods if _has_rows(rows, period)]
+    present = [period for period in periods if costing.has_rows(rows, period)]
     window_present = window is not None and len(present) == len(periods)
 
     priced = one_register and window_present
@@ -69,7 +64,7 @@ def _run(run: StageRun) -> None:
             bill = price(tariff, usage, periods, scenario=scenario, pricing=pricing)
             line_records.extend(costing.cost_line_records(tariff.offer_snapshot_id, scenario, bill.lines))
             totals.append(_total(tariff, scenario, bill))
-            conserved = conserved and _energy_conserved(bill, rows, periods)
+            conserved = conserved and costing.energy_conserved(bill, rows, periods, tolerance=ENERGY_TOLERANCE_KWH)
     costing.rank(totals, SCENARIOS)
     sums_ok = _lines_sum(line_records, totals, periods)
 
@@ -113,38 +108,6 @@ def _run(run: StageRun) -> None:
     run.check("energy_conserved", conserved, tolerance_kwh=ENERGY_TOLERANCE_KWH)
 
 
-def _usage_summary(directory: Path) -> UsageSummary:
-    try:
-        return UsageSummary.from_document(json.loads((directory / SUMMARY_FILENAME).read_bytes()))
-    except OSError, ValueError, InvalidInputError, SchemaTooNewError:
-        raise InvalidInputError("The usage profile has no valid summary.json.", input="profile") from None
-
-
-def _window(summary: UsageSummary, suffix: str | None) -> tuple[str, str] | None:
-    found = summary.suffixes.get(suffix) if suffix is not None else None
-    if found is None or found.window_start is None or found.window_end is None:
-        return None
-    return found.window_start, found.window_end
-
-
-def _months(first: str, last: str) -> list[tuple[date, date]]:
-    """The calendar months from `first` to `last` (`YYYY-MM`, inclusive) as `(first day, last day)`."""
-    year, month = int(first[:4]), int(first[5:])
-    end = (int(last[:4]), int(last[5:]))
-    months: list[tuple[date, date]] = []
-    while (year, month) <= end:
-        start = date(year, month, 1)
-        following = date(year + month // 12, month % 12 + 1, 1)
-        months.append((start, following - timedelta(days=1)))
-        year, month = following.year, following.month
-    return months
-
-
-def _has_rows(rows: pd.DataFrame, period: tuple[date, date]) -> bool:
-    dates = rows["local_date"]
-    return bool(((dates >= period[0]) & (dates <= period[1])).any())
-
-
 def _total(tariff: Tariff, scenario: str, bill: Bill) -> dict[str, object]:
     ongoing = bill.total()
     return {
@@ -173,18 +136,6 @@ def _lines_sum(
         sums.get((cast(str, row["offer_snapshot_id"]), cast(str, row["scenario"])), Decimal(0)) == row["annual_ongoing"]
         for row in totals
     )
-
-
-def _energy_conserved(bill: Bill, rows: pd.DataFrame, periods: Sequence[tuple[date, date]]) -> bool:
-    """The usage lines' quantities add up to the metered energy of each period."""
-    for first, last in periods:
-        metered = math.fsum(rows[(rows["local_date"] >= first) & (rows["local_date"] <= last)]["kwh"].tolist())
-        billed = math.fsum(
-            float(line.quantity) for line in bill.lines if line.line == "usage" and line.period_start == first
-        )
-        if abs(billed - metered) > ENERGY_TOLERANCE_KWH:
-            return False
-    return True
 
 
 SPEC: Final = StageSpec(

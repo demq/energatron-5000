@@ -201,8 +201,11 @@ class StageRun:
         inputs: Mapping[str, Path],
         params: Mapping[str, JSONValue],
         outputs: Mapping[str, Path],
+        *,
+        stage_sha256: str = "",
     ) -> None:
         self._spec = spec
+        self.stage_sha256: Final[str] = stage_sha256  # the live code entry run_stage was given (P6 spec §3.3)
         self._inputs = inputs
         self._outputs = outputs
         self.params: Mapping[str, JSONValue] = MappingProxyType(dict(params))
@@ -300,7 +303,7 @@ def run_stage(
             if directory.exists():
                 shutil.rmtree(directory)
             directory.mkdir()
-        run = StageRun(spec, inputs, params, temporary)
+        run = StageRun(spec, inputs, params, temporary, stage_sha256=code.stage_sha256)
         try:
             spec.impl(run)
         except EnergatronError:

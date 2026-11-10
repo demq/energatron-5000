@@ -118,7 +118,7 @@ def test_land_a_gas_bill_fetch_repro_and_verify(
     git(root, "commit", "-q", "-m", "the gas tariff in force")
 
     ran = DvcRunner(workspace.scratch.paths, fingerprint=wiring.code_fingerprint).repro().ran
-    assert ran == list(STAGES) and len(ran) == 16
+    assert ran == list(STAGES) and len(ran) == len(STAGES)
     bills = json.loads((root / "data/interim/gas_bills/summary.json").read_text())
     assert (bills["current"], all(bills["checks"].values())) == (1, True)
     statuses = {

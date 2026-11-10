@@ -1,0 +1,12 @@
+{
+  "kind": "bundle_rule",
+  "schema_version": 1,
+  "id": "example-dual-fuel",
+  "description": "A synthetic dual-fuel credit.",
+  "brand": "Example Energy",
+  "electricity_plan": "EXA-E-.*",
+  "gas_plan": null,
+  "effect": {"annual_credit": "25.00", "percent_off": null},
+  "verified_on": "2026-11-10",
+  "cites": ["EXA-E-1~20261101T000000Z~0123abcd"]
+}

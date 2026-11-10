@@ -83,6 +83,7 @@ def test_the_dump_keeps_the_specs_key_order() -> None:
         "pricing",
         "backtest",
         "gas",
+        "recommend",
     ]
     assert list(dumped["meter"]) == ["timebase", "local_tz"]
     assert list(dumped["validation"]) == ["meter", "timebase", "backtest", "gas_bills"]
@@ -256,7 +257,7 @@ def test_defaults_take_the_zone_and_windows_from_the_profile_they_are_given() ->
     assert params.validation.timebase.register_tolerance_pct == 0.1
     assert params.validation.timebase.total_tolerance_kwh == 0.05
     assert params.validation.timebase.min_fit_periods == 3
-    assert params.schema_version == 5
+    assert params.schema_version == 6
     assert params.analysis.tou.window_sets[0].windows == TEST_WINDOWS
     assert params.analysis.tou.window_sets[0].effective_from is None
 
@@ -305,7 +306,7 @@ def test_the_v1_to_v2_migration_inserts_the_defaults_and_null_zone_and_windows()
 
 def test_a_v1_document_reads_as_v4_with_null_zone_and_windows() -> None:
     params = Params.from_document({"kind": "params", "schema_version": 1})
-    assert params.schema_version == 5
+    assert params.schema_version == 6
     assert params.meter.local_tz is None
     assert params.validation.timebase.windows is None
     assert params.analysis.tou.window_sets[0].windows is None
