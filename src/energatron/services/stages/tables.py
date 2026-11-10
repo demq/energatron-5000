@@ -260,6 +260,24 @@ SENSITIVITY_TOTAL_SCHEMA: Final = pa.schema(
     ]
 )
 """`totals.parquet` of `sensitivity` (kind `sensitivity_total`, P6 spec §4)."""
+BUNDLE_OPTION_SCHEMA: Final = pa.schema(
+    [
+        ("variation", pa.string()),
+        ("rank", pa.int32()),
+        ("option_key", pa.string()),
+        ("kind", pa.string()),
+        ("brand", pa.string()),
+        ("elec_snapshot_id", pa.string()),
+        ("gas_snapshot_id", pa.string()),
+        ("elec_annual_ongoing", MONEY),
+        ("gas_annual_ongoing", MONEY),
+        ("adjustment", MONEY),
+        ("annual_ongoing", MONEY),
+        ("annual_year1", MONEY),
+        ("rules", pa.list_(pa.string())),
+    ]
+)
+"""`options.parquet` of `bundles` (kind `bundle_option`, P6 spec §5.3)."""
 GAS_BACKTEST_BILL_SCHEMA: Final = pa.schema(
     [
         ("period_start", pa.date32()),

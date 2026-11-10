@@ -11,6 +11,7 @@ from energatron.core.errors import InternalError, UsageError
 from energatron.services.stages import (
     backtest,
     backtest_gas,
+    bundles,
     catalog_index,
     cost_elec,
     cost_gas,
@@ -63,6 +64,7 @@ STAGES: Final[Mapping[str, StageSpec]] = _build(
         cost_gas.SPEC,
         backtest_gas.SPEC,
         sensitivity.SPEC,
+        bundles.SPEC,
     ]
 )
 """Every stage, in `dvc.yaml` order."""

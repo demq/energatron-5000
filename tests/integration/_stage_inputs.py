@@ -174,6 +174,12 @@ def _sensitivity(root: Path) -> None:
     _run_upstream(root, "usage_profile", "normalise_offers", "gas_bills", "gas_profile", "normalise_gas_offers")
 
 
+def _bundles(root: Path) -> None:
+    """Everything `sensitivity` needs, with both cost stages and `sensitivity` run: `bundles` reads their marts."""
+    _sensitivity(root)
+    _run_upstream(root, "cost_elec", "cost_gas", "sensitivity")
+
+
 BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "catalog_index": _catalog_index,
     "parse_nem12": _parse_nem12,
@@ -192,6 +198,7 @@ BUILDERS: Final[Mapping[str, Callable[[Path], None]]] = {
     "cost_gas": _cost_gas,
     "backtest_gas": _backtest_gas,
     "sensitivity": _sensitivity,
+    "bundles": _bundles,
 }
 
 

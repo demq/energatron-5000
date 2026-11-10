@@ -211,3 +211,18 @@ stages:
       - stages.sensitivity.stage_sha256
     outs:
     - data/marts/costs/sensitivity
+  bundles:
+    cmd: energatron stage bundles
+    deps:
+    - data/marts/costs/elec
+    - data/marts/costs/gas
+    - data/marts/costs/sensitivity
+    - data/marts/offers
+    - data/marts/offers_gas
+    - config/bundle_rules.local
+    params:
+    - backtest
+    - .energatron/code_fingerprint.json:
+      - stages.bundles.stage_sha256
+    outs:
+    - data/marts/costs/bundles

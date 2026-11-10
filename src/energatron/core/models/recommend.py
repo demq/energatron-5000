@@ -51,3 +51,31 @@ class SensitivitySummary(Persisted):
     usage_scale_pct: str
     fuels: dict[Fuel, FuelSensitivity]
     checks: dict[str, bool]
+
+
+# `bundles` (P6 spec §5.3)
+
+BUNDLE_VARIATIONS: Final = ("base", "conditions_not_met", *SENSITIVITY_VARIATIONS)
+BUNDLE_OPTION_KIND: Final = "bundle_option"
+BUNDLE_OPTION_VERSION: Final = 1
+BUNDLE_OPTION_SORT: Final = ("variation", "rank")
+BUNDLES_OPTIONS_FILENAME: Final = "options.parquet"
+BUNDLES_SUMMARY_FILENAME: Final = "summary.json"
+
+
+class BundlesSummary(Persisted):
+    """`bundles_summary` v1 (P6 spec §5.3)."""
+
+    KIND: ClassVar[str] = "bundles_summary"
+    SCHEMA_VERSION: ClassVar[int] = 1
+    kind: Literal["bundles_summary"] = "bundles_summary"
+    schema_version: Literal[1] = 1
+
+    variations: list[str]  # used, in BUNDLE_VARIATIONS order
+    skipped: list[str]
+    candidates: dict[Fuel, _Count]
+    history_excluded: dict[Fuel, _Count]
+    rules: list[str]  # loaded, by id
+    rules_applied: list[str]
+    options: dict[str, _Count]  # per variation used
+    checks: dict[str, bool]

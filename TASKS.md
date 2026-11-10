@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P6.2.2
-- Last commit: energatron-5000 `P6.2.1-P6.2.2: add params v6, bundle rules, the P6 folders and the sensitivity stage`
-- Checks: pytest -q 3395 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
+- Last done: P6.2.3
+- Last commit: energatron-5000 `P6.2.3: add core/ranking and the bundles stage`
+- Checks: pytest -q 3429 passed; ruff, ruff format, pyright, lint-imports clean; privacy scan 0 violations
 - Review: none
-- Next: P6.2.3 (`bundles` and `core/ranking.py`)
+- Next: P6.2.4 (`recommend`: the recommendation document, its ID and page)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -564,11 +564,14 @@ current plan falls back to the open backtest range; bundle rules are curated YAM
   - Handover: `sensitivity` (usage ±, the earlier window per fuel, ranks per fuel and variation, `energy_scaled`,
     `W_SENSITIVITY_UNAVAILABLE`), `sensitivity_total`/`sensitivity_summary`, seventeen stages; committed with P6.2.1.
     Watch: stage-list tests now use `list(STAGES)`; the fixture zone has too little history for `alt_window`.
-- ⬜ **P6.2.3** `bundles` and `core/ranking.py`.
+- ✅ **P6.2.3** `bundles` and `core/ranking.py`.
   - Candidates and history, options, rule effects; the stage and its kinds (`bundle_option`, `bundles_summary`).
   - Refs: the P6 spec §3.2, §5.
   - Files: `src/energatron/core/ranking.py`, the stage, tests.
   - Done when: the standard checks pass.
+  - Handover: `core/ranking.py` (history, candidates, pairs with rules, options, action, recheck date, verdicts) and
+    `bundles` (five variations, unavailable ones fall back to base per fuel, three checks), `bundle_option` and
+    `bundles_summary`; eighteen stages; self-review. Watch: a same-brand independent pair keeps the same-brand form.
 - ⬜ **P6.2.4** `recommend`: the recommendation document, its ID and page.
   - `core/models/recommend.py` (`recommendation`), the current plan, action and sensitivity verdicts in
     `core/ranking.py`, `core/recommendation_report.py`, the stage.
@@ -599,6 +602,7 @@ P7 operations. It starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-10 · P6.2.3 · `core/ranking.py` and the `bundles` stage (options per variation, bundle rules, history excluded) (3429 tests); self-review · energatron-5000 `P6.2.3: add core/ranking and the bundles stage`
 - 2026-11-10 · P6.2.1, P6.2.2 · params v6, `StageRun.stage_sha256`, bundle rules, P6 folders in `pipeline sync`, three warnings, shared costing helpers; `sensitivity` stage (3395 tests); self-review · energatron-5000 `P6.2.1-P6.2.2: add params v6, bundle rules, the P6 folders and the sensitivity stage`
 - 2026-11-10 · P6.1.1 · P6 bundles, recommendation and decisions spec drafted and approved on the owner's instruction (self-review); plan rev 14, D1 rev 7; P6.2-P6.3 added from its §2 · energatron-5000 `P6.1.1: approve the P6 recommendation spec and apply plan rev 14 and D1 rev 7`
 - 2026-11-05 · P5.3.1 · P5 acceptance in the workspace: gas bill landed and transcribed, 73 gas plans, 47/25/2 normalised/approximate/excluded, backtest within, verify ok; P5 ticked and archived · energatron-5000 `P5.3.1: record P5 acceptance in the workspace and close P5`

@@ -1,0 +1,12 @@
+{
+  "kind": "bundles_summary",
+  "schema_version": 1,
+  "variations": ["base", "conditions_not_met", "usage_up", "usage_down"],
+  "skipped": ["alt_window"],
+  "candidates": {"electricity": 3, "gas": 2},
+  "history_excluded": {"electricity": 1, "gas": 0},
+  "rules": ["example-dual-fuel"],
+  "rules_applied": [],
+  "options": {"base": 2, "conditions_not_met": 2, "usage_up": 2, "usage_down": 2},
+  "checks": {"rules_valid": true, "eligibility_applied": true, "totals_add_up": true}
+}
