@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P5.3.1
-- Last commit: energatron-5000 `P5.3.1: record P5 acceptance in the workspace and close P5`; demq-elektric `P5.3.1: record the P5 gas run and acceptance`
-- Checks: workspace: verify ok (16 stages), dvc status clean, gas_bills 10 of 10 checks, backtest_gas 1 of 1 within (diff 0.00%); tool repo pytest -q 3344 passed, ruff, pyright, lint-imports clean; privacy scans 0 violations
+- Last done: P6.1.1
+- Last commit: energatron-5000 `P6.1.1: approve the P6 recommendation spec and apply plan rev 14 and D1 rev 7`
+- Checks: privacy scan 0 violations (docs only)
 - Review: none
-- Next: no ⬜ sub-task; P6 (bundles, recommendation, decisions) starts with its spec sub-task (plan §15)
+- Next: P6.2.1 (foundations: params v6, `StageRun.stage_sha256`, bundle rules, new workspace directories)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -519,11 +519,80 @@ Archived verbatim in `agent_docs/2026-11/2026-11-05_tasks-archive-p4.md`: P4.1.1
 
 Archived verbatim in `agent_docs/2026-11/2026-11-05_tasks-archive-p5.md`: P5.1.1, P5.2.1–P5.2.6, P5.3.1, all ✅.
 
+### P6: Bundles, recommendation, decisions 🔄
+
+Built from the P6 spec (`agent_docs/2026-11/2026-11-10_p6-recommendation-spec.md`, "the P6 spec") in its §2 order; D1
+rev 7 binds all code. The owner asked (2026-11-10) for P6's tasks to be added and built as far as possible without
+stopping for review or `/done`: the agent plays the owner's part (approvals, reviews, commits), as for P4 and P5.
+Pushing, global installs, iCloud, `private/` and real plan decisions stay the owner's. The spec's decisions (Q1-Q8):
+sensitivity reprices every tariff in its own stage; history = manual offers named only by closed backtest ranges; the
+current plan falls back to the open backtest range; bundle rules are curated YAML shipped empty; one
+`recommendation.json`; no fact-sheet source type; draft runs commit; no `rec/` tags.
+- P6.2.1 changes every stage's code entry (`Params` v6, `runner.py`); re-run `fingerprint` in a workspace before any
+  `dvc repro` (or use `energatron run` once it exists).
+- Each stage sub-task adds its stage to `STAGES`, the golden `tests/fixtures/golden/dvc.yaml` and the fixture workspace.
+
+#### P6.1 P6 spec ✅
+- ✅ **P6.1.1** Draft the P6 bundles, recommendation and decisions spec.
+  - Refs: plan §9.4, §10.7, §10.8, §11, §14.5, §15; D1 rev 6 §6.3, §9.4, §14; the P4 and P5 specs.
+  - Files: the new spec; plan rev 14; D1 rev 7.
+  - Done when: the owner approves it (here: the agent, on the owner's instruction of 2026-11-10, after a self-review).
+  - Handover: spec approved 2026-11-10; plan rev 14, D1 rev 7. Decision: sensitivity as its own stage repricing every
+    tariff. Watch: `recommend` reads `private/config.toml` as a stage input (only public snapshot IDs leave it).
+
+#### P6.2 Build ⬜
+- ⬜ **P6.2.1** Foundations: `Params` v6, `StageRun.stage_sha256`, `bundle_rule`, the new workspace directories.
+  - `core/models/params.py` v6 (`recommend`, migration v5 to v6); `StageRun.stage_sha256`; `core/bundle_rules.py` and
+    package data `bundle_rules/` (readme only); `pipeline sync` creates `config/bundle_rules.local/`, `data/runs/` and
+    `data/decisions/` (tracked); the three P6 warnings; the billing-period helpers moved into `costing.py`; golden
+    schemas; `params_v6_text`.
+  - Refs: the P6 spec §3, §5.1, §11; D1 rev 7 §5, §9.2.
+  - Files: `src/energatron/core/{models/params.py,bundle_rules.py,errors.py}`, `src/energatron/bundle_rules/`,
+    `src/energatron/services/{pipeline_sync.py,stages/runner.py,stages/costing.py,stages/cost_elec.py}`, tests and
+    fixtures.
+  - Done when: the standard checks pass; a v5 `params.yaml` syncs to v6.
+- ⬜ **P6.2.2** `sensitivity`.
+  - The stage and its kinds (`sensitivity_total`, `sensitivity_summary`); golden `dvc.yaml`; fixture workspace.
+  - Refs: the P6 spec §4.
+  - Files: `src/energatron/services/stages/{sensitivity,registry,tables}.py`, `src/energatron/core/models/recommend.py`,
+    tests.
+  - Done when: the standard checks pass; every check passes and fails in a test.
+- ⬜ **P6.2.3** `bundles` and `core/ranking.py`.
+  - Candidates and history, options, rule effects; the stage and its kinds (`bundle_option`, `bundles_summary`).
+  - Refs: the P6 spec §3.2, §5.
+  - Files: `src/energatron/core/ranking.py`, the stage, tests.
+  - Done when: the standard checks pass.
+- ⬜ **P6.2.4** `recommend`: the recommendation document, its ID and page.
+  - `core/models/recommend.py` (`recommendation`), the current plan, action and sensitivity verdicts in
+    `core/ranking.py`, `core/recommendation_report.py`, the stage.
+  - Refs: the P6 spec §6, §7; D1 §6.3.
+  - Files: the modules above, tests, golden HTML.
+  - Done when: the standard checks pass; the ID is stable across runs and changes with a cited input.
+- ⬜ **P6.2.5** `energatron run`.
+  - `services/run.py`, `run_manifest`, `run_result`, the command (lock, `--draft`, `--json`).
+  - Refs: the P6 spec §8; plan §9.4; D1 §4.4, §4.5, §8.8.
+  - Files: `src/energatron/services/run.py`, `src/energatron/adapters/cli/commands/run.py`, `app.py`, tests.
+  - Done when: the standard checks pass; `run --json` prints one document.
+- ⬜ **P6.2.6** `energatron decide`, `outcomes` and the end-to-end test.
+  - `services/decide.py`, `decision`, `decide_result`, the command; the `outcomes` stage (`outcome_bill`,
+    `outcomes_summary`); `test_p6_pipeline` (run, decide, run, verify); the determinism test's REC check.
+  - Refs: the P6 spec §9, §10, §12.
+  - Files: the modules above, tests.
+  - Done when: the standard checks pass.
+
+#### P6.3 Acceptance ⬜
+- ⬜ **P6.3.1** P6 acceptance in the workspace, and the three workspace skills.
+  - Refs: the P6 spec §14; plan §14.5, §15.
+  - Files: `demq-elektric` (`params.yaml`, `dvc.yaml`, `dvc.lock`, pointers, readmes, `.claude/skills/`, a workspace
+    note); `TASKS.md`.
+  - Done when: §14's checks pass or are explained in the workspace note; the pending backup is reported.
+
 ### Later (plan §15)
-P6 bundles, recommendation, decisions · P7 operations. Each starts with its own spec sub-task.
+P7 operations. It starts with its own spec sub-task.
 
 ## Log (newest first)
 
+- 2026-11-10 · P6.1.1 · P6 bundles, recommendation and decisions spec drafted and approved on the owner's instruction (self-review); plan rev 14, D1 rev 7; P6.2-P6.3 added from its §2 · energatron-5000 `P6.1.1: approve the P6 recommendation spec and apply plan rev 14 and D1 rev 7`
 - 2026-11-05 · P5.3.1 · P5 acceptance in the workspace: gas bill landed and transcribed, 73 gas plans, 47/25/2 normalised/approximate/excluded, backtest within, verify ok; P5 ticked and archived · energatron-5000 `P5.3.1: record P5 acceptance in the workspace and close P5`
 - 2026-11-05 · P5.2.6 · fresh-review findings of P5.2.4-P5.2.6 fixed (2 should-fix, 2 of 4 nits) · energatron-5000 `P5.2.6: fix the review findings in the gas offers and costs`
 - 2026-11-05 · P5.2.6 · backtest_gas, test_p5_pipeline, sixteen stages (3339 tests); fresh review of P5.2.4-P5.2.6 on the commits · energatron-5000 `P5.2.6: add backtest_gas and the end-to-end P5 test`

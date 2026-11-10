@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -16,6 +16,9 @@
   the money rounding rule, edited in place (listed in §1).
   2026-11-05 rev 6 (P5.1.1): the additive changes the P5 spec (`2026-11-05_p5-gas-spec.md`) §14 lists: the gas
   modules, stages, parser and command, and the two P5 warnings, edited in place (listed in §1)
+  2026-11-10 rev 7 (P6.1.1): the changes the P6 spec (`2026-11-10_p6-recommendation-spec.md`) §13 lists: the P6
+  modules, stages and commands, `StageRun.stage_sha256`, the recommendation payload, run manifest and decision schema,
+  and the three P6 warnings, edited in place
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -143,7 +146,7 @@ src/energatron/
 │   ├── usage.py  charts.py  usage_report.py  models/usage.py                                      P3
 │   ├── tariff.py  cdr_tariff.py  offer_rules.py  engine.py  retailer_txn.py  models/costs.py      P4
 │   ├── gas_tariff.py  cdr_gas_tariff.py  gas_engine.py  gas_bill.py  models/gas.py               P5
-│   └── ranking.py                                                                                 P6
+│   └── ranking.py  bundle_rules.py  recommendation_report.py  models/recommend.py                 P6
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
 ├── services/                use cases; local file I/O only at paths passed in
@@ -157,7 +160,8 @@ src/energatron/
 │   ├── verify.py            verify() (§11.4)                                                      P1
 │   ├── fetch_offers.py  offer_diff.py  stages/{normalise_offers,cost_elec,backtest}.py            P4
 │   ├── gas_bill.py  stages/{gas_bills,gas_profile,normalise_gas_offers,cost_gas,backtest_gas}.py   P5
-│   └── run.py  compare.py  explain.py  decide.py  migrate.py                                     P6+
+│   ├── run.py  decide.py  stages/{sensitivity,bundles,recommend,outcomes}.py                      P6
+│   └── compare.py  explain.py  migrate.py                                                        P7+
 ├── adapters/
 │   ├── wiring.py            composition root: build_context() (P0), code_fingerprint() (P1)       P0
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
@@ -170,6 +174,7 @@ src/energatron/
 │   └── cli/                 app.py, output.py (envelope, redaction), commands/                    P0
 ├── regions/                 package data: sa.yaml                                                 P1
 ├── offer_rules/             package data: curated public offer rules                              P4
+├── bundle_rules/            package data: curated dual-fuel bundle rules (P6 spec §5.1)           P6
 └── templates/workspace/     package data: files `energatron init` writes                          P8
 ```
 
@@ -697,7 +702,7 @@ json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, all
   IDs are never lengthened silently. The same `sha256` means "already landed", which is a no-op.
 - **Recommendation payload:** content only: input dataset and snapshot IDs, params hash, the `recommend`
   stage's `stage_sha256` (§11), ranking. No wall-clock times, run IDs or commit SHAs, so a re-run reproduces the
-  same ID. The P6 spec fixes the exact payload.
+  same ID. The P6 spec §7.3 fixes the exact payload: the `recommendation` document without its ID.
 - `plan_id` must not contain `~` or whitespace (validated on construction).
 - IDs are opaque. Code reads meaning out of an ID only through the `parse_*` functions in `core/ids.py`.
 - IDs never contain personal data. They are built from source types, timestamps, hashes and public plan IDs.
@@ -735,6 +740,8 @@ class EnergatronError(Exception):
   - Warnings added in P4: `W_FETCH_FAILED`, `W_OFFERS_MISSING_SNAPSHOT`, `W_BACKTEST_OUTSIDE_TOLERANCE`,
     `W_BACKTEST_NO_TARIFF` (P4 spec §12).
   - Warnings added in P5: `W_GAS_GAP`, `W_GAS_PARTIAL_YEAR` (P5 spec §11).
+  - Warnings added in P6: `W_SENSITIVITY_UNAVAILABLE`, `W_REC_NO_CURRENT_PLAN`, `W_REC_CURRENT_NOT_PRICED` (P6 spec
+    §11).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
@@ -961,6 +968,7 @@ STAGES: dict[str, StageSpec] = {...}  # registry.py, built from each stage modul
   - `check(name, passed, **details)`: a check either passes or fails. Something worth flagging that shouldn't
     fail the stage is a warning, not a check.
   - `warn(code, message, **details)`
+  - `stage_sha256`: the live code entry `run_stage` was given (rev 7; read by `recommend` for its payload)
 
 ### 9.3 What `run_stage` does
 1. The caller has already looked up the spec: `registry.get_stage(name)` raises `E_USAGE` for an unknown name.
@@ -993,7 +1001,7 @@ STAGES: dict[str, StageSpec] = {...}  # registry.py, built from each stage modul
     clean run on the same inputs give the same `REC-…` ID, which is correct, because the content is the same.
   - Outputs from different code already differ: provenance records the stage's `stage_sha256`. The fingerprint
     file records `tool_dirty`, and `energatron run` refuses a dirty tool without `--draft`.
-  - The P6 spec fixes the manifest fields.
+  - The P6 spec §8.2 fixes the manifest fields.
 - **Code and data reach a stage only through what its code entry sees.** A stage's code entry is computed from
   the import statements and declared package data of its module set (§11.1), so anything reached another way
   would be invisible to it. Within every module of a stage's module set:
@@ -1367,7 +1375,7 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
   distribution through `StageRun.zone()` (§9.2, §9.4). Staged table schemas and keys are in the P2 spec.
 - Tariff and engine models, money rounding, the GST convention → P4 spec
 - `Fetched` header allow-list, CDR paging details → P4 spec
-- Recommendation payload, run manifest, decision schema → P6 spec
+- Recommendation payload, run manifest, decision schema → settled by the P6 spec (§7.3, §8.2, §9.2; rev 7)
 - `energatron migrate` CLI → P8 (the migration hook exists from P0); `params.yaml` is rewritten earlier, by
   `pipeline sync` (§5)
 - MCP and HTTP adapters → P9 and P10 (they reuse the service result models and the error codes)

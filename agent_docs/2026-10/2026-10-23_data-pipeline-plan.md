@@ -67,6 +67,12 @@
   the next bill, gaps warned, usage spread evenly over a bill's days; the gas reference year is the latest
   `gas.reference_bills` bills, annualised by days and flagged when partial; §16 Q3 answered (§8.2, §9.1, §9.2, §10.6,
   §10.8, §15, §16).
+  2026-11-10 rev 14 — P6 bundles, recommendation and decisions spec (`2026-11-10_p6-recommendation-spec.md`) approved,
+  and its §13 edits applied: the stages `sensitivity`, `bundles` (curated `bundle_rule` YAML, candidates exclude manual
+  offers named only by closed backtest ranges), `recommend` (`recommendation.json` + `index.html`; the current plan from
+  `current_plans`, else the open backtest range) and `outcomes`; `params` v6 (`recommend`); the run manifest's fields;
+  draft runs commit and are marked only in their manifest; no `rec/` tag in P6; `decide` evidence is any landed dataset
+  (§9.1, §9.2, §9.4, §10.7, §10.8, §11, §12, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -511,8 +517,10 @@ raw/offer_cdr(+_index) + raw/offer_manual + offer_rules* ─► normalise_offers
 raw/gas_bill + raw/gas_bill_record ─► gas_bills ─► gas_profile ────────────────────────────┘     │
                                                                                                  │
 raw/retailer_txn + raw/retailer_usage + marts/offers ─► backtest (P5 adds gas_bills)            │
-cost_elec + cost_gas + offer_rules*       + private/config ─► bundles ─► recommend ◄─────────────┘
-                                                                             └─► reports/recommendations/
+offers marts + local + usage/gas profiles ─► sensitivity ─┐                                       │
+cost_elec + cost_gas + bundle_rules* ───────────────────────┴─► bundles ─► recommend ◄─────────────┘
+                                                         private/config ──────┘   └─► reports/recommendations/
+data/decisions + backtest + gas_bills ─► outcomes ─► reports/outcomes/
 ```
 
 `usage_profile` is followed by `usage_report`, which reads only `marts/usage_profile` and writes `reports/usage/`
@@ -553,8 +561,10 @@ directories.
 | `cost_gas` | `marts/offers_gas`, `marts/gas_profile/` | `marts/costs/gas/` | Lines sum; MJ conserved; a partial year warns (P5 spec §9.3) |
 | `backtest_gas` | `marts/offers_gas`, `interim/gas_bills/`, params `backtest.gas_tariffs` | `reports/validation/backtest_gas/` | As `backtest`; per bill (P5 spec §10) |
 | `backtest` | `marts/offers`, `interim/elec_interval_local/`, `raw/retailer_usage`, `raw/retailer_txn`, params `pricing`, `backtest`, `validation.backtest` (P5 adds gas) | `reports/validation/backtest/` | Configured tariffs resolve; line items sum; outside ±`validation.backtest.tolerance_pct` is a warning (P4 spec §10) |
-| `bundles` | `marts/costs/*`, `config/offer_rules.local` | `marts/costs/bundles/` | Eligibility rules applied |
-| `recommend` | `marts/costs/*`, `marts/usage_profile`, `private/config.toml`, params | `reports/recommendations/` (`REC-*.json`, `.html`) | Deterministic ID; every cited ID resolves |
+| `sensitivity` | `marts/offers`, `marts/offers_gas`, `interim/elec_interval_local/`, `marts/usage_profile`, `marts/gas_profile`, params `pricing`, `analysis.reference_months`, `gas`, `recommend` | `marts/costs/sensitivity/` | Usage scaled or the alternative window priced with energy conserved (P6 spec §4) |
+| `bundles` | `marts/costs/{elec,gas,sensitivity}`, both offers marts, `config/bundle_rules.local`, package `bundle_rules/`, params `backtest` | `marts/costs/bundles/` | Rules valid; eligibility (same brand, candidates only) applied; totals add up (P6 spec §5) |
+| `recommend` | `marts/costs/*`, both offers marts, `marts/usage_profile`, `marts/gas_profile`, `marts/catalog`, `private/config.toml`, params `recommend`, `backtest` | `reports/recommendations/` (`recommendation.json`, `index.html`) | Deterministic ID; every cited ID resolves (P6 spec §6) |
+| `outcomes` | `data/decisions`, `reports/validation/backtest/`, `interim/gas_bills/` | `reports/outcomes/` | Decisions valid (P6 spec §10) |
 
 `params.yaml` holds non-personal settings only. It begins with `kind: params` and `schema_version`. P1's
 version 1 holds no keys; each block below arrives with its phase's spec as a new version, and
@@ -600,6 +610,8 @@ validation:
     total_tolerance_kwh: 0.05
     min_fit_periods: 3
   backtest: {tolerance_pct: 1.0, invoice_window_days: 14}
+# v5 (P5 spec §4.1) adds offers.gas_distributor, gas, backtest.gas_tariffs, validation.gas_bills; v6 (P6 spec §3.1):
+recommend: {top: 5, usage_scale_pct: "10", min_saving: "50", recheck_days: 90, price_reset: "07-01"}
 ```
 
 `config/private.example.toml` (committed; the real `private/config.toml` is DVC-tracked):
@@ -640,9 +652,10 @@ looked at outside git.
    the run manifest only, and a decision may cite a recommendation only once a non-draft run manifest names it.
 2. Refresh `.energatron/code_fingerprint.json`, then run `dvc repro`. No run ID reaches the stages.
 3. Write `data/runs/<run_id>.json`: which stages ran, were restored from DVC's run cache, or were up to date, input dataset IDs, offer fetch batches
-   considered, and the recommendation ID. Then `dvc add data/runs`.
-4. `git add dvc.lock data/**/*.dvc && git commit -m "run: <run_id> <REC-id>"`, and optionally tag
-   `rec/<REC-id>`.
+   considered, and the recommendation ID (fields: P6 spec §8.2). Then `dvc add data/runs`. A draft run commits too,
+   marked only in its manifest (P6 spec §8.1).
+4. `git add dvc.lock .energatron/code_fingerprint.json data/runs.dvc && git commit -m "run: <run_id> <REC-id>"`. No
+   `rec/` tag in P6: `git log --grep` finds the commit.
 5. No backup here: agents can't reach iCloud (§6). The command ends with `W_BACKUP_PENDING`, and the owner
    runs `icloud_backup.py backup`. `land` does the same.
 
@@ -827,6 +840,8 @@ snapshot (e.g. "daily supply +3c, peak −1c").
   - (a) the best independent electricity plan + the best independent gas plan, from any retailers
   - (b) every same-retailer bundle, with its bundle rules applied
 - Rank by combined annual cost, and show each bundle's saving or premium against (a).
+- Made concrete by the P6 spec §5: bundle rules are curated `bundle_rule` YAML (package `bundle_rules/` and
+  `config/bundle_rules.local/`); a manual offer named only by closed backtest ranges is history, not a candidate.
 
 ### 10.8 Projection and savings methodology
 
@@ -844,6 +859,9 @@ snapshot (e.g. "daily supply +3c, peak −1c").
   - A recommendation is marked "robust" only if the top choice holds across these.
 - **Price-change horizon:** market offers are variable, and network tariffs reset each 1 July, so every
   recommendation states `valid_as_of` and `recheck_by`.
+- Made concrete by the P6 spec §4 and §6: the current plan is `current_plans` in private config, else the open range of
+  `backtest.tariffs` / `gas_tariffs`; the `sensitivity` stage reprices every tariff with usage ±`usage_scale_pct` and
+  in the previous window; `recheck_by` is the earlier of `as_of + recheck_days` and the next `price_reset`.
 
 ### 10.9 Backtesting (engine credibility)
 
@@ -1094,7 +1112,7 @@ added without refactoring the core.
 | **P3 Usage profile** | Metrics + HTML usage report | Report builds from marts; TOU daily averages reconcile with the legacy notebook for the same window, with differences explained by the time-basis and merge fixes (made concrete as R1–R4 in the P3 spec §12) |
 | **P4 Offers + electricity engine** | CDR client, `fetch-offers`, `offer_manual` schema, normaliser, offer rules, engine, `backtest`, offer diff | Every current SAPN residential plan from configured retailers either normalises (or is approximate) or is excluded with a reason; GST convention verified against a BPID; backtest within ±1% (or deviations explained), made concrete as the P4 spec §13 |
 | **P5 Gas** | Gas bill landing + YAML scaffold, `gas_bills`, `gas_profile`, gas offer normalisation, gas engine | Every bill recomputes within ±$0.05 from its own line items; engine reproduces bills on the plan in force at the time within ±1% |
-| **P6 Bundles, recommendation, decisions** | Bundle rules, ranking, sensitivity, REC JSON + HTML, `energatron run`, `energatron decide`, outcomes report | The recommendation cites offer snapshot IDs, dataset IDs, run ID and commit; a clean-checkout re-run reproduces the same recommendation ID; decision entries link back |
+| **P6 Bundles, recommendation, decisions** | Bundle rules, ranking, sensitivity, REC JSON + HTML, `energatron run`, `energatron decide`, outcomes report | The recommendation cites offer snapshot IDs, dataset IDs, run ID and commit; a clean-checkout re-run reproduces the same recommendation ID; decision entries link back (made concrete as the P6 spec §14) |
 | **P7 Operations** | README runbooks; optional weekly launchd `fetch-offers`, with a notification when a cheaper plan appears; quarterly restore-drill reminder (the drill ends with `energatron verify`) | One full cycle (new SAPN download → recommendation) completed using only the README |
 | **P8 Open-source readiness** *(later)* | Workspace template + `energatron init` / `--demo` / `upgrade` / `migrate`; region profiles; `diagnose --redacted`; README quickstart, CONTRIBUTING, release workflow | A new user on a clean Mac gets from README to a demo report in under 15 minutes; the demo end-to-end test runs in CI |
 | **P9 Agent interface** *(later)* | Local MCP server over the services; workspace skills/commands; agent-assisted bill transcription with validators and `extracted_by` | An agent completes a "monthly check-in" using only the tools, without reading `private/` or raw intervals |
