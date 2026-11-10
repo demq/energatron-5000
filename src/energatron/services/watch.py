@@ -107,7 +107,7 @@ def watch(ctx: ServiceContext, *, tool: ToolState, code_stale: list[str], dry_ru
         cheaper_plan=cheaper,
         reminders=final.reminders,
         notifications=[NotificationText(title=item.title, message=item.message) for item in found],
-        warnings=(*passed_on, *final.warnings),
+        warnings=(*(item for item in passed_on if item.code.value not in final.reminders), *final.warnings),
     )
 
 

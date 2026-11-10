@@ -11,7 +11,7 @@ from typing import Any
 import pytest
 
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
-from energatron.core.errors import DirtyError, NetworkError
+from energatron.core.errors import DirtyError, NetworkError, ResultWarning, WarningCode
 from energatron.core.models.recommend import ToolState
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.services import watch as watch_service
@@ -66,7 +66,9 @@ class Stand:
         self.dry_runs.append(dry_run)
         if self.fetch_error is not None:
             raise self.fetch_error
-        return fetched(0 if dry_run else self.landed)
+        found = fetched(0 if dry_run else self.landed)
+        pending = ResultWarning(code=WarningCode.W_BACKUP_PENDING, message="Pending.")
+        return found.model_copy(update={"warnings": (pending,)})
 
     def run(self, ctx: Any, *, tool: ToolState, draft: bool = False) -> RunResult:
         assert draft is False
@@ -114,6 +116,8 @@ def test_a_fetch_that_landed_runs_and_a_new_top_plan_is_notified(
     assert "REC-20261110-89abcdef" in result.notifications[0].message
     assert stand.runs == 1
     assert watch_service.outcome(result) is None
+    codes = [warning.code.value for warning in result.warnings]
+    assert len(codes) == len(set(codes))  # a reminder the fetch also warned about appears once
 
 
 def test_nothing_new_and_not_behind_means_no_run(
