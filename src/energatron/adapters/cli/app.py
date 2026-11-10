@@ -27,6 +27,7 @@ from energatron.adapters.cli.commands import (
     offers,
     pipeline,
     run,
+    schedule,
     stage,
     status,
     verify,
@@ -72,6 +73,7 @@ app.command("decide")(decide.decide)
 app.add_typer(landing.app, name="landing")
 app.command("status")(status.status)
 app.command("watch")(watch.watch)
+app.add_typer(schedule.app, name="schedule")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

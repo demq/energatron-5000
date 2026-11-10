@@ -1,0 +1,14 @@
+{
+  "action": "install",
+  "dry_run": false,
+  "hour": 9,
+  "installed": true,
+  "kind": "schedule_result",
+  "label": "org.energatron.watch.abababab",
+  "loaded": true,
+  "log": ".energatron/logs/watch.log",
+  "minute": 0,
+  "plist": "~/Library/LaunchAgents/org.energatron.watch.abababab.plist",
+  "schema_version": 1,
+  "weekday": 1
+}

@@ -8,7 +8,9 @@ registered parsers the workspace region's profile lists (D3 §10.3); `region` is
 
 import importlib.resources
 import os
+import sys
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Final
 
 import yaml
@@ -22,6 +24,7 @@ from energatron.adapters.pipeline.fingerprint import InstalledDistributions, com
 from energatron.adapters.pipeline.fingerprint import read_fingerprint as read_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refresh_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
+from energatron.adapters.schedule.launchd import Launchd as Launchd  # for the CLI
 from energatron.adapters.sources.registry import parsers_for
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
@@ -126,6 +129,11 @@ def code_fingerprint() -> CodeFingerprint:
 def notifier() -> Notifier:
     """The desktop notifier (P7 spec §7); `ENERGATRON_NOTIFY_LOG` redirects it to a file."""
     return Notifier(os.environ)
+
+
+def launchd() -> Launchd:
+    """This user's launchd agents (P7 spec §8)."""
+    return Launchd(home=Path.home(), uid=os.getuid(), platform=sys.platform)
 
 
 def code_state(paths: WorkspacePaths) -> tuple[list[str], bool]:

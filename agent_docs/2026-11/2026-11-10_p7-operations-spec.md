@@ -236,7 +236,8 @@ returns (outside the service, §7); without it, nothing is sent. `--dry-run` fet
 ## 8. `energatron schedule` (`adapters/schedule/launchd.py`)
 
 A per-user launchd agent; macOS only (elsewhere every subcommand → `E_USAGE` "launchd is macOS only"). Not a service:
-it configures this machine, not the workspace (Q5). Owner-run (`install`, `remove`); agents may run `status` and
+it configures this machine, not the workspace (Q5). Its result kind lives in `services/schedule.py` (every CLI result is a
+`ServiceResult`), which holds no function. Owner-run (`install`, `remove`); agents may run `status` and
 `install --dry-run` (D2 §4's split, as for backups).
 
 - **Label:** `org.energatron.watch.<h>`, `h` the first 8 hex digits of the sha256 of the workspace root's absolute

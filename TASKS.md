@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.2.3
-- Last commit: energatron-5000 `P7.2.3: add energatron watch and macOS notifications`
-- Checks: pytest -q 3555 passed; ruff, pyright, lint-imports clean
+- Last done: P7.2.4
+- Last commit: energatron-5000 `P7.2.4: add energatron schedule for the weekly watch`
+- Checks: pytest -q 3563 passed; ruff, pyright, lint-imports clean
 - Review: none
-- Next: P7.2.4 (`energatron schedule`)
+- Next: P7.2.5 (README runbooks)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -570,12 +570,13 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
   - Files: the modules above, `src/energatron/adapters/wiring.py`, tests.
   - Done when: the standard checks pass; `test_p7_watch` sees the cheaper-plan notification, then a quiet second run.
   - Handover: `services/watch.py` (fetch; run when anything landed or behind; `cheaper_plan` by plan identity; notifications; `E_PARTIAL` on a failed fetch or run), `watch_result` v1, `adapters/notify/macos.py` (`osascript` with argv, `ENERGATRON_NOTIFY_LOG` seam) and `wiring.notifier()`, `energatron watch [--notify] [--dry-run]` (lock), `test_p7_watch`; notify and schedule packages in the import contracts; self-review. Decision: every fetch lands a new fetch log, so `watch` runs after every successful fetch (spec §6 note). Watch: the adapter is `adapters/notify/macos.py`, not `notify.py`.
-- ⬜ **P7.2.4** `energatron schedule install|remove|status`.
+- ✅ **P7.2.4** `energatron schedule install|remove|status`.
   - `launchd_plist` in `core/operations.py`, `adapters/schedule/launchd.py` and `wiring.launchd()`, `schedule_result`
     v1, the command (macOS only).
   - Refs: the P7 spec §8.
   - Files: the modules above, tests.
   - Done when: the standard checks pass; install, reinstall, remove and status work against a fake `launchctl`.
+  - Handover: `adapters/schedule/launchd.py` (`Launchd`: plist written atomically, `bootout` then `bootstrap` into `gui/<uid>`, `print` for loaded, `~` in shown paths) and `wiring.launchd()`, `energatron schedule install|remove|status` (macOS only, no lock; `install` creates `.energatron/logs/`), `schedule_result` v1 in `services/schedule.py` (kind only, spec §8 edited); self-review. Watch: dry-run human output prints the plist with `~` for the home folder.
 - ⬜ **P7.2.5** README runbooks.
   - `README.md` as the operating manual, `CHANGELOG.md`, `tests/architecture/test_readme.py`.
   - Refs: the P7 spec §10; plan §12.
@@ -597,6 +598,7 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
 
 ## Log (newest first)
 
+- 2026-11-10 · P7.2.4 · `energatron schedule install|remove|status` over launchd, `schedule_result` v1 (3563 tests); self-review · energatron-5000 `P7.2.4: add energatron schedule for the weekly watch`
 - 2026-11-10 · P7.2.3 · `energatron watch` and notifications, `test_p7_watch` (3555 tests); self-review · energatron-5000 `P7.2.3: add energatron watch and macOS notifications`
 - 2026-11-10 · P7.2.2 · `energatron status` with six reminder warnings, `drill_state` record from `icloud_backup.py`, `core/operations.py` (3540 tests); self-review · energatron-5000 `P7.2.2: add energatron status, its reminders and the drill record`
 - 2026-11-10 · P7.2.1 · `landing list|clear`, `landing_result` v1 (3503 tests); self-review · energatron-5000 `P7.2.1: add energatron landing list and clear`
