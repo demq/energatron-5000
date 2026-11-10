@@ -97,54 +97,53 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.2.5
-- Last commit: energatron-5000 `P7.2.5: rewrite the README as the runbook and check its commands`
-- Checks: pytest -q 3565 passed; ruff, pyright, lint-imports clean
+- Last done: P7.3.1
+- Last commit: energatron-5000 `P7.3.1: record P7 acceptance in the workspace (agent part)`; demq-elektric `P7.3.1: add the P7 commands to the workspace instructions and the check-in skill`, `land: 22 datasets`, two `run:` commits, `P7.3.1: record the P7 acceptance (agent part)`
+- Checks: pytest -q 3565 passed; ruff, pyright, lint-imports clean; workspace: dvc status clean, privacy guard 0 violations
 - Review: none
-- Next: P7.3.1 (P7 acceptance in the workspace, agent part)
+- Next: P7.3.2 (owner: a cycle from a new SAPN download via the README, the schedule, a drill)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P6 are done. P6 (bundles, recommendation, decisions) was added and run end to end by the agent on the owner's
-  instruction of 2026-11-10: spec (self-reviewed), build P6.2.1-P6.2.6, acceptance in the workspace.
-- The workspace has twenty stages, `energatron run` / `decide`, two run manifests and a current recommendation; no
-  decision is recorded. Backup pending (owner).
+- P0-P6 are done; P7 (operations) is built and its agent acceptance passed. Added and run end to end by the agent on
+  the owner's instruction of 2026-11-10 (spec self-reviewed, P7.2.1-P7.2.5, P7.3.1). Only P7.3.2 (owner steps) is left.
+- New commands: `status` (reminders), `landing list|clear`, `watch [--notify]`, `schedule install|remove|status`;
+  `icloud_backup.py` records passed drills; the README is the runbook (checked by `test_readme`).
 - The tool repo is on GitHub (private, `origin`); nothing was pushed this session.
 
 **Read first** (for the next session)
-- No ⬜ sub-task is left. Next is P7 (operations): add its spec sub-task from plan §15.
-- The P6 spec (`agent_docs/2026-11/2026-11-10_p6-recommendation-spec.md`) and, for figures, the workspace note
-  `demq-elektric/agent_docs/2026-11/2026-11-10_p6-acceptance-recommendation.md` (never copy).
+- The P7 spec (`agent_docs/2026-11/2026-11-10_p7-operations-spec.md`) §13 and the workspace note
+  `demq-elektric/agent_docs/2026-11/2026-11-10_p7-acceptance-operations.md` (never copy).
+- P7.3.2 is the owner's; once they report it, tick it, tick P7.3 and P7, and archive P7 (this file is over 400 lines).
 
 **Facts**
-- `energatron run` is now the supported way to run the pipeline: it refreshes the fingerprint, refuses dirty config or
-  a dirty tool without `--draft`, writes `data/runs/<run_id>.json` and commits `run: <run_id> <REC-id>`.
-- The current plan per fuel is `current_plans` in the private config, else the open backtest range (today: backtest).
-- `recommend` reads `private/config.toml` as a stage input; only public snapshot IDs leave it.
-- Stage warnings inside `run` (e.g. `W_SENSITIVITY_UNAVAILABLE`) are not surfaced in the run result; run a stage alone
-  to see them.
-- SA metro gas distributor in CDR: `AGN Metro/Barossa/Peterborough`. CDR prices exclude GST; fees as published.
+- Every fetch lands a new fetch log, so `watch` runs the pipeline after every successful fetch; "cheaper plan" compares
+  the top option's plan IDs, so a new REC with the same plans doesn't notify.
+- The REC ID covers the `recommend` stage's code entry: a tool change in the stage closure (even `core/errors.py`)
+  gives a new REC with the same content.
+- `schedule` is owner-installed; it runs `uv run --frozen energatron watch --notify --json` and logs to
+  `.energatron/logs/watch.log`. Agents only run `schedule status` and `install --dry-run`.
+- `landing clear` deletes owner files: owner only (agents `--dry-run`).
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing; no global installs.
 
 **Open questions for the owner**
 - **Before any push:** commits 4edaf38 and 3948b6d (P5.2.3, local only) hold a few numbers copied from the gas bill
   (removed from the tree in P5.2.5). The rules forbid an agent rewriting history; decide whether to rewrite them.
-- Decide whether to switch (the recommendation says switch, robust); `record-decision` records it. After a switch,
-  set `current_plans` in `private/config.toml` and add the new plans to `backtest.tariffs` / `gas_tariffs`.
-- The top electricity option is wholesale-linked and priced from its estimate; more gas bills would firm up the gas side.
-- Add the gas account number to `private/config.toml` (`accounts.gas`), then `energatron denylist`.
-- Eligibility: list unmet types (e.g. `SENIOR_CARD`) in `offers.unmet_eligibility`.
-- From P4/P3: the double-billed month; `elec_bill` PDFs; a one-off discount rule effect; the fee GST source; the usage
-  report browser look; `demand_minutes` in `UsageSummary`.
+- The 11 electricity invoice PDFs in the inbox are rejected as ambiguous: land them with `--source elec_bill`, or move
+  them out (they keep `W_LANDING_NEW` on).
+- Decide whether to switch (the recommendation says switch, robust); `record-decision` records it.
+- Install the weekly schedule or not; run `backup --drill` (the first recorded drill).
+- Earlier: the gas account number in `private/config.toml`; unmet eligibility types; the double-billed month; the fee
+  GST source; the usage report browser look; `demand_minutes` in `UsageSummary`.
 
 **Watch out**
+- Backup pending (17 workspace commits).
 - `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected.
-- A full `run` after a tool change reruns all twenty stages (~4.5 minutes in the workspace).
-- `energatron land` makes its own commit; dry-run it first (`--dry-run --json`).
+- A full `run` after a tool change reruns all twenty stages (~4.5 minutes); `watch` takes about as long.
 - Never put a number read from a real bill into a test or docstring, even as an example.
 - Later cleanup: `core/cdr_tariff.py` shares helpers with the gas mapping through public aliases; rename them once.
-- pytest takes ~2.5 minutes in parallel (`-n0` serially). Agents never read `demq-elektric/private/`.
+- pytest takes ~2.8 minutes in parallel; don't edit files while it runs (a closure test can flake).
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -585,11 +584,12 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
   - Handover: README rewritten as the operating manual (set-up, the monthly cycle, gas bills, offers, deciding, the weekly check and schedule, backups and the drill, after a tool update, reminders and error codes, agents, development), `test_readme` (every `uv run energatron` line parses: command path, declared options, required argument), CHANGELOG P7 entry, plan §12's `offers diff` line corrected (no `--since`); self-review. Watch: the workspace skill `monthly-check-in` still says `offers diff --since` (fix in P7.3.1). P7.2 complete.
 
 #### P7.3 Acceptance ⬜
-- ⬜ **P7.3.1** P7 acceptance in the workspace (agent part).
+- ✅ **P7.3.1** P7 acceptance in the workspace (agent part).
   - Refs: the P7 spec §13 checks 1-5.
   - Files: `demq-elektric` (`.gitignore`, `CLAUDE.md`, `.claude/skills/monthly-check-in/SKILL.md`, the `watch`
     commits, a workspace note); `TASKS.md`.
   - Done when: §13 checks 1-5 pass or are explained in the workspace note; the pending backup is reported.
+  - Handover: P7 acceptance (agent part): workspace `.gitignore`, `CLAUDE.md` and `monthly-check-in` updated; README cycle (clean `run`, 20 ran, `status` no longer behind; 11 invoice PDFs rejected as ambiguous, left for the owner); `watch --notify` on the live CDR (22 landed, ran, same top plans, no cheaper plan); minimal-PATH dry run ok; `schedule install --dry-run` ok, not installed; dvc clean, guard 0. Two tool fixes from real use: README `--source` note, a duplicate warning in `watch`. Watch: backup pending (17 commits); drill not recorded until the next one.
 - ⬜ **P7.3.2** Owner: a full cycle from a new SAPN download using only the README, the schedule and a drill.
   - Why: owner steps (the SAPN portal login, launchd on the owner's account, iCloud).
   - Refs: the P7 spec §13 checks 6-8; the README.
@@ -599,6 +599,7 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
 
 ## Log (newest first)
 
+- 2026-11-10 · P7.3.1 · P7 acceptance agent part: README cycle, live `watch`, schedule dry run, workspace instructions; two small tool fixes · energatron-5000 `P7.3.1: record P7 acceptance in the workspace (agent part)`; demq-elektric `P7.3.1: add the P7 commands to the workspace instructions and the check-in skill`, `land: 22 datasets`, two `run:` commits, `P7.3.1: record the P7 acceptance (agent part)`
 - 2026-11-10 · P7.2.5 · README runbooks with `test_readme`, CHANGELOG (3565 tests); self-review; P7.2 complete · energatron-5000 `P7.2.5: rewrite the README as the runbook and check its commands`
 - 2026-11-10 · P7.2.4 · `energatron schedule install|remove|status` over launchd, `schedule_result` v1 (3563 tests); self-review · energatron-5000 `P7.2.4: add energatron schedule for the weekly watch`
 - 2026-11-10 · P7.2.3 · `energatron watch` and notifications, `test_p7_watch` (3555 tests); self-review · energatron-5000 `P7.2.3: add energatron watch and macOS notifications`
