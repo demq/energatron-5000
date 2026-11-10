@@ -179,6 +179,8 @@ the whole call and computes `tool` and `code_stale` as `run` and `status` do.
    the job goes on to step 4 without running. A partial fetch is fine; its `W_FETCH_FAILED` warnings pass through.
 3. Run when not `dry_run`, no `fetch_error`, and either the fetch landed something or the status facts say the run is
    behind (`W_RUN_BEHIND`'s condition: an earlier manual `land` without a `run` is picked up too).
+   Every successful fetch lands a new fetch log (`offer_cdr_index`, which decides the current plans), so in practice
+   `watch` runs after every fetch; stages whose inputs didn't change stay cached.
    `run(ctx, tool=tool, draft=False)`; an `EnergatronError` (dirty config, dirty tool, a failed check, not synced) is
    recorded as `run_error` (its code), never retried and never turned into a draft run.
 4. `after` = the current recommendation; `status` facts are recomputed and give the reminders.

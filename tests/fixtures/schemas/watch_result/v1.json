@@ -1,0 +1,18 @@
+{
+  "after": "REC-20261110-89abcdef",
+  "before": "REC-20261101-0123abcd",
+  "cheaper_plan": true,
+  "dry_run": false,
+  "fetch": {"failed_retailers": 0, "fetch_batch_id": "fetch-20261110T000000Z", "landed": 2},
+  "fetch_error": null,
+  "kind": "watch_result",
+  "notifications": [
+    {"message": "Synthetic Saver (electricity) tops REC-20261110-89abcdef; see the recommendation page.", "title": "energatron: cheaper plan"},
+    {"message": "backup pending.", "title": "energatron: reminders"}
+  ],
+  "ran": true,
+  "reminders": ["W_BACKUP_PENDING"],
+  "run_error": null,
+  "run_id": "run-20261110T000000Z-a1b2c3d",
+  "schema_version": 1
+}

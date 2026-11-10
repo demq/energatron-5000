@@ -52,6 +52,8 @@ modules =
     energatron.adapters.vcs
     energatron.adapters.pipeline
     energatron.adapters.offers
+    energatron.adapters.notify
+    energatron.adapters.schedule
 
 [importlinter:contract:cli-via-wiring]
 name = CLI reaches driven adapters only through wiring
@@ -63,4 +65,6 @@ forbidden_modules =
     energatron.adapters.vcs
     energatron.adapters.pipeline
     energatron.adapters.offers
+    energatron.adapters.notify
+    energatron.adapters.schedule
 allow_indirect_imports = True

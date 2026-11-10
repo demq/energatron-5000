@@ -56,6 +56,11 @@ def manifest(run_id: str, *, draft: bool, datasets: list[str]) -> dict[str, Any]
 
 @pytest.fixture
 def paths(tmp_path: Path) -> WorkspacePaths:
+    return make_status_workspace(tmp_path)
+
+
+def make_status_workspace(tmp_path: Path) -> WorkspacePaths:
+    """The scratch workspace this module describes; `test_watch` builds on it too."""
     paths = make_workspace(tmp_path, private=None)
     catalog = JsonlCatalog(paths)
     for source in SourceType:

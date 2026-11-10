@@ -14,6 +14,7 @@ from typing import Final
 import yaml
 
 from energatron import __version__
+from energatron.adapters.notify.macos import Notifier
 from energatron.adapters.offers.cdr import DEFAULT_ROOT, CdrProvider
 from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
@@ -120,6 +121,11 @@ def load_region_profile(name: str) -> RegionProfile:
 def code_fingerprint() -> CodeFingerprint:
     """The live code fingerprint: one code entry per registered stage, in `dvc.yaml` order (D1 §11.1, §11.2)."""
     return compute_fingerprint(STAGES)
+
+
+def notifier() -> Notifier:
+    """The desktop notifier (P7 spec §7); `ENERGATRON_NOTIFY_LOG` redirects it to a file."""
+    return Notifier(os.environ)
 
 
 def code_state(paths: WorkspacePaths) -> tuple[list[str], bool]:

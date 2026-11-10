@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.2.2
-- Last commit: energatron-5000 `P7.2.2: add energatron status, its reminders and the drill record`
-- Checks: pytest -q 3540 passed; ruff, pyright, lint-imports clean
+- Last done: P7.2.3
+- Last commit: energatron-5000 `P7.2.3: add energatron watch and macOS notifications`
+- Checks: pytest -q 3555 passed; ruff, pyright, lint-imports clean
 - Review: none
-- Next: P7.2.3 (`energatron watch` and notifications)
+- Next: P7.2.4 (`energatron schedule`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -563,12 +563,13 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
     `scripts/icloud_backup.py`, tests, golden schemas.
   - Done when: the standard checks pass; each reminder is on and off at its boundary in a test.
   - Handover: `core/operations.py` (thresholds, `Facts`, `reminders`; also the cheaper-plan test, notification texts and the launchd plist, tested here, used by P7.2.3-P7.2.4), six warnings, `drill_state` v1, `services/status.py` (`snapshot` for `watch`), `status_result` v1, `energatron status` (no lock), `wiring.code_state`; `icloud_backup.py` records a passed drill; self-review. Decision: the stage closure includes `core/errors.py`, so the next workspace run reruns every stage once (spec §2 corrected). Watch: human output lists reminders as stderr warnings only.
-- ⬜ **P7.2.3** `energatron watch` and notifications.
+- ✅ **P7.2.3** `energatron watch` and notifications.
   - `cheaper_plan` and `notifications` in `core/operations.py`, `services/watch.py`, `watch_result` v1,
     `adapters/notify.py` and `wiring.notifier()`, the command (`--notify`, `--dry-run`, lock), `test_p7_watch`.
   - Refs: the P7 spec §6, §7, §11.
   - Files: the modules above, `src/energatron/adapters/wiring.py`, tests.
   - Done when: the standard checks pass; `test_p7_watch` sees the cheaper-plan notification, then a quiet second run.
+  - Handover: `services/watch.py` (fetch; run when anything landed or behind; `cheaper_plan` by plan identity; notifications; `E_PARTIAL` on a failed fetch or run), `watch_result` v1, `adapters/notify/macos.py` (`osascript` with argv, `ENERGATRON_NOTIFY_LOG` seam) and `wiring.notifier()`, `energatron watch [--notify] [--dry-run]` (lock), `test_p7_watch`; notify and schedule packages in the import contracts; self-review. Decision: every fetch lands a new fetch log, so `watch` runs after every successful fetch (spec §6 note). Watch: the adapter is `adapters/notify/macos.py`, not `notify.py`.
 - ⬜ **P7.2.4** `energatron schedule install|remove|status`.
   - `launchd_plist` in `core/operations.py`, `adapters/schedule/launchd.py` and `wiring.launchd()`, `schedule_result`
     v1, the command (macOS only).
@@ -596,6 +597,7 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
 
 ## Log (newest first)
 
+- 2026-11-10 · P7.2.3 · `energatron watch` and notifications, `test_p7_watch` (3555 tests); self-review · energatron-5000 `P7.2.3: add energatron watch and macOS notifications`
 - 2026-11-10 · P7.2.2 · `energatron status` with six reminder warnings, `drill_state` record from `icloud_backup.py`, `core/operations.py` (3540 tests); self-review · energatron-5000 `P7.2.2: add energatron status, its reminders and the drill record`
 - 2026-11-10 · P7.2.1 · `landing list|clear`, `landing_result` v1 (3503 tests); self-review · energatron-5000 `P7.2.1: add energatron landing list and clear`
 - 2026-11-10 · P7.1.1 · P7 operations spec drafted and approved on the owner's instruction (self-review); plan rev 15, D1 rev 8, D2 rev 2; P7.2-P7.3 added from its §2 · energatron-5000 `P7.1.1: approve the P7 operations spec and apply plan rev 15, D1 rev 8 and D2 rev 2`

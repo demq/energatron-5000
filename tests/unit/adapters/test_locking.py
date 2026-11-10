@@ -1,9 +1,9 @@
 """The workspace lock across processes (D1 §8.8; D2 §5.9, §14).
 
 Another process holds `.energatron/lock` through `workspace_lock()`. `denylist`, `backup`, `fingerprint`,
-`pipeline sync`, `verify`, `land`, `fetch-offers` and `landing clear` (their dry runs and `denylist --check` included)
-fail with `E_LOCKED` and change nothing; `backup --status`, `fingerprint --check`, `pipeline sync --check`, `stage`
-and `version` still run.
+`pipeline sync`, `verify`, `land`, `fetch-offers`, `landing clear` and `watch` (their dry runs and `denylist --check`
+included) fail with `E_LOCKED` and change nothing; `backup --status`, `fingerprint --check`, `pipeline sync --check`,
+`stage` and `version` still run.
 """
 
 import subprocess
@@ -72,6 +72,8 @@ def held_by_another_process(paths: WorkspacePaths) -> Iterator[None]:
         ("fetch-offers", "--dry-run"),
         ("landing", "clear", "--dry-run"),
         ("landing", "clear", "--yes"),
+        ("watch",),
+        ("watch", "--dry-run"),
     ],
 )
 def test_a_locking_command_fails_while_another_process_holds_the_lock(

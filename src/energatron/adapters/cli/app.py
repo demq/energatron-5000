@@ -31,6 +31,7 @@ from energatron.adapters.cli.commands import (
     status,
     verify,
     version,
+    watch,
 )
 from energatron.adapters.cli.output import (
     CommandOutput,
@@ -70,6 +71,7 @@ app.command("run")(run.run)
 app.command("decide")(decide.decide)
 app.add_typer(landing.app, name="landing")
 app.command("status")(status.status)
+app.command("watch")(watch.watch)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
