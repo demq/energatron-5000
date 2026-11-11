@@ -186,6 +186,7 @@ def make_pdf(
     xmp_compressed: bool = False,
     encrypted: bool = False,
     truncated: bool = False,
+    text: tuple[str, ...] | None = None,
 ) -> bytes:
     """A minimal valid one-page PDF.
 
@@ -193,8 +194,9 @@ def make_pdf(
     for none. `xmp` is the XMP packet's `xmp:CreateDate`, or `None` for no packet. `info_in_objstm` puts the Info
     dictionary in a Flate-compressed `/ObjStm` with a cross-reference stream (PDF 1.5 style); `xmp_compressed`
     deflates the XMP packet; `encrypted` adds an `/Encrypt` entry to the trailer; `truncated` cuts the file before
-    its `%%EOF`.
+    its `%%EOF`. `text` puts those lines on the page in Helvetica, so pypdf extracts them (not with `info_in_objstm`).
     """
+    assert text is None or not info_in_objstm, "text is only written in the classic layout"
     info_parts = [b"/Producer (Synthetic PDF generator)"]
     if creation_date is not None:
         info_parts.append(b"/CreationDate " + _date_string(creation_date, date_encoding))
@@ -206,6 +208,14 @@ def make_pdf(
         3: b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>",
         4: _stream(b"", _PAGE_CONTENT),
     }
+    if text is not None:
+        lines = b" T* ".join(_literal(line.encode("latin-1")) + b" Tj" for line in text)
+        objects[3] = (
+            b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R"
+            b" /Resources << /Font << /F1 10 0 R >> >> >>"
+        )
+        objects[4] = _stream(b"", b"BT /F1 12 Tf 14 TL 72 720 Td " + lines + b" ET")
+        objects[10] = b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"
     if xmp is not None:
         packet = _xmp_packet(xmp)
         if xmp_compressed:

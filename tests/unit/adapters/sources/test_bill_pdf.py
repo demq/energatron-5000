@@ -10,6 +10,10 @@ from energatron.core.models.catalog import SourceType
 from energatron.ports.sources import SourceParser
 from tests.fixtures.make_sources import make_pdf
 
+ELEC_TEXT = ("Tax invoice", "Issue date 23 Jan 2025", "NMI <NMI>")
+GAS_TEXT = ("Your gas bill", "Issue date", "27 Oct 2026", "MIRN <MIRN>")
+SUMMARY_TEXT = ("Data Meter Summary Format", "NMI: <NMI>")
+
 PARSERS = (ELEC_BILL, GAS_BILL)
 NAME = "bill.pdf"
 
@@ -23,11 +27,11 @@ def reason(parser: BillPdfParser, data: bytes) -> str:
     return value
 
 
-def test_two_instances_one_per_source_version_1() -> None:
+def test_two_instances_one_per_source_version_2() -> None:
     elec: SourceParser = ELEC_BILL
     gas: SourceParser = GAS_BILL
     assert elec.source is SourceType.ELEC_BILL and gas.source is SourceType.GAS_BILL
-    assert elec.version == gas.version == 1
+    assert elec.version == gas.version == 2
     assert isinstance(ELEC_BILL, BillPdfParser) and isinstance(GAS_BILL, BillPdfParser)
 
 
@@ -75,7 +79,7 @@ def test_reasons(parser: BillPdfParser) -> None:
     assert reason(parser, make_pdf(creation_date="D:2025", truncated=True)) == "truncated"
     assert reason(parser, make_pdf(creation_date="D:2025", encrypted=True)) == "encrypted"
     assert reason(parser, make_pdf(creation_date="D:2025", encrypted=True, info_in_objstm=True)) == "encrypted"
-    assert reason(parser, make_pdf(creation_date=None)) == "no_creation_date"
+    assert reason(parser, make_pdf(creation_date=None)) == "no_date"
     assert reason(parser, b"plain text\n%%EOF") == "not_pdf"
 
 
@@ -86,3 +90,43 @@ def test_truncated_is_checked_before_encrypted() -> None:
 def test_encrypt_metadata_alone_is_not_encryption() -> None:
     data = make_pdf(creation_date="D:2025").replace(b"/Producer", b"/EncryptMetadata false /Producer", 1)
     assert ELEC_BILL.inspect(NAME, data).source_ts == datetime(2025, 1, 1)
+
+
+# --- version 2: the text (bill PDF spec §2, §3) ----------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("parser", PARSERS)
+def test_the_printed_issue_date_wins_over_the_creation_date(parser: BillPdfParser) -> None:
+    info = parser.inspect(NAME, make_pdf(creation_date="D:20250304050607", text=ELEC_TEXT))
+    assert info.source_ts == datetime(2025, 1, 23)
+    assert info.extra == {"source_ts_from": "pdf_text"}
+    assert info.identifiers == {}
+
+
+@pytest.mark.parametrize("parser", PARSERS)
+def test_an_issue_date_alone_is_enough(parser: BillPdfParser) -> None:
+    info = parser.inspect(NAME, make_pdf(creation_date=None, text=GAS_TEXT))
+    assert info.source_ts == datetime(2026, 10, 27)
+
+
+@pytest.mark.parametrize("parser", PARSERS)
+def test_text_without_an_issue_date_falls_back_to_the_creation_date(parser: BillPdfParser) -> None:
+    info = parser.inspect(NAME, make_pdf(creation_date="D:20250304", text=("Tax invoice", "Due date 1 Apr 2025")))
+    assert info.source_ts == datetime(2025, 3, 4)
+    assert info.extra == {"source_ts_from": "pdf_metadata"}
+
+
+def test_each_bill_parser_confirms_only_its_own_kind() -> None:
+    elec, gas, summary = (make_pdf(creation_date=None, text=text) for text in (ELEC_TEXT, GAS_TEXT, SUMMARY_TEXT))
+    assert (ELEC_BILL.confirm(NAME, elec), ELEC_BILL.confirm(NAME, gas), ELEC_BILL.confirm(NAME, summary)) == (
+        True,
+        False,
+        False,
+    )
+    assert (GAS_BILL.confirm(NAME, elec), GAS_BILL.confirm(NAME, gas), GAS_BILL.confirm(NAME, summary)) == (
+        False,
+        True,
+        False,
+    )
+    assert not ELEC_BILL.confirm(NAME, make_pdf(creation_date="D:2025"))  # no text: no claim
+    assert not ELEC_BILL.confirm(NAME, b"Tax invoice NMI")  # not a PDF

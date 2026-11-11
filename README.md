@@ -65,9 +65,10 @@ uv run energatron land data/landing/ --dry-run
 uv run energatron land data/landing/
 ```
 
-   `land` makes its own commit (`land: <ids>`). Landing the same bytes again is a no-op. Retailer usage exports and
-   transaction CSVs land the same way. A bill PDF matches several parsers (`E_AMBIGUOUS_SOURCE`): name its source,
-   e.g. `uv run energatron land data/landing/<bill>.pdf --source elec_bill`.
+   `land` makes its own commit (`land: <ids>`). Landing the same bytes again is a no-op. Retailer usage exports,
+   transaction CSVs and bill PDFs land the same way, all in one command: a bill is recognised (electricity or gas) and
+   dated by the issue date printed on it. Only if `land` says it can't tell (`E_AMBIGUOUS_SOURCE`, e.g. a dual-fuel
+   bill) name the source: `uv run energatron land data/landing/<bill>.pdf --source elec_bill`.
 3. **Run** the pipeline. It refuses to start with uncommitted config or tool changes; commit them first:
 
 ```bash
@@ -92,7 +93,7 @@ uv run energatron landing clear
 ## Gas bills
 
 ```bash
-uv run energatron land data/landing/<bill>.pdf --source gas_bill
+uv run energatron land data/landing/<bill>.pdf
 uv run energatron gas-bill new <gas_bill dataset ID>
 # fill in data/landing/gas_bill_record-<ID>.yaml from the bill, following its comments
 uv run energatron land data/landing/gas_bill_record-<ID>.yaml --dry-run

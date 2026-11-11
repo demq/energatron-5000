@@ -124,10 +124,73 @@ WINDOW = (date(2025, 1, 1), date(2025, 2, 1))
 GENERATED = datetime(2025, 2, 1, 9, 0, 0)
 
 
-def test_the_real_three_way_pdf_tie_is_ambiguous() -> None:
+def test_the_real_three_way_pdf_tie_is_ambiguous_when_the_text_names_no_kind() -> None:
+    for data in (make_pdf(creation_date="D:2025"), make_pdf(creation_date=None, text=("Tax invoice", "NMI", "MIRN"))):
+        with pytest.raises(AmbiguousSourceError) as caught:
+            resolve_parser(PARSERS, "scan.pdf", data)
+        assert caught.value.details["candidates"] == ["elec_bill", "gas_bill", "sapn_summary"]
+
+
+@pytest.mark.parametrize(
+    ("text", "source"),
+    [
+        (("Tax invoice", "Issue date 23 Jan 2025", "NMI <NMI>"), ELEC),
+        (("Your gas bill", "Issue date 27 Oct 2026", "MIRN <MIRN>"), GAS),
+        (("Data Meter Summary Format", "NMI: <NMI>"), SUMMARY),
+    ],
+)
+def test_the_text_settles_the_real_pdf_tie(text: tuple[str, ...], source: SourceType) -> None:
+    chosen, evidence = resolve_parser(PARSERS, "Invoice_1.pdf", make_pdf(creation_date=None, text=text))
+    assert chosen.source == source and evidence == ("content",)
+
+
+@dataclass
+class Confirming(StandIn):
+    """A stand-in that reads the whole file: it confirms when `data` holds its `word`."""
+
+    word: bytes = b""
+
+    def confirm(self, filename: str, data: bytes) -> bool:
+        return self.word in data
+
+
+def test_confirm_sees_the_whole_file_and_detect_only_the_head() -> None:
+    seen: list[int] = []
+
+    @dataclass
+    class Measuring(Confirming):
+        def detect(self, filename: str, head: bytes) -> Detection | None:
+            seen.append(len(head))
+            return super().detect(filename, head)
+
+    data = b"x" * (70 * 1024) + b"TAIL"
+    chosen, _ = resolve_parser(
+        parsers(Measuring(ELEC, ("content",), word=b"never"), Confirming(GAS, ("content",), word=b"TAIL")), "f", data
+    )
+    assert chosen.source == GAS and seen == [64 * 1024]
+
+
+def test_declining_confirmers_drop_out_and_one_left_wins() -> None:
+    plain, elec, gas = (
+        StandIn(SUMMARY, ("content",)),
+        Confirming(ELEC, ("content",), word=b"E"),
+        Confirming(GAS, ("content",), word=b"G"),
+    )
+    assert resolve_parser(parsers(plain, elec, gas), "f", b"none")[0].source == SUMMARY
+    assert resolve_parser(parsers(elec, gas), "f", b"E")[0].source == ELEC
     with pytest.raises(AmbiguousSourceError) as caught:
-        resolve_parser(PARSERS, "scan.pdf", make_pdf(creation_date="D:2025"))
-    assert caught.value.details["candidates"] == ["elec_bill", "gas_bill", "sapn_summary"]
+        resolve_parser(parsers(plain, elec, gas), "f", b"E")
+    assert caught.value.details["candidates"] == ["elec_bill", "sapn_summary"]
+    with pytest.raises(AmbiguousSourceError) as caught:
+        resolve_parser(parsers(elec, gas), "f", b"none")  # all decline: the tie stands
+    assert caught.value.details["candidates"] == ["elec_bill", "gas_bill"]
+
+
+def test_confirm_never_overrides_a_higher_rank_or_the_source_option() -> None:
+    top, low = StandIn(SUMMARY, ("filename", "content")), Confirming(ELEC, ("content",), word=b"E")
+    assert resolve_parser(parsers(top, low), "f", b"E")[0].source == SUMMARY
+    declining = Confirming(GAS, ("content",), word=b"never")
+    assert resolve_parser(parsers(declining), "f", b"E", source=GAS) == (declining, ("option",))
 
 
 def test_a_sapn_named_pdf_resolves_to_the_summary() -> None:

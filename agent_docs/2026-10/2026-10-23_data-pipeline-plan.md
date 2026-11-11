@@ -79,6 +79,10 @@
   reminders), `schedule install|remove|status` (a per-user launchd agent, owner-installed); `icloud_backup.py` records a
   passed drill so `status` can say when the quarterly drill is due; the README is the runbook; §12's `offers diff`
   line corrected (it has no `--since`) (§6, §12, §15).
+  2026-11-11 rev 16 — bill PDF text spec (`2026-11-11_bill-pdf-text-spec.md`), on the owner's decision of 2026-11-11:
+  bill PDFs are dated by the issue date printed on them (pypdf, not pdfplumber) and told apart by their text
+  (electricity bill, gas bill, SAPN summary), so `land` takes a folder of bills without `--source`; gas figures still
+  come from the YAML transcription (§4, §5, §10.6).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -209,7 +213,7 @@ matches the current GloBird SAPN windows), period cost calculations, monthly and
 - DVC as a *dev dependency* of the workspace, so the DVC version is pinned too. The `energatron` package calls
   git and DVC as subprocesses and doesn't depend on DVC.
 - pandas + pyarrow (Parquet), pydantic v2 (schemas), typer (CLI), httpx (API client), matplotlib/plotly
-  (reports), duckdb (optional ad-hoc SQL over Parquet), pdfplumber (later, for bill PDFs).
+  (reports), duckdb (optional ad-hoc SQL over Parquet), pypdf (bill PDF text: the issue date and the kind, rev 16).
 - `tzdata` (from P2) as an explicit runtime dependency, so stages read time-zone rules from a pinned
   distribution rather than the system database (rev 10).
 - pytest + hypothesis, ruff, pyright, pre-commit, nbstripout, all dev dependencies run through `uv run`.
@@ -442,7 +446,7 @@ in the tool repo; anything that mentions your own data stays in the workspace.
 | `sapn_summary` | SAPN `*_SAPN_SUMMARY.csv` / `.pdf` | Manual | Generation timestamp from the filename; else content (CSV) or PDF creation date |
 | `retailer_usage` | Retailer monthly TOU usage export | Manual | Latest `Read Datetime` in the content (the export carries no export date) |
 | `retailer_txn` | Retailer transactions export (invoices, payments) | Manual | Latest `Date` in the content |
-| `elec_bill`, `gas_bill` | Bill PDF | Manual | PDF creation date (P1; P5 adds no text extraction, rev 13) |
+| `elec_bill`, `gas_bill` | Bill PDF | Manual | The issue date printed on the bill, else the PDF creation date (rev 16) |
 | `gas_bill_record` | YAML transcription of one gas bill (references the PDF's dataset ID) | Manual, scaffolded by CLI | Issue date |
 | `offer_cdr` | Plan-detail JSON from the AER CDR API | `energatron fetch-offers` | Plan `lastUpdated` |
 | `offer_cdr_index` | The fetch log of one batch: every list page verbatim (base64) and what was selected (P4 spec §3.3) | `energatron fetch-offers` | `fetched_at` |
@@ -828,7 +832,8 @@ snapshot (e.g. "daily supply +3c, peak −1c").
 ### 10.6 Gas
 
 - **Inputs:** monthly bill PDFs (landed) plus one YAML transcription per bill (`gas_bill_record`). At ~12
-  bills a year, manual entry is cheaper than maintaining a parser; a pdfplumber template can come later if it
+  bills a year, manual entry is cheaper than maintaining a parser (the PDF's text gives only its date and kind, rev
+  16); a figures template can come later if it
   proves worthwhile. `energatron gas-bill new <pdf_dataset_id>` scaffolds the YAML.
 - **YAML fields:** retailer, bill ID, issue date, period start/end, read type (actual/estimate), start/end
   read, m³, heating value (MJ/m³), pressure correction factor, MJ, line items (supply days × rate, each step

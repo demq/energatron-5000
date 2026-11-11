@@ -1,7 +1,8 @@
 """`sapn_summary`: SAPN's SUMMARY download, as CSV or PDF (D3 §5.3), version 1.
 
-Pure. The CSV is checked row by row; the PDF only for completeness, as P1 doesn't read PDF text. Stages that read
-summaries (P2) select `extra.format == "csv"`.
+Pure. The CSV is checked row by row; the PDF only for completeness. A bare PDF ties with the bill parsers, and
+`confirm` settles it from the PDF's text (bill PDF spec §3); that changes which parser is chosen, never what this one
+records, so the version stays 1. Stages that read summaries (P2) select `extra.format == "csv"`.
 """
 
 import re
@@ -11,6 +12,7 @@ from typing import Final
 from energatron.adapters.sources._common import first_line, sapn_filename_facts, window_json
 from energatron.adapters.sources.bill_pdf import PDF_MAGIC, is_complete_pdf
 from energatron.adapters.sources.pdf_meta import creation_date
+from energatron.adapters.sources.pdf_text import pdf_kind, pdf_text
 from energatron.core.canonical import JSONValue
 from energatron.core.models.catalog import Coverage, Detection, Evidence, SourceInfo, SourceType
 from energatron.core.sapn_summary import DMY, FIELDS, scan_summary_csv
@@ -49,6 +51,10 @@ class SapnSummaryParser:
             if first is not None and _csv_matches(first.split(",")):
                 evidence.append("content")
         return Detection(source=self.source, evidence=tuple(evidence)) if evidence else None
+
+    def confirm(self, filename: str, data: bytes) -> bool:
+        """A CSV always (its content check is exact); a PDF when its text names a meter summary (`pdf_kind`)."""
+        return not data.startswith(PDF_MAGIC) or pdf_kind(pdf_text(data)) is _SOURCE
 
     def inspect(self, filename: str, data: bytes) -> SourceInfo:
         if data.startswith(PDF_MAGIC):

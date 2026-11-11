@@ -219,3 +219,11 @@ def test_pdf_reasons() -> None:
 
 def test_a_named_pdf_needs_no_creation_date() -> None:
     assert inspect(pdf(creation_date=None), PDF_NAME).source_ts == GENERATED
+
+
+def test_confirm_takes_any_csv_and_a_pdf_whose_text_names_a_meter_summary() -> None:
+    assert SAPN_SUMMARY.confirm("x.csv", b"anything,csv\n")
+    summary = make_pdf(creation_date=None, text=("Data Meter Summary Format", "NMI: <NMI>"))
+    assert SAPN_SUMMARY.confirm("scan.pdf", summary)
+    assert not SAPN_SUMMARY.confirm("scan.pdf", make_pdf(creation_date=None, text=("Tax invoice", "NMI <NMI>")))
+    assert not SAPN_SUMMARY.confirm("scan.pdf", make_pdf(creation_date="D:2025"))

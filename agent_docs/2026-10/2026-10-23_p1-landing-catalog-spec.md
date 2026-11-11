@@ -250,6 +250,9 @@ never file content) on the first problem.
 
 ### 5.1 Resolution (`services/land.py: resolve_parser`)
 
+> 2026-11-11: step 3 now lets `ConfirmingParser`s settle a tie from the whole file; see the bill PDF text spec
+> (`../2026-11/2026-11-11_bill-pdf-text-spec.md`) §3.
+
 - **With `--source S`:**
   - no parser for `S` in `ctx.parsers` → `E_USAGE` ("no parser for S in this version")
   - the parser's detection has no `content` evidence → `E_INVALID_INPUT`, `details.reason: "content_mismatch"`
@@ -340,6 +343,9 @@ version, or a per-format parser once a spec adds a `name` to `SourceParser` (§1
   - `extension`: `.csv`
 
 ### 5.6 `elec_bill`, `gas_bill` (`adapters/sources/bill_pdf.py`: two parser instances, version 1)
+
+> 2026-11-11: version 2 dates a bill by its printed issue date and confirms its kind from the text, so a bill no
+> longer needs `--source`; see the bill PDF text spec (`../2026-11/2026-11-11_bill-pdf-text-spec.md`) §3, §4.
 
 - **Filename evidence:** none. **Content:** the file starts with `%PDF-`. So a bill always needs `--source`: a
   bare PDF also matches `sapn_summary` content-only, and the three tie (§5.1).

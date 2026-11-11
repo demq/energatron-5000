@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Bill PDFs are dated by the issue date printed on them and recognised from their text (electricity bill, gas bill
+  or SAPN summary), so `energatron land data/landing/` lands a folder of bills without `--source`. New dependency:
+  pypdf.
 - Operations (P7): `energatron status` (one read-only summary with reminders), `landing list|clear`, `watch` (the
   weekly offers check that runs the pipeline and notifies on macOS when a cheaper plan appears), `schedule
   install|remove|status` (a per-user launchd agent for `watch`); `icloud_backup.py` records each passed restore drill;

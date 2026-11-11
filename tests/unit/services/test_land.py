@@ -10,13 +10,14 @@ import json
 import logging
 import os
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 
 import pytest
 import yaml
 
+from energatron.adapters.sources.registry import PARSERS
 from energatron.adapters.sources.sapn_nem12 import SAPN_INTERVAL
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
@@ -56,6 +57,7 @@ from energatron.services.land import LandPending, LandResult, land, outcome, wri
 from energatron.services.stages.dvc_yaml import emit_dvc_yaml
 from energatron.services.stages.registry import STAGES
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
+from tests.fixtures.make_sources import make_pdf
 from tests.fixtures.synthetic import SYNTHETIC_NMI, SYNTHETIC_NMI11, SYNTHETIC_SERIAL, synthetic_private_config
 from tests.unit.adapters._workspace import make_workspace, write
 from tests.unit.services.test_context import TEST_REGION, FixedClock, build
@@ -844,3 +846,31 @@ def test_a_corrupt_marker_is_invalid_input_with_a_hint(ctx: ServiceContext, land
     assert "resync raw pointers" in hint
     assert str(ctx.paths.root) not in hint
     assert catalog_ids(ctx.paths) == []
+
+
+def test_a_folder_of_bill_pdfs_lands_in_one_call_without_source(
+    ctx: ServiceContext, vcs: LandVcs, landing: Path
+) -> None:
+    """Bill PDF spec §3, §6: the text tells the bills apart, and each is dated by its printed issue date."""
+    ctx = replace(ctx, parsers=PARSERS)
+
+    texts = {
+        "Invoice_1.pdf": ("Tax invoice", "Issue date 23 Jan 2025", "NMI <NMI>"),
+        "Invoice_2.pdf": ("Tax invoice", "Issue date 11 Feb 2025", "NMI <NMI>"),
+        "gas.pdf": ("Your gas bill", "Issue date", "27 Oct 2026", "MIRN <MIRN>"),
+    }
+    for name, text in texts.items():
+        (landing / name).write_bytes(make_pdf(creation_date="D:20200101", text=text))
+    result = land(ctx, [landing])
+    assert outcome(result) is None
+    landed = {item.dataset_id: item.source for item in result.items}
+    assert sorted((source, ident.split("-")[1][:8]) for ident, source in landed.items() if ident) == [
+        ("elec_bill", "20250123"),
+        ("elec_bill", "20250211"),
+        ("gas_bill", "20261027"),
+    ]
+    record = JsonlCatalog(ctx.paths).get(next(ident for ident in landed if ident and ident.startswith("gas_bill")))
+    assert record is not None
+    assert record.detector == Detector(name=SourceType.GAS_BILL, version=2, evidence=("content",))
+    assert record.extra["source_ts_from"] == "pdf_text"
+    assert len(vcs.commits) == 1

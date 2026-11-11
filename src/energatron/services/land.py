@@ -58,7 +58,7 @@ from energatron.core.models.catalog import (
 from energatron.core.models.storage import RAW_PREFIX
 from energatron.core.persisted import Persisted
 from energatron.core.privacy import DenyEntry, check_premises, derive_denylist, mask_filename
-from energatron.ports.sources import SourceParser
+from energatron.ports.sources import ConfirmingParser, SourceParser
 from energatron.services import pipeline_sync
 from energatron.services.context import ServiceContext, ServiceResult
 from energatron.services.files import atomic_write_bytes
@@ -158,16 +158,19 @@ class LandPending(Persisted):
 
 
 def resolve_parser(
-    parsers: Sequence[SourceParser], filename: str, head: bytes, source: SourceType | None = None
+    parsers: Sequence[SourceParser], filename: str, data: bytes, source: SourceType | None = None
 ) -> tuple[SourceParser, tuple[DetectorEvidence, ...]]:
     """The parser for a file and the catalog's `detector.evidence` for it (D3 §5.1).
 
     With `source`: that parser (`E_USAGE` if there is none), provided its detection has `content` evidence
     (`E_INVALID_INPUT`, `content_mismatch`); the evidence is `("option",)`. Without: the single best detection with
-    `content` evidence, filename + content ranking above content alone; a tie at the top → `E_AMBIGUOUS_SOURCE`
-    with sorted `candidates`; only filename matches → `content_mismatch` naming the source; none →
-    `E_UNKNOWN_SOURCE`.
+    `content` evidence, filename + content ranking above content alone. A tie at the top goes to the tied
+    `ConfirmingParser`s: those that decline the whole file drop out, and if exactly one parser is left it wins
+    (bill PDF spec §3). Otherwise → `E_AMBIGUOUS_SOURCE` with the sorted `candidates` still in the tie; only
+    filename matches → `content_mismatch` naming the source; none → `E_UNKNOWN_SOURCE`. `detect` sees only the
+    first `HEAD_BYTES`; `confirm` sees `data`.
     """
+    head = data[:HEAD_BYTES]
     if source is not None:
         parser = _parser_for(parsers, source)
         detection = parser.detect(filename, head)
@@ -181,6 +184,9 @@ def resolve_parser(
     if with_content:
         best = max(len(detection.evidence) for _, detection in with_content)
         top = [(parser, detection) for parser, detection in with_content if len(detection.evidence) == best]
+        if len(top) > 1:
+            kept = [(p, d) for p, d in top if not isinstance(p, ConfirmingParser) or p.confirm(filename, data)]
+            top = kept or top
         if len(top) > 1:
             candidates = sorted(parser.source.value for parser, _ in top)
             raise AmbiguousSourceError(
@@ -527,7 +533,7 @@ def _plan_item(
     # 3.3 Detect and inspect
     name = item.path.name
     try:
-        parser, evidence = resolve_parser(ctx.parsers, name, data[:HEAD_BYTES], source)
+        parser, evidence = resolve_parser(ctx.parsers, name, data, source)
         info = parser.inspect(name, data)
     except (UnknownSourceError, AmbiguousSourceError, InvalidInputError) as error:
         return rejected(error, size=size, sha=sha)

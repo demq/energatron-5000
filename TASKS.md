@@ -97,53 +97,53 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.3.1
-- Last commit: energatron-5000 `P7.3.1: record P7 acceptance in the workspace (agent part)`; demq-elektric `P7.3.1: add the P7 commands to the workspace instructions and the check-in skill`, `land: 22 datasets`, two `run:` commits, `P7.3.1: record the P7 acceptance (agent part)`
-- Checks: pytest -q 3565 passed; ruff, pyright, lint-imports clean; workspace: dvc status clean, privacy guard 0 violations
+- Last done: P7.4.1
+- Last commit: energatron-5000 `P7.4.1: date and recognise bill PDFs from their text`; demq-elektric `P7.4.1: lock pypdf for the bill PDF text`
+- Checks: pytest -q 3606 passed; ruff, pyright, lint-imports clean; pre-commit and privacy scan clean; workspace `land data/landing/ --dry-run` lands the 11 invoices as `elec_bill`, exit 0
 - Review: none
-- Next: P7.3.2 (owner: a cycle from a new SAPN download via the README, the schedule, a drill)
+- Next: P7.3.2 (owner: land the invoices, then a cycle from a new SAPN download via the README, the schedule, a drill)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P6 are done; P7 (operations) is built and its agent acceptance passed. Added and run end to end by the agent on
-  the owner's instruction of 2026-11-10 (spec self-reviewed, P7.2.1-P7.2.5, P7.3.1). Only P7.3.2 (owner steps) is left.
-- New commands: `status` (reminders), `landing list|clear`, `watch [--notify]`, `schedule install|remove|status`;
-  `icloud_backup.py` records passed drills; the README is the runbook (checked by `test_readme`).
-- The tool repo is on GitHub (private, `origin`); nothing was pushed this session.
+- P0-P6 are done; P7 (operations) is built and its agent acceptance passed. P7.4.1 (from the owner's acceptance
+  attempt): bill PDFs are dated by their printed issue date and recognised from their text (pypdf), so
+  `land data/landing/` lands a folder of bills without `--source`. Only P7.3.2 (owner steps) is left.
+- The tool repo is on GitHub (private, `origin`); nothing was pushed.
 
 **Read first** (for the next session)
-- The P7 spec (`agent_docs/2026-11/2026-11-10_p7-operations-spec.md`) §13 and the workspace note
+- The P7 spec (`agent_docs/2026-11/2026-11-10_p7-operations-spec.md`) §13, the bill PDF text spec
+  (`agent_docs/2026-11/2026-11-11_bill-pdf-text-spec.md`) and the workspace note
   `demq-elektric/agent_docs/2026-11/2026-11-10_p7-acceptance-operations.md` (never copy).
 - P7.3.2 is the owner's; once they report it, tick it, tick P7.3 and P7, and archive P7 (this file is over 400 lines).
 
 **Facts**
+- `resolve_parser` gets the whole file: `detect` sees the first 64 KiB, and tied `ConfirmingParser`s settle a tie
+  (`confirm`); `--source` and higher ranks are never overridden. `elec_bill`/`gas_bill` are version 2 (reason
+  `no_date` replaces `no_creation_date`); `sapn_summary` stays version 1.
 - Every fetch lands a new fetch log, so `watch` runs the pipeline after every successful fetch; "cheaper plan" compares
-  the top option's plan IDs, so a new REC with the same plans doesn't notify.
-- The REC ID covers the `recommend` stage's code entry: a tool change in the stage closure (even `core/errors.py`)
-  gives a new REC with the same content.
-- `schedule` is owner-installed; it runs `uv run --frozen energatron watch --notify --json` and logs to
-  `.energatron/logs/watch.log`. Agents only run `schedule status` and `install --dry-run`.
-- `landing clear` deletes owner files: owner only (agents `--dry-run`).
+  the top option's plan IDs.
+- The REC ID covers the `recommend` stage's code entry: a tool change in the stage closure gives a new REC.
+- `schedule` and `landing clear` are owner-run; agents use `schedule status`, `install --dry-run`, `clear --dry-run`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing; no global installs.
 
 **Open questions for the owner**
 - **Before any push:** commits 4edaf38 and 3948b6d (P5.2.3, local only) hold a few numbers copied from the gas bill
   (removed from the tree in P5.2.5). The rules forbid an agent rewriting history; decide whether to rewrite them.
-- The 11 electricity invoice PDFs in the inbox are rejected as ambiguous: land them with `--source elec_bill`, or move
-  them out (they keep `W_LANDING_NEW` on).
+- Land the 11 electricity invoices (`land data/landing/`), then `landing clear`.
 - Decide whether to switch (the recommendation says switch, robust); `record-decision` records it.
 - Install the weekly schedule or not; run `backup --drill` (the first recorded drill).
+- Possible follow-up: use the NMI/MIRN in a bill's text for the foreign-premises check (bills have none today).
 - Earlier: the gas account number in `private/config.toml`; unmet eligibility types; the double-billed month; the fee
   GST source; the usage report browser look; `demand_minutes` in `UsageSummary`.
 
 **Watch out**
-- Backup pending (17 workspace commits).
+- Backup pending (workspace commits not in iCloud).
+- Never put a number or date read from a real bill into a test, docstring or doc, even as an example.
+- If a retailer's layout drops the "Issue date" label and the PDF has no creation date, its bills fail `no_date`.
+- A full `run` after a tool change in a stage closure reruns all twenty stages (~4.5 minutes); `watch` takes as long.
 - `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected.
-- A full `run` after a tool change reruns all twenty stages (~4.5 minutes); `watch` takes about as long.
-- Never put a number read from a real bill into a test or docstring, even as an example.
-- Later cleanup: `core/cdr_tariff.py` shares helpers with the gas mapping through public aliases; rename them once.
-- pytest takes ~2.8 minutes in parallel; don't edit files while it runs (a closure test can flake).
+- pytest takes ~3 minutes in parallel; don't edit files while it runs (a closure test can flake).
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -597,8 +597,20 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
   - Done when: a new download reaches a recommendation via the README alone; `schedule status` shows the agent loaded
     (if the owner wants the weekly job); `backup --drill` passes and `energatron status` shows the drill not due.
 
+#### P7.4 Follow-ups from acceptance ✅
+- ✅ **P7.4.1** Bill PDFs: the issue date and the kind from the PDF's text, so a folder of bills lands in one command.
+  - Why: the owner's retailer PDFs have no creation date (`no_creation_date`), and every bill needed `--source`; the
+    owner decided on 2026-11-11 to read the bills' text.
+  - Refs: the bill PDF text spec; D3 §5.1, §5.6; the P5 spec Q2.
+  - Files: `adapters/sources/pdf_text.py`, `bill_pdf.py`, `sapn_summary.py`, `ports/sources.py`, `services/land.py`,
+    `pyproject.toml`, `uv.lock`, tests, docs; the workspace `uv.lock`.
+  - Done when: the standard checks pass; `land data/landing/ --dry-run` in the workspace lands every invoice PDF as
+    `elec_bill`, dated by its issue date, without `--source`.
+  - Handover: `pdf_text.py` (pypdf: text, kind, issue date), `ConfirmingParser` settling the PDF tie, `elec_bill`/`gas_bill` v2 (issue date first, `no_date`), `sapn_summary.confirm`; spec approved, plan rev 16. Decision: pypdf over pdfplumber; `--source` still overrides. Watch: the owner lands the 11 invoices.
+
 ## Log (newest first)
 
+- 2026-11-11 · P7.4.1 · bill PDFs dated by issue date and recognised from their text (pypdf), one `land` for a folder of bills (3606 tests) · energatron-5000 `P7.4.1: date and recognise bill PDFs from their text`; demq-elektric `P7.4.1: lock pypdf for the bill PDF text`
 - 2026-11-10 · P7.3.1 · P7 acceptance agent part: README cycle, live `watch`, schedule dry run, workspace instructions; two small tool fixes · energatron-5000 `P7.3.1: record P7 acceptance in the workspace (agent part)`; demq-elektric `P7.3.1: add the P7 commands to the workspace instructions and the check-in skill`, `land: 22 datasets`, two `run:` commits, `P7.3.1: record the P7 acceptance (agent part)`
 - 2026-11-10 · P7.2.5 · README runbooks with `test_readme`, CHANGELOG (3565 tests); self-review; P7.2 complete · energatron-5000 `P7.2.5: rewrite the README as the runbook and check its commands`
 - 2026-11-10 · P7.2.4 · `energatron schedule install|remove|status` over launchd, `schedule_result` v1 (3563 tests); self-review · energatron-5000 `P7.2.4: add energatron schedule for the weekly watch`
