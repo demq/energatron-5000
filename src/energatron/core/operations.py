@@ -36,6 +36,7 @@ class Facts:
     refs_backed_up: bool
     commits_not_backed_up: int | None
     last_drill: date | None
+    tool_unpublished: bool | None = None
 
 
 def days_since(today: date, then: date | None) -> int | None:
@@ -114,6 +115,13 @@ def reminders(facts: Facts) -> list[ResultWarning]:
                 WarningCode.W_DRILL_DUE,
                 "The quarterly restore drill is due: the owner runs `icloud_backup.py backup --drill`.",
                 days_since=days_since(facts.today, facts.last_drill),
+            )
+        )
+    if facts.tool_unpublished:
+        found.append(
+            _warn(
+                WarningCode.W_TOOL_UNPUBLISHED,
+                "The last run's tool commit isn't pushed: the owner pushes the tool repo before a restore drill.",
             )
         )
     if facts.landing_landed:

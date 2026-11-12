@@ -20,7 +20,12 @@ from energatron.adapters.notify.macos import Notifier
 from energatron.adapters.offers.cdr import DEFAULT_ROOT, CdrProvider
 from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
-from energatron.adapters.pipeline.fingerprint import InstalledDistributions, compute_fingerprint, package_dir
+from energatron.adapters.pipeline.fingerprint import (
+    InstalledDistributions,
+    commit_published,
+    compute_fingerprint,
+    package_dir,
+)
 from energatron.adapters.pipeline.fingerprint import read_fingerprint as read_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refresh_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
@@ -147,6 +152,22 @@ def code_state(paths: WorkspacePaths) -> tuple[list[str], bool]:
     except InvalidInputError:
         recorded = None
     return stale_stages(live, recorded), live.tool_dirty
+
+
+def tool_unpublished(paths: WorkspacePaths) -> bool | None:
+    """Whether the tool commit the workspace last recorded (an editable install's) is on no remote branch yet.
+
+    The restore drill clones the tool from its remote and checks that commit out, so it must be pushed first
+    (P7.4.2). `None` when it can't be told: no recorded commit, another install kind, no remote, git fails.
+    """
+    try:
+        recorded = read_fingerprint(paths.root / CODE_FINGERPRINT_PATH)
+    except InvalidInputError:
+        return None
+    if recorded is None or recorded.install != "editable" or recorded.tool_commit is None:
+        return None
+    published = commit_published(recorded.tool_commit)
+    return None if published is None else not published
 
 
 def stage_code(name: str) -> StageCode:

@@ -120,12 +120,16 @@ class Snapshot:
     facts: Facts
 
 
-def status(ctx: ServiceContext, *, code_stale: list[str], tool_dirty: bool) -> StatusResult:
+def status(
+    ctx: ServiceContext, *, code_stale: list[str], tool_dirty: bool, tool_unpublished: bool | None = None
+) -> StatusResult:
     """The summary, its reminders in `reminders` and as warnings (P7 spec §3.3, §4)."""
-    return snapshot(ctx, code_stale=code_stale, tool_dirty=tool_dirty).result
+    return snapshot(ctx, code_stale=code_stale, tool_dirty=tool_dirty, tool_unpublished=tool_unpublished).result
 
 
-def snapshot(ctx: ServiceContext, *, code_stale: list[str], tool_dirty: bool) -> Snapshot:
+def snapshot(
+    ctx: ServiceContext, *, code_stale: list[str], tool_dirty: bool, tool_unpublished: bool | None = None
+) -> Snapshot:
     today = local_date(ctx, ctx.clock.now())
     drift = _drift(ctx)
     runs = read_manifests(ctx)
@@ -153,6 +157,7 @@ def snapshot(ctx: ServiceContext, *, code_stale: list[str], tool_dirty: bool) ->
         refs_backed_up=backup.refs_backed_up,
         commits_not_backed_up=backup.commits_not_backed_up,
         last_drill=last_drill,
+        tool_unpublished=tool_unpublished,
     )
     warnings = reminders(facts)
     result = StatusResult(

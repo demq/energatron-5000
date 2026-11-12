@@ -97,48 +97,45 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.4.1
-- Last commit: energatron-5000 `P7.4.1: date and recognise bill PDFs from their text`; demq-elektric `P7.4.1: lock pypdf for the bill PDF text`
-- Checks: pytest -q 3606 passed; ruff, pyright, lint-imports clean; pre-commit and privacy scan clean; workspace `land data/landing/ --dry-run` lands the 11 invoices as `elec_bill`, exit 0
+- Last done: P7.4.2
+- Last commit: energatron-5000 `P7.4.2: tell the owner to push the tool repo before a restore drill`
+- Checks: pytest -q 3616 passed; ruff, pyright, lint-imports clean; pre-commit and privacy scan clean; workspace `status` warns `W_TOOL_UNPUBLISHED`
 - Review: none
-- Next: P7.3.2 (owner: land the invoices, then a cycle from a new SAPN download via the README, the schedule, a drill)
+- Next: P7.3.2 (owner: push the tool repo, `run`, `backup --drill`; optionally the schedule)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P6 are done; P7 (operations) is built and its agent acceptance passed. P7.4.1 (from the owner's acceptance
-  attempt): bill PDFs are dated by their printed issue date and recognised from their text (pypdf), so
-  `land data/landing/` lands a folder of bills without `--source`. Only P7.3.2 (owner steps) is left.
-- The tool repo is on GitHub (private, `origin`); nothing was pushed.
+- P0-P6 are done; P7 is built, with two follow-ups from the owner's acceptance: P7.4.1 (bill PDFs dated and recognised
+  from their text; the owner landed the 11 invoices) and P7.4.2 (`W_TOOL_UNPUBLISHED` in `status`; the drill's step 4
+  says to push). The owner landed a new SAPN download and ran (`REC-20261110-21b45935`). Only P7.3.2 is left.
+- The owner's first `backup --drill` failed at step 4: the tool repo was 48 commits ahead of origin. Nothing pushed yet.
+- History rewritten on the owner's instruction (2026-11-12): the three gas-bill figures in P5.2.3's helper docstring
+  and test (3 local commits, P5.2.3 to P5.2.4) became invented values; `main` moved (same messages, authors, dates and
+  tip tree). Commit IDs from P5.2.3 on changed; the workspace's last run cites an old one until the next `run`.
 
 **Read first** (for the next session)
-- The P7 spec (`agent_docs/2026-11/2026-11-10_p7-operations-spec.md`) §13, the bill PDF text spec
-  (`agent_docs/2026-11/2026-11-11_bill-pdf-text-spec.md`) and the workspace note
+- The P7 spec §3.3 and §13, the bill PDF text spec, and the workspace note
   `demq-elektric/agent_docs/2026-11/2026-11-10_p7-acceptance-operations.md` (never copy).
 - P7.3.2 is the owner's; once they report it, tick it, tick P7.3 and P7, and archive P7 (this file is over 400 lines).
 
 **Facts**
-- `resolve_parser` gets the whole file: `detect` sees the first 64 KiB, and tied `ConfirmingParser`s settle a tie
-  (`confirm`); `--source` and higher ranks are never overridden. `elec_bill`/`gas_bill` are version 2 (reason
-  `no_date` replaces `no_creation_date`); `sapn_summary` stays version 1.
-- Every fetch lands a new fetch log, so `watch` runs the pipeline after every successful fetch; "cheaper plan" compares
-  the top option's plan IDs.
-- The REC ID covers the `recommend` stage's code entry: a tool change in the stage closure gives a new REC.
+- The owner's remaining steps: `git -C energatron-5000 push`; `uv run energatron run` (all twenty stages rerun after
+  the `core/errors.py` change); `icloud_backup.py backup --drill`; then `status` shows no run, drill or tool reminder.
+- The drill clones the tool from origin and checks out the last run's recorded tool commit (D2 §12 step 4).
+- `resolve_parser` gets the whole file; tied `ConfirmingParser`s settle a tie. `elec_bill`/`gas_bill` are version 2.
 - `schedule` and `landing clear` are owner-run; agents use `schedule status`, `install --dry-run`, `clear --dry-run`.
 - Agents never touch iCloud or run `energatron backup` (only `backup --status`). No pushing; no global installs.
 
 **Open questions for the owner**
-- **Before any push:** commits 4edaf38 and 3948b6d (P5.2.3, local only) hold a few numbers copied from the gas bill
-  (removed from the tree in P5.2.5). The rules forbid an agent rewriting history; decide whether to rewrite them.
-- Land the 11 electricity invoices (`land data/landing/`), then `landing clear`.
 - Decide whether to switch (the recommendation says switch, robust); `record-decision` records it.
-- Install the weekly schedule or not; run `backup --drill` (the first recorded drill).
-- Possible follow-up: use the NMI/MIRN in a bill's text for the foreign-premises check (bills have none today).
+- Install the weekly schedule or not.
+- Optional: purge the pre-rewrite commits locally (`reflog expire --expire=now --all`, `gc --prune=now`).
+- Possible follow-up: use the NMI/MIRN in a bill's text for the premises check (`W_PREMISES_UNCHECKED` on bills).
 - Earlier: the gas account number in `private/config.toml`; unmet eligibility types; the double-billed month; the fee
   GST source; the usage report browser look; `demand_minutes` in `UsageSummary`.
 
 **Watch out**
-- Backup pending (workspace commits not in iCloud).
 - Never put a number or date read from a real bill into a test, docstring or doc, even as an example.
 - If a retailer's layout drops the "Issue date" label and the PDF has no creation date, its bills fail `no_date`.
 - A full `run` after a tool change in a stage closure reruns all twenty stages (~4.5 minutes); `watch` takes as long.
@@ -607,9 +604,18 @@ never drafts; plan identity decides "a cheaper plan"; notifications carry no fig
   - Done when: the standard checks pass; `land data/landing/ --dry-run` in the workspace lands every invoice PDF as
     `elec_bill`, dated by its issue date, without `--source`.
   - Handover: `pdf_text.py` (pypdf: text, kind, issue date), `ConfirmingParser` settling the PDF tie, `elec_bill`/`gas_bill` v2 (issue date first, `no_date`), `sapn_summary.confirm`; spec approved, plan rev 16. Decision: pypdf over pdfplumber; `--source` still overrides. Watch: the owner lands the 11 invoices.
+- ✅ **P7.4.2** The restore drill and `status` say to push the tool repo before a drill.
+  - Why: the owner's drill failed at step 4 because the tool commit the last run used was never pushed.
+  - Refs: the P7 spec §3.3; D2 §12; the iCloud runbook.
+  - Files: `scripts/restore_drill.py`, `adapters/pipeline/fingerprint.py`, `adapters/wiring.py`, `core/errors.py`,
+    `core/operations.py`, `services/status.py`, `adapters/cli/commands/status.py`, tests, README, CHANGELOG, docs.
+  - Done when: the standard checks pass; a drill on an unpushed commit says to push; `status` in the workspace warns
+    `W_TOOL_UNPUBLISHED` while the tool repo is ahead of origin.
+  - Handover: drill step 4 checks the commit is in the clone and says to push; `W_TOOL_UNPUBLISHED` (`commit_published` on remote-tracking branches, no network; `status` only); README, runbook, P7 spec §3.3. Decision: not in `watch`. Watch: the next `run` reruns all stages (errors.py changed).
 
 ## Log (newest first)
 
+- 2026-11-12 · P7.4.2 · the drill and `status` tell the owner to push the tool repo first (3616 tests); history rewritten on the owner's instruction to drop three gas-bill figures · energatron-5000 `P7.4.2: tell the owner to push the tool repo before a restore drill`
 - 2026-11-11 · P7.4.1 · bill PDFs dated by issue date and recognised from their text (pypdf), one `land` for a folder of bills (3606 tests) · energatron-5000 `P7.4.1: date and recognise bill PDFs from their text`; demq-elektric `P7.4.1: lock pypdf for the bill PDF text`
 - 2026-11-10 · P7.3.1 · P7 acceptance agent part: README cycle, live `watch`, schedule dry run, workspace instructions; two small tool fixes · energatron-5000 `P7.3.1: record P7 acceptance in the workspace (agent part)`; demq-elektric `P7.3.1: add the P7 commands to the workspace instructions and the check-in skill`, `land: 22 datasets`, two `run:` commits, `P7.3.1: record the P7 acceptance (agent part)`
 - 2026-11-10 · P7.2.5 · README runbooks with `test_readme`, CHANGELOG (3565 tests); self-review; P7.2 complete · energatron-5000 `P7.2.5: rewrite the README as the runbook and check its commands`

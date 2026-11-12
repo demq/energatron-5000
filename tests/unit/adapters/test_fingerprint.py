@@ -7,16 +7,18 @@ handed to the command through `wiring.code_fingerprint`, so a file edited while 
 
 import json
 import os
+import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 
 from energatron.adapters import wiring
-from energatron.adapters.pipeline.fingerprint import install_fields, stage_code
+from energatron.adapters.pipeline.fingerprint import commit_published, install_fields, stage_code
 from energatron.core.canonical import content_hash, sha256_hex, tree_hash
 from energatron.core.errors import InternalError
 from energatron.core.models.provenance import CodeFingerprint, StageCode
+from energatron.core.models.workspace import WorkspacePaths
 from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 from energatron.services.stages.registry import STAGES
 from tests.unit.adapters._cli import FakeVcsState, run_cli
@@ -345,3 +347,56 @@ def test_human_output_names_the_result(
     ran = run_cli(capsys, "fingerprint", "--workspace", str(workspace))
     assert ran.code == 0
     assert ran.out.startswith("Code fingerprint written")
+
+
+# --- commit_published, tool_unpublished (P7.4.2) ---------------------------------------------------------------------
+
+
+def _git(cwd: Path, *args: str) -> str:
+    env = {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.invalid",
+           "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.invalid"}  # fmt: skip
+    return subprocess.run(["git", "-C", str(cwd), *args], env=env, check=True, capture_output=True, text=True).stdout
+
+
+def test_commit_published_reads_the_remote_tracking_branches(tmp_path: Path) -> None:
+    origin, tool = tmp_path / "origin", tmp_path / "tool"
+    _git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+    _git(tmp_path, "init", "-q", "-b", "main", str(tool))
+    _git(tool, "commit", "-q", "--allow-empty", "-m", "one")
+    first = _git(tool, "rev-parse", "HEAD").strip()
+    assert commit_published(first, root=tool) is None  # no remote: can't tell
+    _git(tool, "remote", "add", "origin", str(origin))
+    _git(tool, "push", "-q", "origin", "main")
+    assert commit_published(first, root=tool) is True
+    _git(tool, "commit", "-q", "--allow-empty", "-m", "two")
+    second = _git(tool, "rev-parse", "HEAD").strip()
+    assert commit_published(second, root=tool) is False  # committed, not pushed
+    assert commit_published("0" * 40, root=tool) is None  # not in the checkout: git fails
+
+
+@pytest.mark.parametrize(
+    ("install", "commit", "published", "expected"),
+    [
+        ("editable", "a" * 40, False, True),
+        ("editable", "a" * 40, True, False),
+        ("editable", "a" * 40, None, None),
+        ("index", None, False, None),
+    ],
+)
+def test_tool_unpublished_from_the_recorded_fingerprint(
+    workspace: Path,
+    live: CodeFingerprint,
+    monkeypatch: pytest.MonkeyPatch,
+    install: str,
+    commit: str | None,
+    published: bool | None,
+    expected: bool | None,
+) -> None:
+    record(workspace, live.model_copy(update={"install": install, "tool_commit": commit, "tool_dirty": False}))
+    monkeypatch.setattr(wiring, "commit_published", lambda _commit: published)
+    assert wiring.tool_unpublished(WorkspacePaths(root=workspace)) is expected
+
+
+def test_tool_unpublished_without_a_recorded_fingerprint_is_unknown(workspace: Path) -> None:
+    (workspace / CODE_FINGERPRINT_PATH).unlink(missing_ok=True)
+    assert wiring.tool_unpublished(WorkspacePaths(root=workspace)) is None

@@ -26,7 +26,8 @@ def status(
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
     stale, tool_dirty = wiring.code_state(context.paths)
-    result = status_service.status(context, code_stale=stale, tool_dirty=tool_dirty)
+    unpublished = wiring.tool_unpublished(context.paths)
+    result = status_service.status(context, code_stale=stale, tool_dirty=tool_dirty, tool_unpublished=unpublished)
     return CommandOutput(COMMAND, result, text(result))
 
 

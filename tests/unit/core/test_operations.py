@@ -67,6 +67,7 @@ def test_every_reminder_in_order() -> None:
         refs_backed_up=False,
         commits_not_backed_up=4,
         last_drill=None,
+        tool_unpublished=True,
     )
     assert codes(loud) == [
         WarningCode.W_LANDING_NEW,
@@ -75,6 +76,7 @@ def test_every_reminder_in_order() -> None:
         WarningCode.W_RECHECK_DUE,
         WarningCode.W_BACKUP_PENDING,
         WarningCode.W_DRILL_DUE,
+        WarningCode.W_TOOL_UNPUBLISHED,
         WarningCode.W_LANDING_LANDED,
     ]
     behind = next(warning for warning in reminders(loud) if warning.code == WarningCode.W_RUN_BEHIND)
@@ -91,6 +93,7 @@ def test_every_reminder_in_order() -> None:
         ({"landing_new": 1}, WarningCode.W_LANDING_NEW),
         ({"landing_landed": 1}, WarningCode.W_LANDING_LANDED),
         ({"refs_backed_up": False}, WarningCode.W_BACKUP_PENDING),
+        ({"tool_unpublished": True}, WarningCode.W_TOOL_UNPUBLISHED),
     ],
 )
 def test_each_condition_alone_raises_its_reminder(change: dict[str, Any], code: WarningCode) -> None:
@@ -229,3 +232,8 @@ def test_a_schedule_is_checked_and_a_foreign_plist_reads_as_none() -> None:
         Schedule(0, 24, 0)
     assert read_schedule(b"not a plist") is None
     assert read_schedule(plistlib.dumps({"Label": "x"})) is None
+
+
+def test_an_unknown_or_pushed_tool_commit_raises_nothing() -> None:
+    assert codes(replace(QUIET, tool_unpublished=None)) == []
+    assert codes(replace(QUIET, tool_unpublished=False)) == []

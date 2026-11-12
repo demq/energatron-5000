@@ -89,6 +89,11 @@ Ages in days are whole local days between the two local dates.
 
 ### 3.3 Reminders (warnings)
 
+> 2026-11-12 (P7.4.2): a reminder `W_TOOL_UNPUBLISHED` follows `W_DRILL_DUE`: the tool commit in
+> `code_fingerprint.json` (an editable install's) is on no remote-tracking branch of the tool checkout, as of its last
+> fetch. The restore drill clones the tool from its remote and checks that commit out (D2 §12 step 4), so an unpushed
+> commit fails the drill; step 4 now says to push. `status` only; `watch` doesn't check it.
+
 A reminder is a `ResultWarning` whose code is one of these (new, except `W_BACKUP_PENDING`). `core/operations.py`
 `reminders(facts) -> list[ResultWarning]` computes them from a plain `Facts` value, in this order:
 

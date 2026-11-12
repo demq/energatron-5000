@@ -80,7 +80,9 @@ is losing those commits if the disk dies, so don't let it run for days.
 
 ## At P0 acceptance, then quarterly: restore drill
 
-Run `backup --drill`. The drill clones the tool and the newest bundle into a scratch folder, pulls every DVC
+First push the tool repo (`git -C energatron-5000 push`): the drill clones the tool from GitHub and checks out
+the commit the last run used, and step 4 fails if that commit was never pushed (`status` warns
+`W_TOOL_UNPUBLISHED`). Then run `backup --drill`. The drill clones the tool and the newest bundle into a scratch folder, pulls every DVC
 file from iCloud, and checks the clone matches the live workspace. Expect every line `PASS` or `SKIP`, then
 exit 0. Paste the summary into the agent session; it has counts only.
 

@@ -322,6 +322,7 @@ class WarningCode(StrEnum):
     W_OFFERS_STALE = "W_OFFERS_STALE"  # no offers fetched recently (P7 spec §3.1)
     W_RECHECK_DUE = "W_RECHECK_DUE"  # the recommendation's recheck date has come (P7 spec §3.3)
     W_DRILL_DUE = "W_DRILL_DUE"  # the quarterly restore drill is due (P7 spec §3.1)
+    W_TOOL_UNPUBLISHED = "W_TOOL_UNPUBLISHED"  # the last run's tool commit isn't pushed (P7 spec §3.3, P7.4.2)
 
 
 class ResultWarning(BaseModel):

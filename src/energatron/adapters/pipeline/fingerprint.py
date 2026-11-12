@@ -289,6 +289,20 @@ def _git_in(directory: Path) -> Git:
     return run
 
 
+def commit_published(commit: str, *, root: Path | None = None) -> bool | None:
+    """Whether a remote-tracking branch of the tool checkout holds `commit`, as of its last fetch (no network).
+
+    `None` when that can't be told: the checkout has no remote, or git fails (e.g. the commit isn't in it).
+    """
+    git = _git_in(root if root is not None else package_dir())
+    try:
+        if not git("remote").strip():
+            return None
+        return bool(git("branch", "-r", "--contains", commit).strip())
+    except SubprocessError:
+        return None
+
+
 def _direct_url() -> str | None:
     try:
         return importlib.metadata.distribution(DISTRIBUTION).read_text("direct_url.json")

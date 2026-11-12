@@ -228,6 +228,37 @@ def test_fails_at_step_8_after_a_commit_that_was_not_backed_up(drill: Drill) -> 
     assert summary["ok"] is False
 
 
+def record_tool_commit(drill: Drill, commit: str) -> None:
+    """Commit a `code_fingerprint.json` naming `commit` and back it up, as a run would (only the field step 4 reads)."""
+    drill.scratch.write(".energatron/code_fingerprint.json", json.dumps({"tool_commit": commit}) + "\n")
+    head = drill.scratch.commit_all("a run's fingerprint")
+    drill.scratch.vcs().backup()
+    for name in drill.scratch.bundles():  # the fixed clock names both bundles alike: keep only the new one
+        if not name.endswith(f"-{head[:7]}.bundle"):
+            (drill.scratch.bundle_dir / name).unlink()
+
+
+def test_step_4_checks_out_the_recorded_tool_commit(drill: Drill) -> None:
+    head = git(drill.tool, "rev-parse", "HEAD").strip()
+    record_tool_commit(drill, head)
+    code, out = drill.run("--json")
+    steps = {step["step"]: step for step in json.loads(out)["steps"]}
+    assert steps[4]["status"] == "PASS", out
+    assert head[:7] in json.dumps(steps[4])
+    assert code == 1  # later, `verify` rejects the minimal fingerprint: only step 4 is under test
+
+
+def test_step_4_says_to_push_when_the_recorded_commit_is_not_on_origin(drill: Drill) -> None:
+    """A run with a tool commit that was never pushed (P7.4.2): the drill says what to do."""
+    record_tool_commit(drill, "0123456" + "9" * 33)
+    code, out = drill.run("--json")
+    assert code == 1, out
+    steps = {step["step"]: step for step in json.loads(out)["steps"]}
+    assert steps[4]["status"] == "FAIL"
+    text = json.dumps(steps[4])
+    assert "0123456" in text and "push the tool repo" in text
+
+
 def test_step_9_runs_verify_when_a_p1_clone_has_lost_its_dvc_yaml(drill: Drill) -> None:
     """A clone with a raw zone but no `dvc.yaml` isn't a pre-P1 workspace: step 9 runs `verify`, which fails."""
     drill.scratch.write("data/raw/sapn_interval/_catalog.jsonl", "")

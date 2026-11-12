@@ -236,6 +236,15 @@ class Drill:
         if not isinstance(commit, str) or not COMMIT.fullmatch(commit):
             self.record(4, "FAIL", "code_fingerprint.json's tool_commit isn't a commit id")
             return
+        known = self.run(tool, "git", "cat-file", "-e", f"{commit}^{{commit}}")
+        if known.returncode != 0:
+            self.record(
+                4,
+                "FAIL",
+                f"the recorded tool commit {commit[:7]} isn't in the tool cloned from origin: "
+                "push the tool repo, then run the drill again",
+            )
+            return
         checked = self.run(tool, "git", "checkout", "-q", "--detach", commit)
         if checked.returncode != 0:
             self.record(4, "FAIL", f"the recorded tool commit can't be checked out (exit {checked.returncode})")

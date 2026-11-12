@@ -174,7 +174,13 @@ uv run energatron-5000/scripts/icloud_backup.py backup --drill
 
 `backup` pushes DVC data and writes a verified git bundle. Run it after commits (`status` says when one is pending).
 `backup --drill` also runs the **restore drill**: a scratch clone from the newest bundle and the DVC remote, checked
-end to end with `energatron verify`. Do it quarterly. A passed drill is recorded in `.energatron/drill_state.json`, and
+end to end with `energatron verify`. Do it quarterly. The drill rebuilds the tool by cloning it from GitHub at the
+commit your last run used, so **push the tool repo first** (`status` warns `W_TOOL_UNPUBLISHED` until you do):
+
+```bash
+git -C ~/WorkSpace/Electricity/energatron-5000 push
+```
+ A passed drill is recorded in `.energatron/drill_state.json`, and
 `status` warns `W_DRILL_DUE` after 91 days. To check the backup state from the workspace:
 
 ```bash
@@ -207,6 +213,7 @@ config), then run. `energatron status` shows whether the pipeline is in sync and
 | `W_RECHECK_DUE` | the recommendation's recheck date has come | `fetch-offers`, then `run` |
 | `W_BACKUP_PENDING` | commits not in a backup yet | `icloud_backup.py backup` |
 | `W_DRILL_DUE` | no restore drill in 91 days | `icloud_backup.py backup --drill` |
+| `W_TOOL_UNPUBLISHED` | the tool commit the last run used isn't on GitHub (as of the last fetch) | push the tool repo before a drill |
 | `W_LANDING_LANDED` | inbox files already landed | `landing clear` |
 
 Errors a cycle can meet:

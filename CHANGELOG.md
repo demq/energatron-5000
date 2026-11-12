@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `energatron status` warns `W_TOOL_UNPUBLISHED` when the last run's tool commit isn't pushed, and the restore drill
+  says to push the tool repo when that commit is missing from the clone; the README's drill section says so too.
 - Bill PDFs are dated by the issue date printed on them and recognised from their text (electricity bill, gas bill
   or SAPN summary), so `energatron land data/landing/` lands a folder of bills without `--source`. New dependency:
   pypdf.
