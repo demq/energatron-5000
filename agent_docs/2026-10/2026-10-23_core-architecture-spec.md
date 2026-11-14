@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec); rev 9 approved 2026-11-14 (with the P8 spec); rev 10 approved 2026-11-14 (with the P9 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec); rev 9 approved 2026-11-14 (with the P8 spec); rev 10 approved 2026-11-14 (with the P9 spec); rev 11 approved 2026-11-14 (with the P10 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -28,6 +28,9 @@
   2026-11-14 rev 10 (P9.1.1): the changes the P9 spec (`2026-11-14_p9-agent-interface-spec.md`) §10 lists: the P9 read
   services and commands, the `mcp` adapter and command (tools run the CLI as child processes; stdout is the protocol),
   its import contract, `gas_bill_record` v2 and the locks, edited in place
+  2026-11-14 rev 11 (P10.1.1): the changes the P10 spec (`2026-11-14_p10-local-web-ui-spec.md`) §10 lists: the shared
+  envelope and read paths, the `http` adapter and its two import contracts, `serve` (stdout and locks), the FastAPI and
+  uvicorn dependencies and the server-rendered UI under the languages rule, edited in place
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -183,6 +186,9 @@ src/energatron/
 │   ├── setup/  offers/frozen.py  (P8 spec §4, §5.3: set-up subprocesses, the demo's offers)    P8
 │   ├── mcp/                 protocol.py, tools.py, runner.py, server.py (P9 spec §5, §6); cli/commands/  P9
 │   │                        gains datasets.py, usage.py, compare.py, explain.py, mcp.py
+│   ├── envelope.py  reads.py  (the `cli_result` envelope; every read path, shared by cli and http)    P10
+│   ├── http/                app.py, security.py, api.py, pages.py, style.py, server.py (P10 spec §4-§7);    P10
+│   │                        cli/commands/ gains serve.py
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
 │   ├── storage/             jsonl_catalog.py, fs_blobs.py                                         P1
 │   ├── sources/             registry.py, plus one module per source type                          P1
@@ -215,10 +221,14 @@ modules this tree doesn't list (D2 §5.9, D3 §2).
 
 Rules inside `adapters`:
 - **Driven adapters** (`storage`, `sources`, `vcs`, `pipeline`, `offers`) are independent of each other.
-- **Driving adapters** (`cli` now; `mcp` and `http` later) call services. They reach driven adapters only
+- **Driving adapters** (`cli`, `mcp` from P9, `http` from P10) call services. They reach driven adapters only
   through `adapters/wiring.py`, which builds the `ServiceContext`.
 - `mcp` (P9) runs each tool as an `energatron … --json` child process, the CLI adapter, so it imports no services and
   no driven adapters (P9 spec §5.4); its contract below forbids both.
+- `http` (P10) calls services in process, through `adapters/reads.py` (the read paths the CLI also calls) and
+  `wiring`; it imports no driven adapter. Its page renderers (`http/pages.py`, `http/style.py`) only format the redacted
+  envelope documents: they import neither services, core, `wiring` nor `reads` (P10 spec §6.2). Contracts
+  `http-via-wiring` and `http-pages-format-only` below.
 - `adapters/workspace.py` may be imported by `wiring` and by driving adapters.
 
 Why services may touch files at all: stage outputs are working files that the runner manages. A hosted runner
@@ -310,6 +320,33 @@ forbidden_modules =
     energatron.adapters.pipeline
     energatron.adapters.offers
 allow_indirect_imports = True
+
+[importlinter:contract:http-via-wiring]
+name = HTTP reaches driven adapters only through wiring
+type = forbidden
+source_modules = energatron.adapters.http
+forbidden_modules =
+    energatron.adapters.storage
+    energatron.adapters.sources
+    energatron.adapters.vcs
+    energatron.adapters.pipeline
+    energatron.adapters.offers
+    energatron.adapters.notify
+    energatron.adapters.schedule
+    energatron.adapters.setup
+allow_indirect_imports = True
+
+[importlinter:contract:http-pages-format-only]
+name = HTTP pages only format envelope documents
+type = forbidden
+source_modules =
+    energatron.adapters.http.pages
+    energatron.adapters.http.style
+forbidden_modules =
+    energatron.services
+    energatron.core
+    energatron.adapters.wiring
+    energatron.adapters.reads
 ```
 
 Import rules can't catch `open()`, `Path.write_text()` or `datetime.now()` in core. An AST test covers those
@@ -825,6 +862,8 @@ Not found → `E_NOT_A_WORKSPACE`. Only `version`, `--help` and `init` (P8) work
 - **stdout** carries the result only: human text, or exactly one JSON document followed by a newline.
   - The one exception is `energatron mcp` (P9 spec §5.1): once it serves, stdout carries MCP JSON-RPC messages, one
     per line. An error before it serves is printed as for any command.
+  - The second is `energatron serve` (P10 spec §7): it prints its one result once it listens, then nothing more on
+    stdout while it serves.
 - **stderr** carries logs, progress, human-mode warnings and tracebacks.
 
 ### 8.5 JSON envelope (kind `cli_result`, version 1)
@@ -900,7 +939,7 @@ Commands that change the workspace take an exclusive, non-blocking lock on `.ene
 
 | Takes the lock | Never takes the lock |
 |---|---|
-| `land`, `fetch-offers`, `fingerprint` (it writes the file), `backup`, `run`, `decide`, `migrate`, `upgrade`, `demo`, `verify` (§11.4), `gas-bill write` (P9), and any later command that writes under `data/`, `.energatron/` or `private/` or commits | `stage`, `version`, read-only commands (`status`, `diagnose`, `fingerprint --check`, `offers diff`, `explain`, `compare`, `datasets`, `usage`, `gas-bill check`, `gas-bill text`), `mcp` (its tool calls lock as their commands do), `init` (no workspace yet), `stage --emit-dvc-yaml` |
+| `land`, `fetch-offers`, `fingerprint` (it writes the file), `backup`, `run`, `decide`, `migrate`, `upgrade`, `demo`, `verify` (§11.4), `gas-bill write` (P9), and any later command that writes under `data/`, `.energatron/` or `private/` or commits | `stage`, `version`, read-only commands (`status`, `diagnose`, `fingerprint --check`, `offers diff`, `explain`, `compare`, `datasets`, `usage`, `gas-bill check`, `gas-bill text`), `mcp` (its tool calls lock as their commands do), `serve` (read-only; P10), `init` (no workspace yet), `stage --emit-dvc-yaml` |
 
 - `energatron stage` never locks. `dvc repro` runs it as a child process, normally of `energatron run`, which
   already holds the lock; a child that tried to take it would fail with `E_LOCKED`. Its only writes under
@@ -1361,7 +1400,7 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
   - runtime data: `tzdata` (an explicit dependency from P2, so the zone rules are pinned in `uv.lock`)
   - services: + pyarrow, PyYAML (`stages/runner.py` reads `params.yaml`, so the parser is in every stage's
     `packages`)
-  - adapters: + typer, httpx, filelock, PyYAML
+  - adapters: + typer, httpx, filelock, PyYAML; `fastapi` and `uvicorn` (plain, no extras) for `serve` (P10)
   - duckdb is an optional extra (`energatron-5000[sql]`). Since duckdb 2.0, relations no longer have `fetch*()`
     methods; use `con.execute(sql).fetchone()` (verified 2026-10-23).
   - git and DVC are subprocesses, not dependencies.
@@ -1378,6 +1417,8 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
     - It calls only the HTTP API, which serialises the service result models (§4.8).
     - It holds no analysis, pricing or ID logic.
     - The Python package never needs Node at runtime.
+    - As built in P10 (P10 spec §6): the UI is server-rendered HTML from the Python `http` adapter, with no script and
+      no build step, so no other language is used yet; the four rules above apply to a script frontend if one comes.
 
 ---
 
@@ -1419,7 +1460,8 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
 - Recommendation payload, run manifest, decision schema → settled by the P6 spec (§7.3, §8.2, §9.2; rev 7)
 - `energatron migrate` CLI → settled by the P8 spec §7 (rev 9); `params.yaml` is rewritten earlier, by
   `pipeline sync` (§5)
-- MCP and HTTP adapters → P9 and P10 (they reuse the service result models and the error codes)
+- MCP and HTTP adapters → settled by the P9 and P10 specs (they reuse the service result models, the error codes and
+  the `cli_result` envelope)
 
 ---
 

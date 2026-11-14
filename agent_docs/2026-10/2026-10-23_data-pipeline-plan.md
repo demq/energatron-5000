@@ -92,6 +92,10 @@
   applied: the MCP tools as built, each running the CLI command as a child process; `--allow-documents` as the opt-in;
   `extracted_by` in `gas_bill_record` v2 and the catalog's `extra`; no agent-drafted offer rules in P9; the workspace
   skills ship in the template (§14.5, §14.7, §15).
+  2026-11-14 rev 19 — P10 local web UI spec (`2026-11-14_p10-local-web-ui-spec.md`) approved, and its §10 edits
+  applied: `energatron serve` is read-only and loopback-only with a per-launch token; FastAPI calls the shared read
+  paths in process; the pages are server-rendered with no script frontend; the JSON API answers the CLI's envelope
+  (§12, §14.6, §14.7, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -961,6 +965,9 @@ uv run energatron decide REC-YYYYMMDD-xxxxxxxx --elec <snapshot_id> --gas <snaps
 # scripts/restore_drill.py clones the tool and the newest bundle into a scratch folder, recreates the DVC
 # remote, runs dvc pull, checks dvc status and dvc repro, and runs energatron verify once it exists.
 uv run energatron-5000/scripts/icloud_backup.py drill
+
+# Look at the workspace in a browser (P10): read-only, on 127.0.0.1, until Ctrl-C
+uv run energatron serve --open
 ```
 
 ---
@@ -1112,7 +1119,10 @@ instructions and skills, so there is no second copy to maintain.
 1. **Local web UI first** (`energatron serve` on localhost): FastAPI over the service layer plus a simple frontend,
    reading the same workspace. The frontend may use a web language (e.g. TypeScript), in its own directory; it
    only calls the API and holds no analysis logic (§4 language rule). Data never leaves the machine, so there's no custody problem, and nothing is
-   rebuilt.
+   rebuilt. As built in P10 (rev 19, the P10 spec): read-only, listening on loopback only, with a per-launch token
+   and Host and Origin checks; FastAPI calls the same read paths as the CLI, in process; the JSON API answers the
+   CLI's own envelope; the pages are server-rendered HTML with no script, so no Node toolchain is needed (a script
+   frontend, if one is ever needed, keeps the rule above).
 2. **Hosted multi-user service** only if it's clearly worth it. It needs:
    - auth and per-tenant isolation (tenant prefix on every catalog record and blob path)
    - Postgres and S3 behind the existing ports, and a job queue running the same stage functions
@@ -1128,7 +1138,7 @@ instructions and skills, so there is no second copy to maintain.
 
 ### 14.7 Deliberately not built yet
 
-HTTP API, frontend, plugin entry points (a simple registry dict is enough), DB-backed catalog, job
+Hosted HTTP API and write paths in the browser (the local read-only API and pages are built in P10), plugin entry points (a simple registry dict is enough), DB-backed catalog, job
 queue, auth, docs site, package publishing, and region profiles beyond SA. Each has a seam above, so it can be
 added without refactoring the core.
 
@@ -1148,10 +1158,10 @@ added without refactoring the core.
 | **P7 Operations** | README runbooks; optional weekly launchd `fetch-offers`, with a notification when a cheaper plan appears; quarterly restore-drill reminder (the drill ends with `energatron verify`) | One full cycle (new SAPN download → recommendation) completed using only the README (made concrete as the P7 spec §13) |
 | **P8 Open-source readiness** | Workspace template + `energatron init` / `--demo` / `upgrade` / `migrate`; region profiles; `diagnose --redacted`; README quickstart, CONTRIBUTING, release workflow | A new user on a clean Mac gets from README to a demo report in under 15 minutes; the demo end-to-end test runs in CI (made concrete as the P8 spec §13) |
 | **P9 Agent interface** *(later)* | Local MCP server over the services; workspace skills/commands; agent-assisted bill transcription with validators and `extracted_by` | An agent completes a "monthly check-in" using only the tools, without reading `private/` or raw intervals (made concrete as the P9 spec §11) |
-| **P10 Local web UI** *(later)* | `energatron serve`: FastAPI + frontend over the services | All CLI read paths are available in the browser; no new logic outside adapters |
+| **P10 Local web UI** *(later)* | `energatron serve`: FastAPI + frontend over the services | All CLI read paths are available in the browser; no new logic outside adapters (made concrete as the P10 spec §11) |
 | **P11 Hosted service** *(only if justified)* | Postgres/S3 implementations of the ports, job queue, auth, tenancy, privacy compliance | Separate design doc and security review before any build |
 
-P9 started 2026-11-14; P10–P11 are not scheduled. They are listed so that P0–P7 leave the right seams.
+P9 and P10 started 2026-11-14; P11 is not scheduled. They are listed so that P0–P7 leave the right seams.
 
 ---
 

@@ -98,30 +98,31 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P9.3.1
-- Last commit: energatron-5000 `P9.3.1: record P9 acceptance (agent part)`; demq-elektric `P9.3.1: register the energatron MCP server and use the tool-aware skills`
+- Last done: P10.1.1
+- Last commit: energatron-5000 `P10.1.1: approve the P10 local web UI spec and apply plan rev 19 and D1 rev 11`
 - Checks: pytest -q 3858 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P9.3.2 (owner: a real agent check-in, push, backup)
+- Next: P10.2.1 (shared read paths and envelope); P9.3.2 (owner) is still open
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P8 are done and archived; the tool repo is public. P9 (agent interface) runs under the owner's `/phase 9`
-  (2026-11-14): spec approved, P9.2 built, P9.3.1 (agent acceptance) passed; only P9.3.2, the owner's, is left, P9.3.1 is the agent's acceptance,
-  P9.3.2 the owner's.
+- P0-P8 are done and archived; the tool repo is public. P9 is done but for P9.3.2, the owner's (a real agent
+  check-in, push, backup). P10 (local web UI) runs under the owner's `/phase 10` (2026-11-14): spec approved; P10.2.1-
+  P10.2.4 build it, P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
 
 **Read first** (for the next session)
-- The P9 spec (`agent_docs/2026-11/2026-11-14_p9-agent-interface-spec.md`), the section the sub-task names; D1 rev 10
-  §3 (the `mcp-via-cli` contract) and §8.
+- The P10 spec (`agent_docs/2026-11/2026-11-14_p10-local-web-ui-spec.md`), the sections the sub-task names; D1 rev 11
+  §3 (the `http` contracts), §8.4, §8.5, §8.7.
 
 **Facts**
-- Read commands (`datasets`, `usage`, `compare`, `explain`) are lock-free and return no identifier, file name, note or
-  raw row; `status.py`'s `read_manifests`/`read_recommendation` read the run manifests and the recommendation.
-- MCP tools run `[sys.executable, "-m", "energatron", …, "--json", "--workspace", root]` as children; the server holds no
-  state and imports no services (contract `mcp-via-cli`).
-- `gas_bill_record` v2 changes `core/models/gas.py`: the gas stages rerun once. No new codes or warnings in P9.
-- Renaming a command, option or JSON field needs a deprecation (D1 §8.1); a template change bumps `TEMPLATE_VERSION`.
+- Every read command is thin (open the workspace, maybe `wiring.code_state`, one service); P10.2.1 moves those bodies
+  into `adapters/reads.py` so the CLI and `http` share them, and `CliResult` into `adapters/envelope.py`, output unchanged.
+- `denylist --check` takes the lock, so it isn't a read path; `backup --status`, `fingerprint --check`, `pipeline sync
+  --check`, `schedule status`, `landing list` and `version` are.
+- The reports are `data/reports/{usage,recommendations}/index.html`, self-contained, no `<script>`.
+- No new codes or warnings in P10; one kind, `serve_result` v1. FastAPI 0.162, uvicorn 0.54 (plain), httpx (dev).
+- Renaming a command, option or JSON field needs a deprecation (D1 §8.1).
 
 **Open questions for the owner**
 - Optional: cut `v0.1.0`; decide whether to switch (`record-decision`); set Keep Downloaded on the iCloud Backups folder.
@@ -604,8 +605,73 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
   - Done when: the owner reports a monthly check-in done through the `energatron` tools in Claude Code, the push with
     CI green, and the backup.
 
+### P10: Local web UI 🔄
+
+From plan §15 (P10) and §14.6: `energatron serve`, a local, read-only web UI and JSON API over the services, so every
+CLI read path is available in the browser with no new logic outside the adapters. Started by the owner's `/phase 10` of
+2026-11-14. D1 binds all code. The owner keeps looking through the UI in a real browser, pushing and backups.
+
+#### P10.1 P10 spec ✅
+- ✅ **P10.1.1** Draft the P10 spec.
+  - Refs: plan §4, §14.2, §14.6, §14.7, §15 (P10); D1 §2, §3, §7, §8, §12, §14; the P7 spec §4 (`status`), the P8
+    spec §8 (`diagnose`), the P9 spec §3, §5 (read commands, the MCP adapter).
+  - Files: `agent_docs/2026-11/2026-11-14_p10-local-web-ui-spec.md`, the plan and D1 (revision lines and edits),
+    `TASKS.md`.
+  - Done when: the spec is approved and the build and acceptance sub-tasks are added from it.
+  - Handover: P10 spec approved on the owner's `/phase 10` (self-review: cookie name per port, access checks as §5.4, pages render
+    from redacted documents only); plan rev 19, D1 rev 11. Watch: no script frontend, so no Node; `serve` is read-only.
+
+#### P10.2 Build ⬜
+- ⬜ **P10.2.1** Shared read paths and envelope.
+  - `adapters/envelope.py` (`CliResult`, `CliError` moved from `cli/output.py`, `success`, `failure`, `redacted`);
+    `adapters/reads.py` (`open_context`, `ReadPath`, `READS`: each read path's args model and body, moved from its
+    command); the CLI read commands call it with no change in output; `test_reads` classifies every CLI command.
+  - Refs: the P10 spec §3, §8 (`test_reads`); D1 §3, §8.5, §8.7.
+  - Files: `src/energatron/adapters/{envelope,reads}.py`, `src/energatron/adapters/cli/{output,common}.py`,
+    `src/energatron/adapters/cli/commands/` (the read commands), `tests/unit/adapters/test_reads.py`, `CHANGELOG.md`.
+  - Done when: the standard checks pass with the existing CLI tests unchanged; `test_reads` passes.
+- ⬜ **P10.2.2** The JSON API.
+  - `fastapi`, `uvicorn` (runtime) and `httpx` (dev) through `uv add`; `adapters/http/{app,security,api}.py`: one route
+    per read path answering the CLI's envelope, status codes, the gas bill check `POST`, the opt-in bill text, access
+    checks and headers; the `http-via-wiring` contract.
+  - Refs: the P10 spec §4, §5, §8 (`test_http_api`, `test_http_security`), §10 (D1 §3); D1 §7, §8.
+  - Files: `pyproject.toml`, `uv.lock`, `.importlinter`, `src/energatron/adapters/http/`,
+    `tests/unit/adapters/http/`, `CHANGELOG.md`.
+  - Done when: the standard checks pass; every API body equals the CLI's `--json` envelope for the same arguments.
+- ⬜ **P10.2.3** The pages.
+  - `adapters/http/{pages,style}.py` and the page routes (§6.1), the two reports, the gas bill check form; the
+    `http-pages-format-only` contract.
+  - Refs: the P10 spec §6, §8 (`test_http_pages`), §10 (D1 §3).
+  - Files: `.importlinter`, `src/energatron/adapters/http/`, `tests/unit/adapters/http/`, `CHANGELOG.md`.
+  - Done when: the standard checks pass; every page renders on the read workspace and an empty one, and every link
+    answers.
+- ⬜ **P10.2.4** `energatron serve`.
+  - `adapters/http/server.py` (bound socket, uvicorn, signals), `cli/commands/serve.py`, `serve_result` v1 (golden
+    schema), README "Web UI" (checked by `test_readme`), CHANGELOG.
+  - Refs: the P10 spec §7, §8 (`test_serve_cli`, `test_serve`), §9; D1 §8.4, §8.8.
+  - Files: `src/energatron/adapters/http/server.py`, `src/energatron/adapters/cli/{app.py,commands/serve.py}`,
+    `tests/unit/adapters/` (serve CLI), `tests/integration/test_serve.py`, `tests/fixtures/schemas/`, `README.md`,
+    `tests/` (readme), `CHANGELOG.md`.
+  - Done when: the standard checks pass; a real `energatron serve --port 0` child serves a page with its token and
+    stops with exit 0 on SIGINT.
+
+#### P10.3 Acceptance ⬜
+- ⬜ **P10.3.1** P10 acceptance (agent part).
+  - The P10 spec §11 checks 1-3: every page and API route in a fresh demo workspace (parity with the CLI, denylist,
+    security spot checks, workspace unchanged); the same fetches in the owner's workspace, read-only; the README lines.
+  - Refs: the P10 spec §11; plan §15 (P10).
+  - Files: `TASKS.md`.
+  - Done when: checks 1-3 pass; `TASKS.md` gets counts and pass/fail only.
+- ⬜ **P10.3.2** Owner: the UI in a browser, push.
+  - Why: judging the UI in a real browser and pushing are the owner's.
+  - Refs: the P10 spec §11 checks 4-5.
+  - Files: none.
+  - Done when: the owner reports having looked through every page and both reports (with any findings), and the push
+    with CI green.
+
 ## Log (newest first)
 
+- 2026-11-14 · P10.1.1 · P10 local web UI spec drafted and approved on the owner's `/phase 10` (self-review); plan rev 19, D1 rev 11; P10.2-P10.3 added from its §2 · energatron-5000 `P10.1.1: approve the P10 local web UI spec and apply plan rev 19 and D1 rev 11`
 - 2026-11-14 · P9.3.1 · P9 acceptance (agent part): scripted MCP check-in in a fresh demo workspace (11 tool calls, `fetch_offers` dry run, no identifier, raw file name, interval key or `private/` path), 6 read tools in the real workspace (denylist scan 0, workspace untouched), workspace gains `.mcp.json` and tool-aware skills, `upgrade --dry-run` from v1 lists 9 `added` · energatron-5000 `P9.3.1: record P9 acceptance (agent part)`; demq-elektric `P9.3.1: register the energatron MCP server and use the tool-aware skills`
 - 2026-11-14 · P9.2.4 · template v2: four workspace skills, `.agents/skills` links, `.mcp.json`; `upgrade` adds introduced paths; guard allows `.mcp.json`; README "Agents"; scripted MCP check-in test (3858 tests); self-review; P9.2 ticked · energatron-5000 `P9.2.4: add the workspace skills and .mcp.json to the template (v2) and the README's agent guide`
 - 2026-11-14 · P9.2.3 · `energatron mcp`: stdio MCP server, 15 tools each running the CLI command as a child, `--allow-documents`, `mcp-via-cli` import contract (3850 tests); self-review · energatron-5000 `P9.2.3: add energatron mcp, a stdio MCP server whose tools run the CLI`
