@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `energatron mcp` (P9): a local MCP server on stdio for AI agents (Claude Code, Codex, any MCP client). Its tools
+  (`status`, `list_datasets`, `list_inbox`, `usage_summary`, `compare_offers`, `explain_recommendation`,
+  `offers_diff`, `land_file`, `fetch_offers`, `run_pipeline`, `record_decision` and the gas bill record tools) each
+  run the matching `energatron … --json` command and return its envelope. `--allow-documents` adds
+  `read_gas_bill_text`. No tool backs up, clears the inbox, schedules, upgrades or rewrites config.
 - Gas bill transcription with validators (P9): `gas_bill_record` v2 says who extracted it (`extracted_by: manual` or
   `agent:<model id>`; v1 records are upgraded when read, and the catalog carries it in `extra.extracted_by`);
   `energatron gas-bill check` and `gas-bill write` recompute a record from its own reads and lines before it is

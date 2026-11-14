@@ -70,3 +70,17 @@ forbidden_modules =
     energatron.adapters.schedule
     energatron.adapters.setup
 allow_indirect_imports = True
+
+[importlinter:contract:mcp-via-cli]
+name = MCP runs the CLI and imports no services or driven adapters
+type = forbidden
+source_modules = energatron.adapters.mcp
+forbidden_modules =
+    energatron.services
+    energatron.adapters.wiring
+    energatron.adapters.storage
+    energatron.adapters.sources
+    energatron.adapters.vcs
+    energatron.adapters.pipeline
+    energatron.adapters.offers
+allow_indirect_imports = True

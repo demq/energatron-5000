@@ -30,6 +30,7 @@ from energatron.adapters.cli.commands import (
     init,
     land,
     landing,
+    mcp,
     migrate,
     offers,
     pipeline,
@@ -90,6 +91,7 @@ app.command("datasets")(datasets.datasets)
 app.command("usage")(usage.usage)
 app.command("compare")(compare.compare)
 app.command("explain")(explain.explain)
+app.command("mcp")(mcp.mcp)
 app.command("watch")(watch.watch)
 app.add_typer(schedule.app, name="schedule")
 

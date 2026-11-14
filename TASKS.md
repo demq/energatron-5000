@@ -98,17 +98,17 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P9.2.2
-- Last commit: energatron-5000 `P9.2.2: add gas bill records v2 with extracted_by and gas-bill check, write and text`
-- Checks: pytest -q 3774 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P9.2.3
+- Last commit: energatron-5000 `P9.2.3: add energatron mcp, a stdio MCP server whose tools run the CLI`
+- Checks: pytest -q 3850 passed; ruff, pyright, lint-imports (6 contracts) clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P9.2.3 (the MCP server)
+- Next: P9.2.4 (workspace skills, .mcp.json, template v2)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 (agent interface) runs under the owner's `/phase 9`
-  (2026-11-14): spec approved, P9.2.1 (read commands) and P9.2.2 (gas bill tools) done; P9.2.3-P9.2.4 build, P9.3.1 is the agent's acceptance,
+  (2026-11-14): spec approved, P9.2.1-P9.2.3 (read commands, gas bill tools, MCP server) done; P9.2.4 builds, P9.3.1 is the agent's acceptance,
   P9.3.2 the owner's.
 
 **Read first** (for the next session)
@@ -561,7 +561,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
     record lands; landed v1 records still read.
   - Handover: `gas_bill_record` v2 (`extracted_by`, v1 migration), parser v2 (`extra.extracted_by`), `gas-bill check|write|text`,
     `new --extracted-by` (3774 tests). Decision: a failing check is `E_CHECK_FAILED` exit 7 with `details.failed`, `data` null (spec fixed). Watch: gas stages rerun once.
-- ⬜ **P9.2.3** The MCP server: `energatron mcp`.
+- ✅ **P9.2.3** The MCP server: `energatron mcp`.
   - `adapters/mcp/{protocol,tools,runner,server}.py`, the `mcp` command with `--allow-documents`, the `mcp-via-cli`
     import contract; tools per §6 running the CLI as child processes; fd 1 moved to stderr while serving.
   - Refs: the P9 spec §5, §6, §8 (`test_mcp_protocol`, `test_mcp_tools`, `test_mcp_server`), §10 (D1 §3, §8.4);
@@ -570,6 +570,8 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
     `tests/unit/adapters/mcp/`, `tests/integration/test_mcp_server.py`, `CHANGELOG.md`.
   - Done when: the standard checks pass; a real `energatron mcp` child answers `initialize`, `tools/list` and a tool
     call over pipes.
+  - Handover: `adapters/mcp/` (protocol, 15 tools, runner, server with fd 1 moved to stderr), `energatron mcp [--allow-documents]`,
+    `mcp-via-cli` contract (3850 tests). Decision: `record_decision` dry-runs by default; outside a workspace exit 2. Watch: tools need the CLI's options as they are.
 - ⬜ **P9.2.4** Workspace skills, `.mcp.json` and template v2.
   - The four skills (§7.1), their `.agents/skills` links and `.mcp.json` in the template (`TEMPLATE_VERSION` 2);
     `upgrade` adds missing links and seed files; the guard (and its template copy) allows `.mcp.json`; the template
@@ -600,6 +602,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
 
 ## Log (newest first)
 
+- 2026-11-14 · P9.2.3 · `energatron mcp`: stdio MCP server, 15 tools each running the CLI command as a child, `--allow-documents`, `mcp-via-cli` import contract (3850 tests); self-review · energatron-5000 `P9.2.3: add energatron mcp, a stdio MCP server whose tools run the CLI`
 - 2026-11-14 · P9.2.2 · `gas_bill_record` v2 with `extracted_by` (v1 upgraded on read, catalog `extra.extracted_by`), `gas-bill check`, `write`, `text`, `new --extracted-by` (3774 tests); self-review · energatron-5000 `P9.2.2: add gas bill records v2 with extracted_by and gas-bill check, write and text`
 - 2026-11-14 · P9.2.1 · `energatron datasets`, `usage`, `compare`, `explain` (read-only; four result kinds; no file names, notes or raw rows) (3732 tests); self-review · energatron-5000 `P9.2.1: add energatron datasets, usage, compare and explain`
 - 2026-11-14 · P9.1.1 · P9 agent interface spec drafted and approved on the owner's `/phase 9` (self-review); plan rev 18, D1 rev 10, D2 rev 3; P9.2-P9.3 added from its §2; the owner's `/phase` skill committed with it · energatron-5000 `P9.1.1: approve the P9 agent interface spec and apply plan rev 18, D1 rev 10 and D2 rev 3`

@@ -203,7 +203,8 @@ The demo's generated records become v2 with `extracted_by: manual` (they are mad
 ### 5.1 Command
 
 `energatron mcp [--allow-documents] [--workspace PATH] [-v] [--debug] [--json]`. It finds the workspace at start
-(D1 §8.3); outside one → `E_NOT_A_WORKSPACE`, printed as every command prints errors, and exit 3. Once it serves,
+(D1 §8.3); outside one → `E_NOT_A_WORKSPACE`, printed as every command prints errors, and exit 2 (its usage
+category; the spec said 3 until P9.2.3 found the code). Once it serves,
 stdout carries only the protocol (§5.2): it is the one command whose stdout isn't a single envelope (D1 §8.4).
 `--json` is accepted and changes nothing once serving. Logs go to stderr (D1 §8.9). It takes no lock; each tool call
 takes what its command takes. It reads no private config itself. EOF on stdin ends it with exit 0.
@@ -290,7 +291,8 @@ model, the command line it builds, annotations (`readOnlyHint`, `destructiveHint
   `data/landing/`; anything else → `E_USAGE` (`field: "path"`) before any command runs. The tool can't land an
   arbitrary file from the machine.
 - `record_decision`'s description says to call it only when the owner says they have switched or will, naming the
-  plans, and to dry-run first.
+  plans, and to dry-run first. Its `dry_run` defaults to true (built so in P9.2.3): a real decision needs `dry_run: false`
+  on purpose.
 - No tool runs `backup`, `landing clear`, `schedule`, `init`, `upgrade`, `migrate`, `denylist`, `stage` or `verify`:
   those stay with the owner or the command line.
 
