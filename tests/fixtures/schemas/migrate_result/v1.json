@@ -1,0 +1,1 @@
+{"kind": "migrate_result", "schema_version": 1, "files": [{"path": ".energatron/workspace.toml", "kind": "workspace_config", "from_version": 1, "to_version": 2}], "commit": null, "dry_run": true}

@@ -80,6 +80,7 @@ EXPECTED_WARNINGS = frozenset(
         "W_OFFERS_STALE",
         "W_RECHECK_DUE",
         "W_DRILL_DUE",
+        "W_TEMPLATE_MODIFIED",
         "W_TOOL_UNPUBLISHED",
     }
 )

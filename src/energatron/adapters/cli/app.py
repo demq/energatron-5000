@@ -26,12 +26,14 @@ from energatron.adapters.cli.commands import (
     init,
     land,
     landing,
+    migrate,
     offers,
     pipeline,
     run,
     schedule,
     stage,
     status,
+    upgrade,
     verify,
     version,
     watch,
@@ -62,6 +64,8 @@ app = typer.Typer(
 app.command("version")(version.version)
 app.command("init")(init.init)
 app.command("demo")(demo.demo)
+app.command("upgrade")(upgrade.upgrade)
+app.command("migrate")(migrate.migrate)
 app.command("denylist")(denylist.denylist)
 app.command("backup")(backup.backup)
 app.command("fingerprint")(fingerprint.fingerprint)

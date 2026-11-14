@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P8.2.2
-- Last commit: energatron-5000 `P8.2.2: add energatron demo and init --demo`
-- Checks: pytest -q 3661 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P8.2.3
+- Last commit: energatron-5000 `P8.2.3: add energatron upgrade and energatron migrate`
+- Checks: pytest -q 3681 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P8.2.3 (`energatron upgrade` and `energatron migrate`)
+- Next: P8.2.4 (`energatron diagnose` and the region-profile tests)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -111,7 +111,7 @@ Then clear the context and type `/next`.
 - The tool repo's `main` matches origin. The workspace is backed up; `status` shows no reminders.
 - No weekly schedule: the owner removed the launchd agent (2026-11-14) and doesn't want it.
 - P8 (open-source readiness): spec approved (agent, on the owner's instruction); P8.2.1 (template + `init`) and
-  P8.2.2 (`demo`, `init --demo`) done; P8.2.3 (`upgrade`, `migrate`) is next.
+  P8.2.2 (`demo`, `init --demo`) and P8.2.3 (`upgrade`, `migrate`) done; P8.2.4 (`diagnose`) is next.
   P9-P11 are not scheduled.
 
 **Read first** (for the next session)
@@ -573,7 +573,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
   - Done when: the standard checks pass; `test_demo` reaches a recommendation, both reports and a passing `verify`.
   - Handover: `services/demo.py` (14 months NEM12, usage export on NEM time, 12 gas bills, 5 frozen plans), `FrozenProvider`, `demo`,
     `init --demo` (in-process with `--no-sync`); 3661 tests. Decision: no reference-window change needed. Watch: `test_demo` takes ~33 s.
-- ⬜ **P8.2.3** `energatron upgrade` and `energatron migrate`.
+- ✅ **P8.2.3** `energatron upgrade` and `energatron migrate`.
   - `services/upgrade.py`, `services/migrate.py`, `core/toml_text.py`, `upgrade_result` and `migrate_result` v1,
     `W_TEMPLATE_MODIFIED`, the commands.
   - Refs: the P8 spec §6, §7, §11; D1 §5.
@@ -581,6 +581,8 @@ GitHub repo public, pushing and publishing a release stay the owner's.
     `src/energatron/core/models/`, `src/energatron/adapters/cli/`, `tests/unit/core/test_toml_text.py`,
     `tests/unit/services/test_{upgrade,migrate}.py`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass.
+  - Handover: `services/upgrade.py` (hash-tracked managed files, `--force`), `services/migrate.py` + `core/toml_text.py`, both commands,
+    `W_TEMPLATE_MODIFIED`; 3681 tests. Decision: their tests are integration tests (real git). Watch: every stage reruns once (errors.py).
 - ⬜ **P8.2.4** `energatron diagnose` and the region-profile tests.
   - `services/diagnose.py`, `diagnose_result` v1, the command (`--redacted` accepted); `test_region_profiles`.
   - Refs: the P8 spec §8, §9, §11.
@@ -611,6 +613,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
 
 ## Log (newest first)
 
+- 2026-11-14 · P8.2.3 · `energatron upgrade` (managed files by recorded hash, `--force`), `energatron migrate` (TOML/YAML config through the migration chain, private config then denylist), `core/toml_text.py`, `W_TEMPLATE_MODIFIED`, two result kinds (3681 tests); self-review · energatron-5000 `P8.2.3: add energatron upgrade and energatron migrate`
 - 2026-11-14 · P8.2.2 · demo generators and build, `FrozenProvider`, `demo_result` v1, `energatron demo` and `init --demo`, `test_demo` end to end with `verify` (3661 tests); self-review (only the demo's own files removed, commit count) · energatron-5000 `P8.2.2: add energatron demo and init --demo`
 - 2026-11-14 · P8.2.1 · workspace template, `template_state`/`init_result` v1, `WorkspaceSetup` port and adapter, `energatron init` (real init in 21 s), guard allows `.energatron/template.json` (3655 tests); self-review · energatron-5000 `P8.2.1: add the workspace template and energatron init`
 - 2026-11-14 · P8.1.1 · P8 open-source readiness spec drafted and approved on the owner's instruction (self-review); plan rev 17, D1 rev 9; P8.2-P8.3 added from its §2 · energatron-5000 `P8.1.1: approve the P8 open-source readiness spec and apply plan rev 17 and D1 rev 9`
