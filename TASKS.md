@@ -97,54 +97,51 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P8.2.5
-- Last commit: energatron-5000 `P8.2.5: add the README quickstart, CONTRIBUTING, SECURITY, the CI demo job and the release workflow`
+- Last done: P8.3.1
+- Last commit: energatron-5000 `P8.3.1: record P8 acceptance (agent part)`
 - Checks: pytest -q 3689 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P8.3.1 (P8 acceptance, agent part)
+- Next: P8.3.2 (owner: push, CI green, make the repo public, quickstart on a clean Mac, optional first release)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P7 are done and archived. The owner ran the full cycle: landed a new SAPN download and the 11 electricity
-  invoices, pushed the tool, ran (`REC-20261110-982097a0`, switch, robust) and passed the restore drill (recorded).
-- The tool repo's `main` matches origin. The workspace is backed up; `status` shows no reminders.
-- No weekly schedule: the owner removed the launchd agent (2026-11-14) and doesn't want it.
-- P8 (open-source readiness): spec approved (agent, on the owner's instruction); P8.2.1 (template + `init`) and
-  P8.2.2 (`demo`, `init --demo`) and P8.2.3 (`upgrade`, `migrate`), P8.2.4 (`diagnose`) and P8.2.5 (docs, CI demo job,
-  release workflow) done: P8.2 is complete. P8.3.1 (acceptance, agent part) is next; P8.3.2 is the owner's.
-  P9-P11 are not scheduled.
+- P8 (open-source readiness) is built and its agent acceptance passed (P8.3.1). Only P8.3.2, the owner's, is left:
+  push, see CI's `check` and new `demo` (macOS) jobs pass, make the GitHub repo public, follow the README quickstart on
+  a clean Mac (or a new macOS user) within 15 minutes, and optionally tag the first release.
+- The tool repo is ahead of origin by the P8 commits; nothing is pushed. The workspace was not changed by P8.
+- P9-P11 are not scheduled.
 
 **Read first** (for the next session)
-- The P8 spec (`agent_docs/2026-11/2026-11-14_p8-open-source-readiness-spec.md`), the section the sub-task names; D2 §6, §10, §11 for the workspace the template copies.
+- The P8 spec (`agent_docs/2026-11/2026-11-14_p8-open-source-readiness-spec.md`) §13 for P8.3.2; `CONTRIBUTING.md` for
+  how a release is cut.
 
 **Facts**
-- `init` writes the template (`src/energatron/templates/workspace/*.tmpl`; `core/workspace_template.py` lists them),
-  runs git/uv/DVC/pre-commit through `adapters/setup/subprocesses.py`, then the denylist, `pipeline sync` and one commit.
-  `--no-sync` (tests) uses the running venv's DVC. `build_context(paths, dvc=…)` picks the DVC executable.
-- `energatron demo` (services/demo.py) refuses any workspace whose NMI isn't `DEMO_NMI11`; `init --demo` runs it via
-  `uv run --frozen energatron demo --json` in the new venv. Tests fake a clean tool (`wiring.code_fingerprint`).
-- The template's hook scripts are byte copies of `scripts/` (`test_template_scripts`): copy both when a script changes.
-- `status` is the starting point of every check-in; `watch` is the manual weekly check (no schedule installed).
-- The drill clones the tool from origin and checks out the last run's tool commit: push before a drill
-  (`W_TOOL_UNPUBLISHED` says so).
-- Bills land by their text (pypdf): issue date and kind; `--source` still overrides.
-- `schedule`, `landing clear`, push, backups and the drill are owner-run; agents use `backup --status` only.
+- New commands: `init [--demo] [--remote] [--tool-source] [--no-sync]`, `demo`, `upgrade [--force]`, the config
+  rewrite command (P8 spec §7), `diagnose [--redacted]`. The template is `src/energatron/templates/workspace/*.tmpl`
+  (`core/workspace_template.py` lists them; seed vs managed); its hook scripts are byte copies of `scripts/`
+  (`test_template_scripts`).
+- `init` pins the tool it ran from (git URL + commit, or an editable folder). The demo workspace's NMI is `DEMO_NMI11`;
+  `demo` refuses any other workspace. Tests fake a clean tool through `wiring.code_fingerprint`.
+- The quickstart URL `git+https://github.com/demq/energatron-5000` works only once the repo is public.
+- `status`, `watch` and `schedule` are unchanged; `schedule`, `landing clear`, push, backups and the drill stay owner-run.
+- The P8 tool commits touched `core/errors.py` (a warning code): the next `run` in the real workspace reruns all twenty
+  stages (~4.5 minutes, same outputs). `diagnose` there shows 20 stale stages until then.
 
 **Open questions for the owner**
+- P8.3.2's steps, above. Before making the repo public, check you're happy with the GitHub handle in the README, and run
+  the history audit (`uv run python scripts/privacy_guard.py --mode tool --history`).
+- In the real workspace, run the config-rewrite dry run of P8 spec §7 (`energatron` + its `--dry-run`, as the README's
+  "After a tool update" shows); a local permission hook blocked the agent's run of it. It should report nothing.
 - Decide whether to switch (the recommendation says switch, robust); `record-decision` records it.
 - Set Keep Downloaded on the iCloud Backups folder (the last backup warned `W_BACKUP_DATALESS`).
-- Optional: purge the pre-rewrite commits locally (`reflog expire --expire=now --all`, `gc --prune=now`).
-- Possible follow-up: use the NMI/MIRN in a bill's text for the premises check (`W_PREMISES_UNCHECKED` on bills).
-- Earlier: the gas account number in `private/config.toml`; unmet eligibility types; the double-billed month; the fee
-  GST source; the usage report browser look; `demand_minutes` in `UsageSummary`.
+- Possible follow-ups: use the NMI/MIRN in a bill's text for the premises check; demo `current_plans` so its
+  recommendation shows `switch`/`stay` rather than `no_current_plan`.
 
 **Watch out**
 - Never put a number or date read from a real bill into a test, docstring or doc, even as an example.
-- If a retailer's layout drops the "Issue date" label and the PDF has no creation date, its bills fail `no_date`.
-- A full `run` after a tool change in a stage closure reruns all twenty stages (~4.5 minutes); `watch` takes as long.
-- `energatron denylist` always warns `W_PRIVATE_FIELDS_MISSING` for `premises.street`: expected.
-- pytest takes ~3 minutes in parallel; don't edit files while it runs (a closure test can flake).
+- Template changes need `TEMPLATE_VERSION` bumped once a workspace made by `init` exists outside this machine.
+- `test_demo` takes ~33 s; pytest ~3 minutes in parallel; don't edit files while it runs.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -602,12 +599,15 @@ GitHub repo public, pushing and publishing a release stay the owner's.
     template, CI `demo` job (macOS), `release.yml`; 3689 tests. Watch: the quickstart's git URL works only once the repo is public.
 
 #### P8.3 Acceptance ⬜
-- ⬜ **P8.3.1** P8 acceptance (agent part).
+- ✅ **P8.3.1** P8 acceptance (agent part).
   - The P8 spec §13 checks 1-4: the quickstart in a fresh folder (timed), the demo workspace's checks, `diagnose`,
     `migrate --dry-run` and `upgrade --dry-run` on the real workspace (nothing committed there).
   - Refs: the P8 spec §13.
   - Files: `TASKS.md` (counts and pass/fail only); a dated workspace note for anything that mentions data.
   - Done when: checks 1-4 pass.
+  - Handover: quickstart via `uvx --from git+file://…` to a recommendation in 60-69 s (warm cache); demo `status`/`verify`/`diagnose`
+    clean, `upgrade --dry-run` all unchanged after a fix (`/private` in the template ignore). Real workspace: `diagnose` 0 denylist hits, 0 figures;
+    `upgrade --dry-run` `not_templated`; its config-rewrite dry run was blocked by a local permission hook (owner to run). Nothing committed there.
 - ⬜ **P8.3.2** Owner: publish.
   - Why: owner steps (push, visibility, release).
   - The P8 spec §13 checks 5-8: push, CI green, the repo public, the quickstart from GitHub on a clean Mac in under 15
@@ -618,6 +618,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
 
 ## Log (newest first)
 
+- 2026-11-14 · P8.3.1 · P8 acceptance (agent part): quickstart through `uvx --from git+file://` to a recommendation in about a minute, demo checks clean, one tool fix (`/private` in the template's ignore), real workspace `diagnose` clean and untouched; its config-rewrite dry run left to the owner · energatron-5000 `P8.3.1: keep /private in the template's .gitignore`, `P8.3.1: record P8 acceptance (agent part)`
 - 2026-11-14 · P8.2.5 · README quickstart and P8 sections (checked by `test_readme`, incl. `uvx` lines), CONTRIBUTING, SECURITY, bug-report template, CI `demo` job on macOS, `release.yml`, CHANGELOG (3689 tests); self-review; P8.2 ticked · energatron-5000 `P8.2.5: add the README quickstart, CONTRIBUTING, SECURITY, the CI demo job and the release workflow`
 - 2026-11-14 · P8.2.4 · `energatron diagnose` (structure only: versions, config kinds, counts, stage names, codes; failed checks listed), `diagnose_result` v1, `test_region_profiles` (3688 tests); self-review · energatron-5000 `P8.2.4: add energatron diagnose and the region-profile tests`
 - 2026-11-14 · P8.2.3 · `energatron upgrade` (managed files by recorded hash, `--force`), `energatron migrate` (TOML/YAML config through the migration chain, private config then denylist), `core/toml_text.py`, `W_TEMPLATE_MODIFIED`, two result kinds (3681 tests); self-review · energatron-5000 `P8.2.3: add energatron upgrade and energatron migrate`
