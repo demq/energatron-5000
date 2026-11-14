@@ -98,18 +98,18 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P10.2.4
-- Last commit: energatron-5000 `P10.2.4: add energatron serve, the local read-only web UI`
-- Checks: pytest -q 3993 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P10.3.1
+- Last commit: energatron-5000 `P10.3.1: load the web stack only when serve runs`, `P10.3.1: record P10 acceptance (agent part)`
+- Checks: pytest -q 3995 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P10.3.1 (P10 acceptance, agent part); P9.3.2 (owner) is still open
+- Next: P10.3.2 and P9.3.2 (owner)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P8 are done and archived; the tool repo is public. P9 is done but for P9.3.2, the owner's (a real agent
-  check-in, push, backup). P10 (local web UI) runs under the owner's `/phase 10` (2026-11-14): spec approved; P10.2.1-
-  P10.2.4 build it (P10.2 done: shared read paths, JSON API, pages, `serve`), P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
+- P0-P8 are done and archived; the tool repo is public. P9 waits only on P9.3.2 (owner: a real agent check-in, push,
+  backup). P10 (local web UI) is built and passed the agent's acceptance (P10.3.1); only P10.3.2, the owner's, is left:
+  lock the workspace to the new dependencies, look through the UI in a browser, push.
 
 **Read first** (for the next session)
 - The P10 spec (`agent_docs/2026-11/2026-11-14_p10-local-web-ui-spec.md`), the sections the sub-task names; D1 rev 11
@@ -669,22 +669,26 @@ CLI read path is available in the browser with no new logic outside the adapters
   - Handover: `http/server.py` (bind, prepare, stop_signals, run), `serve` command, `serve_result` v1, README "Web UI" (3993 tests).
     Decision: uvicorn subclassed so SIGINT/SIGTERM exit 0 (spec noted). Watch: the token is in the printed URL only; no access log.
 
-#### P10.3 Acceptance ⬜
-- ⬜ **P10.3.1** P10 acceptance (agent part).
+#### P10.3 Acceptance 🔄
+- ✅ **P10.3.1** P10 acceptance (agent part).
   - The P10 spec §11 checks 1-3: every page and API route in a fresh demo workspace (parity with the CLI, denylist,
     security spot checks, workspace unchanged); the same fetches in the owner's workspace, read-only; the README lines.
   - Refs: the P10 spec §11; plan §15 (P10).
   - Files: `TASKS.md`.
   - Done when: checks 1-3 pass; `TASKS.md` gets counts and pass/fail only.
+  - Handover: check 1 pass (fresh demo: 13/13 API = CLI, 12/12 pages, 4/4 security, denylist 0 of 25, workspace unchanged);
+    check 2 pass (owner's workspace via the tool's env: 13/13 = CLI, 12/12 pages, denylist 0 of 25, unchanged; fingerprint stale as on the CLI); check 3 pass.
+    Fix `P10.3.1: load the web stack only when serve runs`: the workspace's old uv.lock broke every command. Watch: the workspace needs `uv lock`.
 - ⬜ **P10.3.2** Owner: the UI in a browser, push.
   - Why: judging the UI in a real browser and pushing are the owner's.
-  - Refs: the P10 spec §11 checks 4-5.
+  - Refs: the P10 spec §11 checks 4-5; first `uv lock`, `uv sync` and a `uv.lock` commit in the workspace (P10.3.1).
   - Files: none.
   - Done when: the owner reports having looked through every page and both reports (with any findings), and the push
     with CI green.
 
 ## Log (newest first)
 
+- 2026-11-14 · P10.3.1 · P10 acceptance (agent part): fresh demo and the owner's workspace served read-only, 13/13 API routes equal to the CLI, every page answers, security spot checks pass, denylist 0 of 25 bodies each, workspaces unchanged; one tool fix (the CLI no longer needs the web stack outside `serve`) · energatron-5000 `P10.3.1: load the web stack only when serve runs`, `P10.3.1: record P10 acceptance (agent part)`
 - 2026-11-14 · P10.2.4 · `energatron serve`: loopback socket, per-launch token, uvicorn without access log, clean exit 0 on SIGINT/SIGTERM, `serve_result` v1, README "Web UI" (3993 tests); self-review; P10.2 ticked · energatron-5000 `P10.2.4: add energatron serve, the local read-only web UI`
 - 2026-11-14 · P10.2.3 · web pages: overview, recommendation, usage, datasets, offers, inbox, health, gas bill check form, the two reports; generic escaping renderer over redacted documents; `http-pages-format-only` contract (3981 tests); self-review · energatron-5000 `P10.2.3: add the web pages and reports over the shared read paths`
 - 2026-11-14 · P10.2.2 · JSON API: `GET /api/v1/<read>` answers the CLI's envelope (parity-tested per route), gas bill check `POST`, opt-in bill text, loopback Host/token/origin checks and security headers; `fastapi`, `uvicorn`, `httpx2` (dev) (3950 tests); self-review · energatron-5000 `P10.2.2: add the local JSON API over every read path, behind loopback access checks`
