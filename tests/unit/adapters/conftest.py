@@ -1,11 +1,13 @@
-"""Fixtures for the adapter and CLI tests: a clean environment, and a fake `VersionControl` behind the wiring."""
+"""Fixtures for the adapter and CLI tests: a clean environment, and fake `VersionControl` and launchd wiring."""
 
 from pathlib import Path
 
 import pytest
 
 from energatron.adapters import wiring
+from energatron.adapters.schedule.launchd import Launchd
 from tests.unit.adapters._cli import FakeVcs, FakeVcsState
+from tests.unit.adapters._launchd import FakeLaunchctl
 
 
 @pytest.fixture
@@ -15,6 +17,15 @@ def fake_vcs(monkeypatch: pytest.MonkeyPatch) -> FakeVcsState:
     monkeypatch.setattr(FakeVcs, "state", state)
     monkeypatch.setattr(wiring, "GitDvcVersionControl", FakeVcs)
     return state
+
+
+@pytest.fixture
+def fake_agent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeLaunchctl:
+    """Make the wiring build a macOS `Launchd` on a scratch home and a fake `launchctl`, whatever the host."""
+    fake = FakeLaunchctl()
+    home = tmp_path / "home"
+    monkeypatch.setattr(wiring, "launchd", lambda: Launchd(home=home, uid=501, platform="darwin", run=fake))
+    return fake
 
 
 @pytest.fixture(autouse=True)

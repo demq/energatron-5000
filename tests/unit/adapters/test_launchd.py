@@ -1,47 +1,19 @@
 """`adapters/schedule/launchd.py` and `energatron schedule` (P7 spec §8) against a fake `launchctl` and a scratch home.
 
-The fake keeps the set of loaded labels: `bootstrap` loads, `bootout` unloads (non-zero when not loaded, as launchctl
-does), `print` succeeds only for a loaded label. Nothing touches the real `~/Library/LaunchAgents` or launchd.
+`FakeLaunchctl` (in `_launchd.py`) and the `fake_agent` fixture (in `conftest.py`) keep everything off the real
+`~/Library/LaunchAgents` and launchd.
 """
 
 import plistlib
-import subprocess
 from pathlib import Path
-from typing import Any
 
 import pytest
 
-from energatron.adapters import wiring
-from energatron.adapters.schedule.launchd import LAUNCHCTL, Launchd
+from energatron.adapters.schedule.launchd import Launchd
 from energatron.core.errors import SubprocessError, UsageError
 from tests.unit.adapters._cli import FakeVcsState, run_cli
+from tests.unit.adapters._launchd import FakeLaunchctl
 from tests.unit.adapters._workspace import make_workspace
-
-
-class FakeLaunchctl:
-    def __init__(self, *, fail_bootstrap: bool = False) -> None:
-        self.loaded: set[str] = set()
-        self.calls: list[list[str]] = []
-        self.fail_bootstrap = fail_bootstrap
-
-    def __call__(self, argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[bytes]:
-        assert argv[0] == LAUNCHCTL
-        self.calls.append(argv[1:])
-        verb, target = argv[1], argv[2]
-        code = 0
-        if verb == "bootstrap":
-            label = Path(argv[3]).stem
-            if self.fail_bootstrap:
-                code = 5
-            else:
-                self.loaded.add(label)
-        elif verb == "bootout":
-            label = target.rsplit("/", 1)[1]
-            code = 0 if label in self.loaded else 3
-            self.loaded.discard(label)
-        elif verb == "print":
-            code = 0 if target.rsplit("/", 1)[1] in self.loaded else 113
-        return subprocess.CompletedProcess(argv, code, b"", b"")
 
 
 def test_install_writes_the_plist_and_loads_it_and_reinstall_replaces_it(tmp_path: Path) -> None:
@@ -78,14 +50,6 @@ def test_other_platforms_are_refused_and_paths_hide_the_home(tmp_path: Path) -> 
     agent = Launchd(home=tmp_path, uid=1, platform="darwin")
     assert agent.shown(agent.plist_path("l")) == "~/Library/LaunchAgents/l.plist"
     assert agent.shown_text(f"<string>{tmp_path}/ws</string>") == "<string>~/ws</string>"
-
-
-@pytest.fixture
-def fake_agent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeLaunchctl:
-    fake = FakeLaunchctl()
-    home = tmp_path / "home"
-    monkeypatch.setattr(wiring, "launchd", lambda: Launchd(home=home, uid=501, platform="darwin", run=fake))
-    return fake
 
 
 def test_the_cli_installs_reports_and_removes(
