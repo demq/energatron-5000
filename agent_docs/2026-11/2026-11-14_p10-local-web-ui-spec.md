@@ -213,7 +213,10 @@ Fixed bodies never echo the request (path, header or parameter).
 ## 6. Pages (`adapters/http/pages.py`, `style.py`)
 
 Server-rendered HTML, one stylesheet, no JavaScript. Each page route runs its reads, takes each **redacted envelope
-document** (§3.1), and renders it; the page renderers see only those JSON documents.
+document** (§3.1), and renders it; the page renderers see only those JSON documents. (Built so in P10.2.3: the page
+routes are in `http/views.py`, because the contract keeps `pages.py` away from `reads`; `pages.py` renders any document
+with one generic, escaping renderer (mappings as key/value tables, lists of records as tables) and each page chooses
+which fields go in which titled part; the reports are read by `Reader.report` under the same lock.)
 
 ### 6.1 Pages
 
@@ -291,7 +294,8 @@ with their own CSP (§5.4's table). A missing file → 404 with a page saying to
   (foreign `Origin`, `Sec-Fetch-Site: cross-site`) → 403; `PUT`/`DELETE` → 405; every response has §5.4's headers and
   no `Access-Control-*`; fixed bodies don't contain a probe string put in the path, a header or a parameter.
 - `test_http_pages` (unit): every page renders (200) on the read workspace and on an empty workspace (missing marts:
-  the "run the pipeline" text, still 200); every link on every page answers 200 or 404 for a missing report; a string
+  the "run the pipeline" text, still 200); every link on every page answers (a JSON link with its read's own status, never a missing route, 401 or
+  5xx; built so in P10.2.3); a string
   with `<script>` and quotes in a result is escaped; a failing read shows its code in its section; a denylist entry
   planted in a result (a plan name) never appears in a page, an API body or a report; the gas bill form shows the
   failing check names.
@@ -330,7 +334,7 @@ To be applied on `/done` of P10.1.1, as plan rev 19 and D1 rev 11.
 
 **D1 (rev 11)**
 - §2: adapters gain `envelope.py`, `reads.py` and `http/` (`app.py`, `reader.py`, `security.py`, `api.py`, `pages.py`,
-  `style.py`, `server.py`); `cli/commands/` gains `serve.py` (P10).
+  `style.py`, `server.py`, and `views.py` for the page routes, built so in P10.2.3); `cli/commands/` gains `serve.py` (P10).
 - §3: the `http` driving adapter calls services in process through `reads` and `wiring`. Two contracts: `http-via-wiring`
   (`energatron.adapters.http` imports no driven adapter, like `cli-via-wiring`), and `http-pages-format-only`
   (`energatron.adapters.http.pages` and `.style` import neither `energatron.services`, `energatron.core`,

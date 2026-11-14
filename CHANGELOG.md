@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Web pages over the same read paths (P10): overview, recommendation and ranked plans, usage, datasets, offer changes,
+  inbox, health (backup, fingerprint, pipeline files, schedule, diagnosis), a gas bill record check form, and the
+  pipeline's two HTML reports. Server-rendered, no JavaScript, every value escaped and redacted; each section links to
+  the JSON behind it.
 - A local JSON API over every read command (P10, served by the coming `energatron serve`): `GET /api/v1/<read>` answers
   exactly the envelope `energatron <command> --json` prints, `POST /api/v1/gas-bill/check` checks a record, and the
   bill text route exists only with `--allow-documents`. Requests need the host's loopback name, a per-launch token and,

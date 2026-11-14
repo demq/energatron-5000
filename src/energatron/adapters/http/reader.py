@@ -11,12 +11,18 @@ from typing import Any, Final
 from energatron.adapters import envelope, reads
 from energatron.core.errors import EnergatronError, InternalError
 from energatron.core.models.workspace import WorkspacePaths
-from energatron.core.privacy import DenyEntry
+from energatron.core.privacy import DenyEntry, redact
 
 _log = logging.getLogger(__name__)
 
 STATUS_BY_EXIT: Final = {0: 200, 1: 500, 2: 400, 3: 422, 4: 409, 5: 403, 6: 502, 7: 422, 8: 207}
 """The HTTP status for each exit code (P10 spec §5.1)."""
+
+REPORTS: Final = {
+    "usage": "data/reports/usage/index.html",
+    "recommendation": "data/reports/recommendations/index.html",
+}
+"""The generated reports the UI serves as they are (P10 spec §6.3). Fixed paths: nothing comes from the request."""
 
 
 @dataclass(frozen=True)
@@ -61,6 +67,17 @@ class Reader:
                 )
                 document = envelope.failure(path.command, error)
             return Answer(STATUS_BY_EXIT[document.exit_code], envelope.redacted(document, denylist))
+
+    def report(self, name: str) -> str | None:
+        """A generated report's HTML (`REPORTS`), passed through `redact()` with the workspace's denylist (D1 §8.7,
+        the last line of defence); None when it's missing."""
+        with self._lock:
+            _, denylist = reads.open_context(self.paths)
+            try:
+                text = (self.paths.root / REPORTS[name]).read_text(encoding="utf-8")
+            except FileNotFoundError:
+                return None
+        return redact(text, denylist)
 
 
 def failed(command: str | None, error: EnergatronError) -> Answer:

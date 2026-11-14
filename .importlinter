@@ -99,3 +99,15 @@ forbidden_modules =
     energatron.adapters.schedule
     energatron.adapters.setup
 allow_indirect_imports = True
+
+[importlinter:contract:http-pages-format-only]
+name = HTTP pages only format envelope documents
+type = forbidden
+source_modules =
+    energatron.adapters.http.pages
+    energatron.adapters.http.style
+forbidden_modules =
+    energatron.services
+    energatron.core
+    energatron.adapters.wiring
+    energatron.adapters.reads

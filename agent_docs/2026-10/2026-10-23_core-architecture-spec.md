@@ -187,7 +187,7 @@ src/energatron/
 │   ├── mcp/                 protocol.py, tools.py, runner.py, server.py (P9 spec §5, §6); cli/commands/  P9
 │   │                        gains datasets.py, usage.py, compare.py, explain.py, mcp.py
 │   ├── envelope.py  reads.py  (the `cli_result` envelope; every read path, shared by cli and http)    P10
-│   ├── http/                app.py, reader.py, security.py, api.py, pages.py, style.py, server.py (§4-§7)  P10
+│   ├── http/                app, reader, security, api, views, pages, style, server (P10 spec §4-§7)        P10
 │   │                        cli/commands/ gains serve.py
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
 │   ├── storage/             jsonl_catalog.py, fs_blobs.py                                         P1

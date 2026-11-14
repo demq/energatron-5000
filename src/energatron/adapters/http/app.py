@@ -7,7 +7,7 @@ route takes the workspace lock. Every answer is the CLI's own envelope, redacted
 
 from fastapi import FastAPI
 
-from energatron.adapters.http import api, security
+from energatron.adapters.http import api, security, views
 from energatron.adapters.http.reader import Reader
 from energatron.core.models.workspace import WorkspacePaths
 
@@ -23,5 +23,6 @@ def create_app(paths: WorkspacePaths, *, access: security.Access, allow_document
     )
     reader = Reader(paths, allow_documents=allow_documents)
     app.include_router(api.router(reader))
+    app.include_router(views.router(reader))
     app.middleware("http")(security.middleware(access))
     return app
