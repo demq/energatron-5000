@@ -126,15 +126,18 @@ uv run energatron landing clear
 
 ```bash
 uv run energatron land data/landing/<bill>.pdf
-uv run energatron gas-bill new <gas_bill dataset ID>
+uv run energatron gas-bill new <gas_bill dataset ID> --extracted-by manual
 # fill in data/landing/gas_bill_record-<ID>.yaml from the bill, following its comments
+uv run energatron gas-bill check data/landing/gas_bill_record-<ID>.yaml
 uv run energatron land data/landing/gas_bill_record-<ID>.yaml --dry-run
 uv run energatron land data/landing/gas_bill_record-<ID>.yaml
 uv run energatron run
 ```
 
 The record holds no account, MIRN or invoice number. If a `gas_bills` check fails, the transcription is wrong: fix
-the YAML and land the corrected copy (the newest record for a bill wins).
+the YAML and land the corrected copy (the newest record for a bill wins). `gas-bill check` runs those checks before you land it.
+An agent fills the same record with `extracted_by: agent:<model id>`; `gas-bill write` writes a record only when
+every check passes, so the checks, not the agent, decide what lands.
 
 ## Offers
 
@@ -290,10 +293,38 @@ Add `-v` (progress) or `--debug` (with tracebacks) to any command.
 
 ## Agents
 
-Claude Code and Codex read the same instructions (`CLAUDE.md`, with `AGENTS.md` linked to it) and skills. The
-workspace has skills for a monthly check-in, explaining a recommendation, recording a decision and transcribing a gas
-bill. Agents never read `private/`, never back up and never install the weekly agent; they may run `status`,
-`schedule status` and dry runs. Development work in this repo runs through `TASKS.md` (`/next`, `/examine`, `/done`).
+Claude Code and Codex read the same instructions (`CLAUDE.md`, with `AGENTS.md` linked to it) and skills. A workspace
+made by `energatron init` has skills for a monthly check-in, explaining a recommendation, recording a decision and
+transcribing a gas bill (`.claude/skills/`, linked from `.agents/skills/`), and `.mcp.json`, which registers a local MCP
+server:
+
+```bash
+uv run energatron mcp
+uv run energatron mcp --allow-documents
+```
+
+It speaks MCP on stdio and offers tools that each run one command and return its `--json` envelope: `status`,
+`list_datasets`, `list_inbox`, `usage_summary`, `compare_offers`, `explain_recommendation`, `offers_diff`,
+`land_file` (only from `data/landing/`), `fetch_offers`, `run_pipeline`, `record_decision` (a dry run unless told
+otherwise), and the gas bill record tools. The same answers come from the command line:
+
+```bash
+uv run energatron datasets --limit 20
+uv run energatron usage --months 13
+uv run energatron compare --fuel electricity --limit 10
+uv run energatron explain
+```
+
+- **Claude Code** reads the workspace's `.mcp.json` and asks you to approve the server the first time. **Codex**:
+  `codex mcp add energatron -- uv run --directory <workspace> --frozen energatron mcp`. Any other MCP client: run
+  `uv run energatron mcp` in the workspace.
+- Whatever a tool returns goes to the model provider. Tools return aggregates, IDs, plan names and statuses: your usage
+  and cost figures, never `private/`, identifiers or interval rows. `--allow-documents` adds `read_gas_bill_text`,
+  which sends a bill's text (address and account included) for transcription; leave it off unless you want that.
+- No tool backs up, clears the inbox, installs the weekly agent, upgrades or rewrites config: those stay yours.
+  `run_pipeline` can take minutes; raise your client's tool timeout if it gives up first.
+
+Development work in this repo runs through `TASKS.md` (`/next`, `/examine`, `/done`, or `/phase`).
 
 ## Development
 

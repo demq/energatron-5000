@@ -296,7 +296,7 @@ def path_problems(path: str, mode: str) -> list[str]:
 
 
 def _data_allowed(path: str, mode: str) -> bool:
-    if path.startswith("tests/fixtures/") or path == ".claude/settings.json":
+    if path.startswith("tests/fixtures/") or path in (".claude/settings.json", ".mcp.json"):
         return True
     return mode == "workspace" and (
         path.startswith("config/") or path in (".energatron/code_fingerprint.json", ".energatron/template.json")

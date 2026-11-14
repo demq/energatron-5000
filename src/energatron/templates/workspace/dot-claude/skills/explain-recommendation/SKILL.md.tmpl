@@ -1,0 +1,27 @@
+---
+name: explain-recommendation
+description: Explain the current energy plan recommendation (REC-…) in plain words, with where each figure comes from. Use when the owner asks what the recommendation says, why a plan was picked, or how robust it is.
+---
+
+# explain-recommendation
+
+Use the `energatron` MCP tools when this session has them (`tool_name` below); otherwise run the same command with
+`uv run energatron <command> --json` from this folder. Never read `private/`. Figures stay in this workspace.
+
+1. **Get it**: `explain_recommendation` (`energatron explain`). If `behind` shows datasets since the run or stages
+   whose code changed, say the recommendation is out of date and offer `monthly-check-in` first. No recommendation:
+   say so and offer a run.
+2. **Say what to do**, from `action`:
+   - `switch`: option 1 with its electricity and gas plans (brand, display name), its annual cost and
+     `saving_ongoing` / `saving_year1` against `current`.
+   - `stay`: the current plans are cheapest, or option 1 saves less than the configured minimum.
+   - `no_current_plan`: no current plan is known for a fuel, so savings can't be shown.
+3. **Say how sure it is**: `robust` and each `sensitivity` verdict (conditional discounts missed, usage up or down,
+   an earlier window). With `usage.gas.partial_year`, the gas figures are scaled up from less than a year of bills.
+4. **Say what to check before switching**: `chosen` lists each plan's notes (eligibility, conditions),
+   approximations and status; prices are as of `as_of`; recheck by `recheck_by`.
+5. **Alternatives**: `compare_offers` (`energatron compare`, optionally `fuel`, `brand`, `limit`) ranks every priced
+   plan and gives the current plan's rank.
+6. **Trace a figure** when asked: `trace` names the marts each figure comes from; `inputs` counts the datasets and offer
+   snapshots; `run` is the run that made it. `usage_summary` (`energatron usage`) gives the usage behind the costs, and
+   `list_datasets` (`energatron datasets`) the landed datasets.

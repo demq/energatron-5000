@@ -3,8 +3,10 @@
 Each managed file is compared with the current template and with the sha256 recorded in `.energatron/template.json`:
 `unchanged` (already the new bytes), `updated` (the user hasn't edited it, so it is rewritten), `modified` (edited:
 left alone with `W_TEMPLATE_MODIFIED`, unless `force`), `added` (new in the template, or missing) and `removed` (no
-longer in the template: left in place, dropped from the record). Seed files are never touched. The written paths and
-the record are committed as `upgrade: template v<N>`; nothing written, no commit. The caller holds the workspace lock.
+longer in the template: left in place, dropped from the record). Seed files are never rewritten; a seed file or a
+symlink that a newer template introduced (`INTRODUCED`, P9 spec §7.2) is written when it is missing (`added`), and an
+existing one is left alone (a link to another target is `modified`, with the warning). The written paths and the
+record are committed as `upgrade: template v<N>`; nothing written, no commit. The caller holds the workspace lock.
 """
 
 import logging
@@ -16,6 +18,7 @@ from energatron.core.canonical import JSONValue, sha256_hex
 from energatron.core.errors import InvalidInputError, ResultWarning, StorageError, UsageError, WarningCode
 from energatron.core.models._common import FrozenModel
 from energatron.core.workspace_template import (
+    INTRODUCED,
     TEMPLATE_STATE_PATH,
     TEMPLATE_VERSION,
     TemplateState,
@@ -90,7 +93,9 @@ def upgrade(
         tool_source=tool_source_line("index"),  # pyproject.toml is a seed file: never rewritten
         deny_root=deny_root(root, home),
     )
-    managed = [item for item in render(values, sources) if item.managed]
+    rendered = render(values, sources)
+    managed = [item for item in rendered if item.managed]
+    introduced = [item for item in rendered if INTRODUCED.get(item.path, 1) > state.template_version]
     files: list[UpgradedFile] = []
     recorded = dict(state.files)
     hashes: dict[str, str] = {}
@@ -124,23 +129,48 @@ def upgrade(
         if status in _WRITES:
             writes.append((root / item.path, item.data, item.mode))
         files.append(UpgradedFile(path=item.path, status=status))
+    links: list[tuple[Path, str]] = []
+    for item in introduced:
+        target = root / item.path
+        if item.symlink_to is not None:
+            if target.is_symlink() and str(target.readlink()) == item.symlink_to:
+                files.append(UpgradedFile(path=item.path, status="unchanged"))
+            elif target.is_symlink() or target.exists():
+                files.append(UpgradedFile(path=item.path, status="modified"))
+                warnings.append(
+                    ResultWarning(
+                        code=WarningCode.W_TEMPLATE_MODIFIED,
+                        message=f"{item.path} exists and isn't the template's link, so upgrade left it alone.",
+                        details={"path": item.path},
+                    )
+                )
+            else:
+                links.append((target, item.symlink_to))
+                files.append(UpgradedFile(path=item.path, status="added"))
+        elif not target.exists() and not target.is_symlink():
+            writes.append((target, item.data, item.mode))
+            files.append(UpgradedFile(path=item.path, status="added"))
     files += [
         UpgradedFile(path=path, status="removed") for path in sorted(set(recorded) - {item.path for item in managed})
     ]
     new_state = TemplateState(template_version=TEMPLATE_VERSION, files=hashes)
     commit: str | None = None
-    if not dry_run and (writes or new_state != state):
+    if not dry_run and (writes or links or new_state != state):
         try:
             for path, data, mode in writes:
                 make_dirs(path.parent)
                 atomic_write_bytes(path, data)
                 path.chmod(mode)
+            for path, link in links:
+                make_dirs(path.parent)
+                path.symlink_to(link)
         except OSError:
             raise StorageError("A template file couldn't be written.", location="workspace") from None
         write_json(root / TEMPLATE_STATE_PATH, cast(JSONValue, new_state.model_dump(mode="json")))
-        paths = [path.relative_to(root).as_posix() for path, _, _ in writes] + [TEMPLATE_STATE_PATH]
+        paths = [path.relative_to(root).as_posix() for path, _, _ in writes]
+        paths += [path.relative_to(root).as_posix() for path, _ in links] + [TEMPLATE_STATE_PATH]
         commit = ctx.vcs.commit(paths, f"upgrade: template v{TEMPLATE_VERSION}")
-    _log.info("upgrade: %d files written, dry run: %s", len(writes), dry_run)
+    _log.info("upgrade: %d files and %d links written, dry run: %s", len(writes), len(links), dry_run)
     return UpgradeResult(
         from_version=state.template_version,
         to_version=TEMPLATE_VERSION,

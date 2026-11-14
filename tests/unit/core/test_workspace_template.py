@@ -11,6 +11,8 @@ from energatron.adapters import wiring
 from energatron.core.canonical import sha256_hex
 from energatron.core.errors import InternalError
 from energatron.core.workspace_template import (
+    INTRODUCED,
+    SKILLS,
     TEMPLATE_FILES,
     TEMPLATE_VERSION,
     TemplateSpec,
@@ -131,3 +133,31 @@ def test_project_name(folder: str, name: str) -> None:
 def test_a_quote_in_a_tool_source_is_refused() -> None:
     with pytest.raises(InternalError):
         tool_source_line("path", '/a"b')
+
+
+def test_version_2_adds_the_skills_their_links_and_the_mcp_registration() -> None:
+    """P9 spec §7.2: four managed skills, a link to each from `.agents/skills/`, and `.mcp.json` as a seed file."""
+    rendered = {item.path: item for item in render(VALUES, sources())}
+    assert TEMPLATE_VERSION == 2
+    for name in SKILLS:
+        skill = rendered[f".claude/skills/{name}/SKILL.md"]
+        assert skill.managed and skill.data.decode().startswith(f"---\nname: {name}\n")
+        link = rendered[f".agents/skills/{name}"]
+        assert (link.symlink_to, link.managed) == (f"../../.claude/skills/{name}", False)
+        assert INTRODUCED[link.path] == 2
+    mcp = rendered[".mcp.json"]
+    assert not mcp.managed and INTRODUCED[".mcp.json"] == 2
+    assert json.loads(mcp.data)["mcpServers"]["energatron"] == {
+        "command": "uv",
+        "args": ["run", "--frozen", "energatron", "mcp"],
+    }
+    assert rendered["AGENTS.md"].symlink_to == "CLAUDE.md"
+    assert "## Agents" in rendered["CLAUDE.md"].data.decode()
+
+
+def test_the_skills_name_no_agent_specific_tool() -> None:
+    """Plan §14.5: skills name the energatron tools and commands, never a tool only one agent has."""
+    for name in SKILLS:
+        text = by_path()[f".claude/skills/{name}/SKILL.md"].decode()
+        for word in ("Bash", "Read(", "Edit(", "TodoWrite", "mcp__"):
+            assert word not in text, (name, word)

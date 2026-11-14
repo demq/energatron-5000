@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Workspace template v2 (P9): `energatron init` writes four agent skills (monthly check-in, explain a recommendation,
+  record a decision, transcribe a gas bill) under `.claude/skills/` with `.agents/skills/` links for Codex, and
+  `.mcp.json` registering `energatron mcp`; `energatron upgrade` adds them to a version 1 workspace. The privacy guard
+  allows `.mcp.json`. README "Agents" explains the tools, how to register them and what they send to the model
+  provider.
 - `energatron mcp` (P9): a local MCP server on stdio for AI agents (Claude Code, Codex, any MCP client). Its tools
   (`status`, `list_datasets`, `list_inbox`, `usage_summary`, `compare_offers`, `explain_recommendation`,
   `offers_diff`, `land_file`, `fetch_offers`, `run_pipeline`, `record_decision` and the gas bill record tools) each

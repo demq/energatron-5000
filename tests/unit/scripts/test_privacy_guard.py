@@ -457,6 +457,8 @@ def test_matching_and_redaction_match_the_package(value: str, match: str, text: 
         ("tests/fixtures/x.csv", 0),
         ("tests/fixtures/schemas/thing/v1.json", 0),
         (".claude/settings.json", 0),
+        (".mcp.json", 0),  # P9: in both modes
+        ("sub/.mcp.json", 1),  # only at the root
         ("config/x.json", 1),  # allowed in the workspace only
         ("src/x.py", 0),
     ],
@@ -504,6 +506,7 @@ def test_container_types_in_the_workspace(tmp_path: Path, suffix: str) -> None:
         (".energatron/code_fingerprint.json", 0),
         (".energatron/template.json", 0),
         (".claude/settings.json", 0),
+        (".mcp.json", 0),
         ("x.csv", 1),
     ],
 )

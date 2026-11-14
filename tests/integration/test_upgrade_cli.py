@@ -7,7 +7,7 @@ from typing import Any
 import pytest
 
 from energatron.core.canonical import sha256_hex
-from energatron.core.workspace_template import TEMPLATE_STATE_PATH
+from energatron.core.workspace_template import SKILLS, TEMPLATE_STATE_PATH, TEMPLATE_VERSION
 from tests.fixtures.synthetic import SYNTHETIC_NMI11
 from tests.integration._scratch import git
 from tests.integration.test_init_cli import init_args
@@ -65,7 +65,7 @@ def test_an_older_template_file_is_rewritten_and_committed(root: Path, capsys: p
     assert code == 0, result["error"]
     assert (statuses(result)[".dvcignore"], statuses(result)["retired.txt"]) == ("updated", "removed")
     assert (root / ".dvcignore").read_bytes() == template
-    assert git(root, "log", "-1", "--format=%s").strip() == "upgrade: template v1"
+    assert git(root, "log", "-1", "--format=%s").strip() == f"upgrade: template v{TEMPLATE_VERSION}"
     assert git(root, "status", "--porcelain") == ""
     assert "retired.txt" not in json.loads(state_path.read_text(encoding="utf-8"))["files"]
 
@@ -101,3 +101,39 @@ def test_a_workspace_not_made_by_init_is_refused(root: Path, capsys: pytest.Capt
     git(root, "commit", "-q", "-m", "hand-built")
     code, result = envelope(capsys, "upgrade")
     assert (code, result["error"]["details"]["reason"]) == (2, "not_templated")
+
+
+def test_a_version_1_workspace_gains_the_skills_their_links_and_the_mcp_registration(
+    root: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """P9 spec §7.2: what template v2 introduced is added; an edited seed file and a user's own path are left alone."""
+    for name in SKILLS:
+        (root / ".agents/skills" / name).unlink()
+        (root / ".claude/skills" / name / "SKILL.md").unlink()
+    (root / ".mcp.json").unlink()
+    (root / ".agents/skills/record-decision").write_text("my own\n", encoding="utf-8")  # not the template's link
+    (root / "CLAUDE.md").write_text("# my own instructions\n", encoding="utf-8")
+    state_path = root / TEMPLATE_STATE_PATH
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["template_version"] = 1
+    state["files"] = {path: digest for path, digest in state["files"].items() if not path.startswith(".claude/skills/")}
+    state_path.write_text(json.dumps(state), encoding="utf-8")
+    commit_all(root, "a version 1 workspace")
+
+    code, result = envelope(capsys, "upgrade")
+    assert code == 0, result["error"]
+    found = statuses(result)
+    assert all(found[f".claude/skills/{name}/SKILL.md"] == "added" for name in SKILLS)
+    assert found[".mcp.json"] == "added" and found[".agents/skills/record-decision"] == "modified"
+    assert all(found[f".agents/skills/{name}"] == "added" for name in SKILLS if name != "record-decision")
+    assert [warning["code"] for warning in result["warnings"]] == ["W_TEMPLATE_MODIFIED"]
+    assert (root / ".agents/skills/monthly-check-in").readlink() == Path("../../.claude/skills/monthly-check-in")
+    assert (root / ".agents/skills/monthly-check-in/SKILL.md").is_file()
+    assert json.loads((root / ".mcp.json").read_text(encoding="utf-8"))["mcpServers"]["energatron"]["command"] == "uv"
+    assert (root / "CLAUDE.md").read_text(encoding="utf-8") == "# my own instructions\n"
+    assert "CLAUDE.md" not in found
+    assert git(root, "status", "--porcelain") == ""
+
+    code, again = envelope(capsys, "upgrade")
+    assert code == 0 and again["data"]["commit"] is None
+    assert set(statuses(again).values()) == {"unchanged"}  # at version 2, introduced paths aren't listed again

@@ -1,0 +1,22 @@
+---
+name: record-decision
+description: Record the owner's decision to switch plans (DEC-…) against the current recommendation. Use only when the owner says they have switched or will switch, and names the plans.
+---
+
+# record-decision
+
+Only the owner decides to switch. Never record a decision on your own initiative, and never read or edit `private/`.
+Use the `energatron` MCP tools when this session has them (`tool_name` below); otherwise run the same command with
+`uv run energatron <command> --json` from this folder.
+
+1. **Check** the recommendation is current and came from a clean run: `explain_recommendation` (`energatron
+   explain`): `behind` is empty and `run.draft` is false. If not, run `run_pipeline` (`energatron run`) first.
+2. **Pick the plans** the owner names from `compare_offers` (`energatron compare`): their offer snapshot IDs, and the
+   switch date.
+3. **Evidence** (optional): a document the owner has, such as a plan fact sheet or a welcome letter, landed first with
+   `land_file` (`energatron land <path>`, dry run first); pass its dataset ID as `evidence`.
+4. **Dry run**: `record_decision` with `dry_run: true` (the default; `energatron decide <REC-id> --switch-date
+   YYYY-MM-DD --elec <snapshot> --gas <snapshot> --dry-run`). Show the owner the result.
+5. **Record** with the same call and `dry_run: false`. It writes the decision and commits.
+6. **Remind the owner** to set `current_plans` in `private/config.toml` themselves once the switch happens, and to add
+   the new plans to the backtest tariffs in `params.yaml` from the switch date. Then `status`: a backup is pending.

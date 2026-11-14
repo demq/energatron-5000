@@ -20,6 +20,13 @@ DVC-managed. This repo must never get a git remote on a public host.
 - `uv run energatron upgrade`, `uv run energatron migrate`, `uv run energatron pipeline sync`: after a tool update.
 - `uv run energatron backup --status`: is the last commit backed up?
 
+## Agents
+- Skills: `monthly-check-in`, `explain-recommendation`, `record-decision`, `transcribe-gas-bill` (`.claude/skills/`,
+  linked from `.agents/skills/`).
+- `.mcp.json` registers `energatron mcp`, a local MCP server whose tools run the commands above and return their JSON.
+  Prefer the tools; without them, run the same commands with `--json`. Results go to the model provider: tools return
+  aggregates and IDs, never `private/` or interval rows.
+
 ## Layout
 - `data/landing/`: the inbox, git-ignored. `data/raw/`: landed datasets. `data/reports/`: the usage report and the
   recommendation.

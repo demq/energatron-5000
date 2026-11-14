@@ -98,17 +98,17 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P9.2.3
-- Last commit: energatron-5000 `P9.2.3: add energatron mcp, a stdio MCP server whose tools run the CLI`
-- Checks: pytest -q 3850 passed; ruff, pyright, lint-imports (6 contracts) clean; privacy scan clean; pre-commit passed
+- Last done: P9.2.4
+- Last commit: energatron-5000 `P9.2.4: add the workspace skills and .mcp.json to the template (v2) and the README's agent guide`
+- Checks: pytest -q 3858 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P9.2.4 (workspace skills, .mcp.json, template v2)
+- Next: P9.3.1 (P9 acceptance, agent part)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 (agent interface) runs under the owner's `/phase 9`
-  (2026-11-14): spec approved, P9.2.1-P9.2.3 (read commands, gas bill tools, MCP server) done; P9.2.4 builds, P9.3.1 is the agent's acceptance,
+  (2026-11-14): spec approved, P9.2 is built (read commands, gas bill tools, MCP server, template v2 with skills), P9.3.1 is the agent's acceptance,
   P9.3.2 the owner's.
 
 **Read first** (for the next session)
@@ -536,7 +536,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
   - Handover: P9 spec approved on the owner's `/phase 9` (self-review: demo `fetch_offers` is a dry run, `compare`/`explain`
     nulls, transcription tools in the check-in test); plan rev 18, D1 rev 10, D2 rev 3. Watch: tools run the CLI as children.
 
-#### P9.2 Build 🔄
+#### P9.2 Build ✅
 - ✅ **P9.2.1** Read commands: `datasets`, `usage`, `compare`, `explain`.
   - `services/{datasets,usage_summary,compare,explain}.py` with `datasets_result`, `usage_result`, `compare_result`,
     `explain_result` v1 (golden schemas); the four commands (`explain` gets the stale stages from the CLI as `status`
@@ -572,7 +572,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
     call over pipes.
   - Handover: `adapters/mcp/` (protocol, 15 tools, runner, server with fd 1 moved to stderr), `energatron mcp [--allow-documents]`,
     `mcp-via-cli` contract (3850 tests). Decision: `record_decision` dry-runs by default; outside a workspace exit 2. Watch: tools need the CLI's options as they are.
-- ⬜ **P9.2.4** Workspace skills, `.mcp.json` and template v2.
+- ✅ **P9.2.4** Workspace skills, `.mcp.json` and template v2.
   - The four skills (§7.1), their `.agents/skills` links and `.mcp.json` in the template (`TEMPLATE_VERSION` 2);
     `upgrade` adds missing links and seed files; the guard (and its template copy) allows `.mcp.json`; the template
     `CLAUDE.md` "Agents" paragraph; README "Agents" (checked by `test_readme`); `test_mcp_check_in`.
@@ -582,6 +582,8 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
     upgrade, guard, readme, `tests/integration/test_mcp_check_in.py`).
   - Done when: the standard checks pass; `init --demo` writes the skills, links and `.mcp.json`; the scripted check-in
     passes its privacy checks.
+  - Handover: template v2 (four skills, `.agents/skills` links, `.mcp.json`), `upgrade` adds what a newer template introduced (`INTRODUCED`),
+    guard allows `.mcp.json`, README "Agents", `test_mcp_check_in` (3858 tests). Decision: introduced paths are added only once (a removed one stays removed). Watch: the check-in test runs a draft.
 
 #### P9.3 Acceptance ⬜
 - ⬜ **P9.3.1** P9 acceptance (agent part).
@@ -602,6 +604,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
 
 ## Log (newest first)
 
+- 2026-11-14 · P9.2.4 · template v2: four workspace skills, `.agents/skills` links, `.mcp.json`; `upgrade` adds introduced paths; guard allows `.mcp.json`; README "Agents"; scripted MCP check-in test (3858 tests); self-review; P9.2 ticked · energatron-5000 `P9.2.4: add the workspace skills and .mcp.json to the template (v2) and the README's agent guide`
 - 2026-11-14 · P9.2.3 · `energatron mcp`: stdio MCP server, 15 tools each running the CLI command as a child, `--allow-documents`, `mcp-via-cli` import contract (3850 tests); self-review · energatron-5000 `P9.2.3: add energatron mcp, a stdio MCP server whose tools run the CLI`
 - 2026-11-14 · P9.2.2 · `gas_bill_record` v2 with `extracted_by` (v1 upgraded on read, catalog `extra.extracted_by`), `gas-bill check`, `write`, `text`, `new --extracted-by` (3774 tests); self-review · energatron-5000 `P9.2.2: add gas bill records v2 with extracted_by and gas-bill check, write and text`
 - 2026-11-14 · P9.2.1 · `energatron datasets`, `usage`, `compare`, `explain` (read-only; four result kinds; no file names, notes or raw rows) (3732 tests); self-review · energatron-5000 `P9.2.1: add energatron datasets, usage, compare and explain`

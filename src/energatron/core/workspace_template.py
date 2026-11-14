@@ -18,8 +18,9 @@ from energatron.core.canonical import sha256_hex
 from energatron.core.errors import InternalError
 from energatron.core.persisted import Persisted
 
-TEMPLATE_VERSION: Final = 1
-"""Bumped with any change to the template files or this module's list (P8 spec §3.2)."""
+TEMPLATE_VERSION: Final = 2
+"""Bumped with any change to the template files or this module's list (P8 spec §3.2). Version 2 (P9 spec §7.2) adds the
+workspace skills, their `.agents/skills/` links and `.mcp.json`."""
 
 AGENTS_LINK: Final = "AGENTS.md"
 TEMPLATE_STATE_PATH: Final = ".energatron/template.json"
@@ -41,6 +42,9 @@ class TemplateSpec:
         return "/".join("." + part.removeprefix("dot-") if part.startswith("dot-") else part for part in parts)
 
 
+SKILLS: Final = ("monthly-check-in", "explain-recommendation", "record-decision", "transcribe-gas-bill")
+"""The workspace skills (P9 spec §7.1): managed files, each linked from `.agents/skills/` for Codex."""
+
 TEMPLATE_FILES: Final = (
     TemplateSpec("pyproject.toml.tmpl", managed=False),
     TemplateSpec("dot-python-version.tmpl", managed=True),
@@ -54,9 +58,24 @@ TEMPLATE_FILES: Final = (
     TemplateSpec("CLAUDE.md.tmpl", managed=False),
     TemplateSpec("dot-claude/settings.json.tmpl", managed=False),
     TemplateSpec("README.md.tmpl", managed=False),
+    TemplateSpec("dot-mcp.json.tmpl", managed=False),
+    *(TemplateSpec(f"dot-claude/skills/{name}/SKILL.md.tmpl", managed=True) for name in SKILLS),
 )
 """Every template file, in the order `init` writes them. `test_workspace_template` checks the package holds exactly
 these."""
+
+LINKS: Final = (
+    (AGENTS_LINK, "CLAUDE.md"),
+    *((f".agents/skills/{name}", f"../../.claude/skills/{name}") for name in SKILLS),
+)
+"""The template's symlinks: `(path, target)`."""
+
+INTRODUCED: Final = {
+    ".mcp.json": 2,
+    **{f".agents/skills/{name}": 2 for name in SKILLS},
+}
+"""The template version that added each seed file and link after version 1: `upgrade` writes one that is missing only
+when the workspace's recorded version is older (P9 spec §7.2), so a file the user removed stays removed."""
 
 _PLACEHOLDER: Final = re.compile(r"\{\{([a-z_]+)\}\}")
 _NAME_CHARS: Final = re.compile(r"[^a-z0-9._-]+")
@@ -121,7 +140,7 @@ def _toml_string(value: str | None) -> str:
 
 
 def render(values: TemplateValues, sources: Mapping[str, str]) -> list[TemplateFile]:
-    """Every template file rendered, plus the `AGENTS.md` symlink, in `TEMPLATE_FILES` order.
+    """Every template file rendered in `TEMPLATE_FILES` order, then the symlinks (`LINKS`).
 
     `sources` maps each `TemplateSpec.source` to its text. A missing source, an unknown placeholder, or a value no
     template uses is a bug → `E_INTERNAL`.
@@ -146,7 +165,7 @@ def render(values: TemplateValues, sources: Mapping[str, str]) -> list[TemplateF
     unused = sorted(set(mapping) - used)
     if unused:
         raise InternalError("A workspace template value is never used.", placeholders=unused)
-    found.append(TemplateFile(AGENTS_LINK, b"", managed=False, symlink_to="CLAUDE.md"))
+    found.extend(TemplateFile(path, b"", managed=False, symlink_to=target) for path, target in LINKS)
     return found
 
 

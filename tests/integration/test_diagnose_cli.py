@@ -10,6 +10,7 @@ from pathlib import Path
 
 import pytest
 
+from energatron.core.workspace_template import TEMPLATE_VERSION
 from tests.fixtures.make_nem12 import Nem12Spec, make_nem12, sapn_filename
 from tests.fixtures.synthetic import SYNTHETIC_NMI, SYNTHETIC_NMI11, SYNTHETIC_SERIAL
 from tests.integration.test_init_cli import init_args
@@ -38,7 +39,7 @@ def test_the_report_holds_structure_not_values(
     assert code == 0, report["error"]
     data = report["data"]
     assert data["workspace"]["catalog_records"]["sapn_interval"] == 1
-    assert data["workspace"]["template_version"] == 1 and data["workspace"]["private_config"] is True
+    assert data["workspace"]["template_version"] == TEMPLATE_VERSION and data["workspace"]["private_config"] is True
     assert {item["path"]: item["current"] for item in data["workspace"]["configs"]}["params.yaml"] is True
     assert data["tool"]["git"] and data["problems"] == []
     text = json.dumps(report)

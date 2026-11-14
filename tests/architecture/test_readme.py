@@ -53,6 +53,11 @@ def test_the_readme_shows_the_p8_commands() -> None:
     assert ["init", "--demo", "~/energatron-demo"] in readme_commands()
 
 
+def test_the_readme_shows_the_p9_commands() -> None:
+    paths = {" ".join(words[:2] if words[0] == "gas-bill" else words[:1]) for words in readme_commands()}
+    assert {"mcp", "datasets", "usage", "compare", "explain", "gas-bill check"} <= paths
+
+
 def test_every_readme_command_parses() -> None:
     commands = readme_commands()
     assert commands

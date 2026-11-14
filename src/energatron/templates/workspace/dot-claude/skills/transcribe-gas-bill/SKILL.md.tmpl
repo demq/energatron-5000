@@ -1,0 +1,32 @@
+---
+name: transcribe-gas-bill
+description: Transcribe a landed gas bill PDF into a gas_bill_record, check it and land it. Use when the owner asks to add a gas bill, or a gas bill PDF waits in data/landing/.
+---
+
+# transcribe-gas-bill
+
+Use the `energatron` MCP tools when this session has them (`tool_name` below); otherwise run the same command with
+`uv run energatron <command> --json` from this folder. Identifiers (account, MIRN, invoice, reference and meter
+numbers, the address) stay out of the record: it has no field for them. Never copy anything from the bill elsewhere.
+
+1. **Land the PDF** if it isn't yet: `land_file` with `source: gas_bill` and `dry_run: true` (`energatron land
+   data/landing/<bill>.pdf --source gas_bill --dry-run`), then without. Note its dataset ID (`gas_bill-…`).
+2. **Read the bill**: `read_gas_bill_text` (offered only when the owner started the server with `--allow-documents`;
+   `energatron gas-bill text <ID>`), or ask the owner for the figures.
+3. **Fill the record** (`new_gas_bill_record` / `energatron gas-bill new <ID> --extracted-by agent:<your model id>`
+   writes a commented skeleton): `kind: gas_bill_record`, `schema_version: 2`, `extracted_by: agent:<your model id>`
+   (`manual` when the owner typed it); the retailer and plan as printed; `issue_date`, `period_start`, `period_end`
+   as quoted `YYYY-MM-DD` (the period is inclusive); one `reads` entry per printed read, oldest first (date, `actual`
+   or `estimate`, start and end index, heating value, pressure factor, MJ as printed); `lines` for this period's
+   charges only, GST-exclusive as printed (a `usage` line per usage step in MJ x $/MJ, a `supply` line per supply rate
+   in days x $/day, discounts and credits negative, `gst_free: true` for anything applied after GST; convert c/MJ to
+   $/MJ); `subtotal` (before GST), `gst`, `total` (this period's charges including GST, never a carried balance).
+   Every number and date is a quoted string.
+4. **Check** it: `check_gas_bill_record` (`energatron gas-bill check <file>`). Every check must pass; a failing check
+   is a transcription error: compare with the bill and fix it. Never adjust a figure just to make a check pass.
+5. **Write** it: `write_gas_bill_record` (`energatron gas-bill write <file>`): it runs the same checks and writes the
+   record into `data/landing/`. Then `land_file` that path (dry run first).
+6. **Run** `run_pipeline` (`energatron run`); every `gas_bills` check must pass. A corrected record lands as a new
+   dataset; the newest per PDF wins.
+7. **Tariff in force** (once per plan): if the bill's plan isn't a landed offer, tell the owner the backtest needs an
+   `offer_manual` for it. Then `status`: a backup is pending.
