@@ -65,6 +65,9 @@ def test_init_demo_reaches_a_recommendation_that_verifies(
     assert not codes & {"W_RUN_BEHIND", "W_LANDING_NEW", "W_LANDING_LANDED", "W_OFFERS_STALE"}
     code, verified = envelope(capsys, "verify")
     assert code == 0, verified["error"]
+    code, upgraded = envelope(capsys, "upgrade", "--dry-run")
+    assert code == 0, upgraded["error"]
+    assert {item["status"] for item in upgraded["data"]["files"]} == {"unchanged"}
 
     guard = subprocess.run(
         [sys.executable, str(root / ".energatron/scripts/privacy_guard.py"), "--mode", "workspace", "--history"],

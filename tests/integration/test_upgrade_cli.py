@@ -8,6 +8,7 @@ import pytest
 
 from energatron.core.canonical import sha256_hex
 from energatron.core.workspace_template import TEMPLATE_STATE_PATH
+from tests.fixtures.synthetic import SYNTHETIC_NMI11
 from tests.integration._scratch import git
 from tests.integration.test_init_cli import init_args
 from tests.integration.test_land_cli import envelope
@@ -20,7 +21,7 @@ def root(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.Capture
     for name in ("ENERGATRON_JSON", "ENERGATRON_WORKSPACE"):
         monkeypatch.delenv(name, raising=False)
     monkeypatch.chdir(tmp_path)
-    code, result = envelope(capsys, *init_args(tmp_path / "ws"))
+    code, result = envelope(capsys, *init_args(tmp_path / "ws", "--nmi", SYNTHETIC_NMI11))  # `dvc add private` runs
     assert code == 0, result["error"]
     monkeypatch.chdir(tmp_path / "ws")
     return tmp_path / "ws"
@@ -39,7 +40,8 @@ def test_a_fresh_workspace_is_current(root: Path, capsys: pytest.CaptureFixture[
     head = git(root, "rev-parse", "HEAD")
     code, result = envelope(capsys, "upgrade")
     assert code == 0, result["error"]
-    assert set(statuses(result).values()) == {"unchanged"}
+    assert set(statuses(result).values()) == {"unchanged"}  # `dvc add private`'s ignore line is the template's
+    assert (root / ".gitignore").read_text(encoding="utf-8").count("/private") == 1
     assert ".gitignore" in statuses(result) and "pyproject.toml" not in statuses(result)
     assert (result["data"]["commit"], git(root, "rev-parse", "HEAD")) == (None, head)
 
