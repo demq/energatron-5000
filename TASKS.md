@@ -98,18 +98,18 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P10.2.1
-- Last commit: energatron-5000 `P10.2.1: share every read path and the envelope between the CLI and the coming web UI`
-- Checks: pytest -q 3899 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P10.2.2
+- Last commit: energatron-5000 `P10.2.2: add the local JSON API over every read path, behind loopback access checks`
+- Checks: pytest -q 3950 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P10.2.2 (the JSON API); P9.3.2 (owner) is still open
+- Next: P10.2.3 (the pages); P9.3.2 (owner) is still open
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 is done but for P9.3.2, the owner's (a real agent
   check-in, push, backup). P10 (local web UI) runs under the owner's `/phase 10` (2026-11-14): spec approved; P10.2.1-
-  P10.2.4 build it (P10.2.1 done: shared read paths), P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
+  P10.2.4 build it (P10.2.1-P10.2.2 done: shared read paths, JSON API), P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
 
 **Read first** (for the next session)
 - The P10 spec (`agent_docs/2026-11/2026-11-14_p10-local-web-ui-spec.md`), the sections the sub-task names; D1 rev 11
@@ -119,10 +119,13 @@ Then clear the context and type `/next`.
 - `adapters/reads.py`: `READS` (15 `ReadPath`s: `name`, `command`, `argv`, `args` model, `run(context, args)`, `parse(values)`
   → `E_USAGE` with `details.parameter`), `open_context(paths)` → `(context, denylist)`. `adapters/envelope.py`: `success`,
   `failure`, `redacted(envelope, denylist)`, `dumps`. HTTP routes call these; nothing else is needed from the CLI.
+- `adapters/http/`: `create_app(paths, access=Access(host, port, token), allow_documents)`; `Reader.answer(path, values|args)`
+  → `Answer(status, redacted document)`; `security.middleware` (Host, methods, token/cookie `energatron_session_<port>`,
+  origin) and `secure()` headers (`/reports/` gets the sandbox CSP); tests use `tests/unit/adapters/http/_client.py`.
 - `denylist --check` takes the lock, so it isn't a read path; `backup --status`, `fingerprint --check`, `pipeline sync
   --check`, `schedule status`, `landing list` and `version` are.
 - The reports are `data/reports/{usage,recommendations}/index.html`, self-contained, no `<script>`.
-- No new codes or warnings in P10; one kind, `serve_result` v1. FastAPI 0.162, uvicorn 0.54 (plain), httpx (dev).
+- No new codes or warnings in P10; one kind, `serve_result` v1. FastAPI 0.162, uvicorn 0.54 (plain), httpx2 (dev).
 - Renaming a command, option or JSON field needs a deprecation (D1 §8.1).
 
 **Open questions for the owner**
@@ -633,7 +636,7 @@ CLI read path is available in the browser with no new logic outside the adapters
   - Done when: the standard checks pass with the existing CLI tests unchanged; `test_reads` passes.
   - Handover: `adapters/envelope.py` (`success`, `failure`, `redacted`, `dumps`), `adapters/reads.py` (15 `ReadPath`s, `open_context`, `parse`),
     CLI read commands call them (3899 tests). Decision: the CLI keeps its own `--source`/`--fuel` messages (spec noted). Watch: `version` runs with no context.
-- ⬜ **P10.2.2** The JSON API.
+- ✅ **P10.2.2** The JSON API.
   - `fastapi`, `uvicorn` (runtime) and `httpx` (dev) through `uv add`; `adapters/http/{app,security,api}.py`: one route
     per read path answering the CLI's envelope, status codes, the gas bill check `POST`, the opt-in bill text, access
     checks and headers; the `http-via-wiring` contract.
@@ -641,6 +644,8 @@ CLI read path is available in the browser with no new logic outside the adapters
   - Files: `pyproject.toml`, `uv.lock`, `.importlinter`, `src/energatron/adapters/http/`,
     `tests/unit/adapters/http/`, `CHANGELOG.md`.
   - Done when: the standard checks pass; every API body equals the CLI's `--json` envelope for the same arguments.
+  - Handover: `adapters/http/{app,reader,security,api}.py`: 13 query routes + gas-bill check/text, access middleware, `http-via-wiring` (3950 tests).
+    Decision: `httpx2` not `httpx` (Starlette 1.10), `Reader` in its own module (spec, D1 noted); HEAD answered as GET. Watch: pages reuse `Reader.answer`.
 - ⬜ **P10.2.3** The pages.
   - `adapters/http/{pages,style}.py` and the page routes (§6.1), the two reports, the gas bill check form; the
     `http-pages-format-only` contract.
@@ -674,6 +679,7 @@ CLI read path is available in the browser with no new logic outside the adapters
 
 ## Log (newest first)
 
+- 2026-11-14 · P10.2.2 · JSON API: `GET /api/v1/<read>` answers the CLI's envelope (parity-tested per route), gas bill check `POST`, opt-in bill text, loopback Host/token/origin checks and security headers; `fastapi`, `uvicorn`, `httpx2` (dev) (3950 tests); self-review · energatron-5000 `P10.2.2: add the local JSON API over every read path, behind loopback access checks`
 - 2026-11-14 · P10.2.1 · shared read paths (`adapters/reads.py`, 15 entries) and envelope (`adapters/envelope.py`); CLI read commands call them, output unchanged; `test_reads` classifies every command (3899 tests); self-review · energatron-5000 `P10.2.1: share every read path and the envelope between the CLI and the coming web UI`
 - 2026-11-14 · P10.1.1 · P10 local web UI spec drafted and approved on the owner's `/phase 10` (self-review); plan rev 19, D1 rev 11; P10.2-P10.3 added from its §2 · energatron-5000 `P10.1.1: approve the P10 local web UI spec and apply plan rev 19 and D1 rev 11`
 - 2026-11-14 · P9.3.1 · P9 acceptance (agent part): scripted MCP check-in in a fresh demo workspace (11 tool calls, `fetch_offers` dry run, no identifier, raw file name, interval key or `private/` path), 6 read tools in the real workspace (denylist scan 0, workspace untouched), workspace gains `.mcp.json` and tool-aware skills, `upgrade --dry-run` from v1 lists 9 `added` · energatron-5000 `P9.3.1: record P9 acceptance (agent part)`; demq-elektric `P9.3.1: register the energatron MCP server and use the tool-aware skills`

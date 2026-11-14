@@ -84,3 +84,18 @@ forbidden_modules =
     energatron.adapters.pipeline
     energatron.adapters.offers
 allow_indirect_imports = True
+
+[importlinter:contract:http-via-wiring]
+name = HTTP reaches driven adapters only through wiring
+type = forbidden
+source_modules = energatron.adapters.http
+forbidden_modules =
+    energatron.adapters.storage
+    energatron.adapters.sources
+    energatron.adapters.vcs
+    energatron.adapters.pipeline
+    energatron.adapters.offers
+    energatron.adapters.notify
+    energatron.adapters.schedule
+    energatron.adapters.setup
+allow_indirect_imports = True

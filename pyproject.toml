@@ -16,6 +16,8 @@ dependencies = [
     "filelock>=4.2",
     "tzdata>=2026.5",
     "pypdf>=7.0",
+    "fastapi>=0.162",
+    "uvicorn>=0.54",
 ]
 
 [project.scripts]
@@ -32,6 +34,7 @@ dev = [
     "pandas-stubs",
     "dvc>=3.67.1",
     "pytest-xdist>=3.8.0",
+    "httpx2>=2.16",
 ]
 
 [build-system]

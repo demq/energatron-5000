@@ -47,7 +47,8 @@ live updates.
 - The pipeline's reports are self-contained HTML with no `<script>`: `data/reports/usage/index.html` and
   `data/reports/recommendations/index.html`.
 - No HTTP stack is a dependency today; the CDR client uses the stdlib. FastAPI 0.162 (Starlette 1.x) and uvicorn 0.54
-  support Python 3.14 and pydantic 2.14 (PyPI, 2026-11-14). FastAPI's `TestClient` needs `httpx`.
+  support Python 3.14 and pydantic 2.14 (PyPI, 2026-11-14). FastAPI's `TestClient` needs `httpx2` (Starlette 1.10 deprecates
+  `httpx` for it; built so in P10.2.2).
 
 ---
 
@@ -135,7 +136,8 @@ CDN); the OpenAPI document is at `/api/openapi.json`, behind the access checks.
   model provider sits between.
 - **Fresh per request.** Each request opens the workspace again (`reads.open_context`), so a changed private config or
   denylist applies at once and nothing is cached between requests.
-- **One at a time.** A process-wide lock serialises the reads (single user; `wiring` and logging aren't shared-state
+- **One at a time.** A process-wide lock serialises the reads (`http/reader.py`'s `Reader`, built so in P10.2.2, which
+  also builds each answer: the status and the redacted envelope) (single user; `wiring` and logging aren't shared-state
   safe). Route functions are plain `def` (FastAPI runs them in its thread pool).
 - **Read-only.** Nothing writes under the workspace and no route takes the workspace lock. A read that fails because
   another command is writing (e.g. a half-written mart) answers its error, as the CLI would.
@@ -308,8 +310,8 @@ with their own CSP (§5.4's table). A missing file → 404 with a page saying to
 - Kinds: `serve_result` v1 (golden schema). `cli_result` v1 moves module, unchanged.
 - Codes and warnings: none new (`E_USAGE`, `E_INTERNAL` and the read paths' own codes cover P10).
 - CLI: `serve`. Locks: none (`serve` takes none; its reads take none).
-- Dependencies: `fastapi` and `uvicorn` (plain, no `[standard]` extras) as runtime dependencies; `httpx` as a dev
-  dependency (`TestClient`), all through `uv add`.
+- Dependencies: `fastapi` and `uvicorn` (plain, no `[standard]` extras) as runtime dependencies; `httpx2` as a dev
+  dependency (`TestClient`; `httpx` is deprecated for it since Starlette 1.10, built so in P10.2.2), all through `uv add`.
 
 ---
 
@@ -327,8 +329,8 @@ To be applied on `/done` of P10.1.1, as plan rev 19 and D1 rev 11.
   scheduled" becomes "P9 and P10 started 2026-11-14; P11 is not scheduled".
 
 **D1 (rev 11)**
-- §2: adapters gain `envelope.py`, `reads.py` and `http/` (`app.py`, `security.py`, `api.py`, `pages.py`, `style.py`,
-  `server.py`); `cli/commands/` gains `serve.py` (P10).
+- §2: adapters gain `envelope.py`, `reads.py` and `http/` (`app.py`, `reader.py`, `security.py`, `api.py`, `pages.py`,
+  `style.py`, `server.py`); `cli/commands/` gains `serve.py` (P10).
 - §3: the `http` driving adapter calls services in process through `reads` and `wiring`. Two contracts: `http-via-wiring`
   (`energatron.adapters.http` imports no driven adapter, like `cli-via-wiring`), and `http-pages-format-only`
   (`energatron.adapters.http.pages` and `.style` import neither `energatron.services`, `energatron.core`,

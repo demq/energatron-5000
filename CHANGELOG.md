@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- A local JSON API over every read command (P10, served by the coming `energatron serve`): `GET /api/v1/<read>` answers
+  exactly the envelope `energatron <command> --json` prints, `POST /api/v1/gas-bill/check` checks a record, and the
+  bill text route exists only with `--allow-documents`. Requests need the host's loopback name, a per-launch token and,
+  for a `POST`, the server's own origin. New dependencies: `fastapi`, `uvicorn`.
 - Every read command's body is shared by the CLI and the coming web UI (P10): `adapters/reads.py` holds each read path
   (its arguments and its work) and `adapters/envelope.py` the `cli_result` envelope. Output is unchanged.
 - Workspace template v2 (P9): `energatron init` writes four agent skills (monthly check-in, explain a recommendation,
