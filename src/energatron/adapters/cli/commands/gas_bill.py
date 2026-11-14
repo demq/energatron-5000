@@ -10,11 +10,11 @@
 
 import sys
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
-from energatron.adapters import wiring
+from energatron.adapters import reads
 from energatron.adapters.cli.common import (
     DebugFlag,
     DryRunFlag,
@@ -26,9 +26,9 @@ from energatron.adapters.cli.common import (
 )
 from energatron.adapters.cli.output import CommandOutput
 from energatron.adapters.workspace import workspace_lock
-from energatron.core.errors import CheckFailedError, InvalidInputError
+from energatron.core.errors import InvalidInputError
 from energatron.services import gas_bill as gas_bill_service
-from energatron.services.gas_bill import GasBillCheckResult
+from energatron.services.gas_bill import GasBillCheckResult, GasBillTextResult
 
 COMMAND = "gas-bill"
 
@@ -82,8 +82,7 @@ def check(
     invocation = begin(ctx, verbose=verbose, debug=debug)
     data = _read_source(source)
     context = open_workspace(invocation, workspace)
-    result = gas_bill_service.check_gas_bill_record(context, data)
-    _raise_if_failed(result)
+    result = cast(GasBillCheckResult, reads.GAS_BILL_CHECK.run(context, reads.GasBillCheckArgs(record=data)))
     return CommandOutput(COMMAND, result, _text(result))
 
 
@@ -104,7 +103,7 @@ def write(
     context = open_workspace(invocation, workspace)
     with workspace_lock(context.paths):
         result = gas_bill_service.write_gas_bill_record(context, data, force=force, dry_run=dry_run)
-    _raise_if_failed(result)
+    reads.raise_if_failed(result)
     return CommandOutput(COMMAND, result, _text(result))
 
 
@@ -120,7 +119,8 @@ def text(
     """Print a landed gas bill PDF's text, for transcribing it."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    result = gas_bill_service.gas_bill_text(context, pdf_dataset_id, wiring.pdf_pages)
+    args = reads.GasBillTextArgs(pdf_dataset_id=pdf_dataset_id)
+    result = cast(GasBillTextResult, reads.GAS_BILL_TEXT.run(context, args))
     return CommandOutput(COMMAND, result, result.text.rstrip("\n") + "\n")
 
 
@@ -132,18 +132,6 @@ def _read_source(source: str) -> bytes:
         return Path(source).read_bytes()
     except OSError:
         raise InvalidInputError("The record file can't be read.", field="source") from None
-
-
-def _raise_if_failed(result: GasBillCheckResult) -> None:
-    failed = result.failed()
-    if failed:
-        raise CheckFailedError(
-            "The record doesn't recompute: fix the failing checks against the bill.",
-            failed=failed,
-            pdf_dataset_id=result.pdf_dataset_id,
-            recomputed_total=str(result.recomputed_total),
-            printed_total=str(result.printed_total),
-        )
 
 
 def _text(result: GasBillCheckResult) -> str:

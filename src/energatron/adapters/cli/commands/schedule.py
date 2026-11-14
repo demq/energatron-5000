@@ -6,11 +6,11 @@ workspace, and `install` only creates the log folder in it.
 """
 
 import shutil
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
-from energatron.adapters import wiring
+from energatron.adapters import reads, wiring
 from energatron.adapters.cli.common import (
     DebugFlag,
     DryRunFlag,
@@ -21,16 +21,12 @@ from energatron.adapters.cli.common import (
     open_workspace,
 )
 from energatron.adapters.cli.output import CommandOutput
-from energatron.core.canonical import sha256_hex
 from energatron.core.errors import StorageError, UsageError
 from energatron.core.operations import (
-    WATCH_LOG,
     Schedule,
-    launchd_label,
     launchd_plist,
     read_schedule,
 )
-from energatron.services.context import ServiceContext
 from energatron.services.schedule import ScheduleResult
 
 COMMAND = "schedule"
@@ -67,7 +63,7 @@ def install(
     uv = shutil.which("uv")
     if uv is None:
         raise UsageError("uv isn't on PATH, so the agent couldn't run it.")
-    label = _label(context)
+    label = reads.schedule_label(context)
     schedule = Schedule(weekday, hour, minute)
     plist = launchd_plist(label=label, uv=uv, workspace=str(context.paths.root), schedule=schedule)
     if not dry_run:
@@ -77,8 +73,9 @@ def install(
             raise StorageError("The log folder couldn't be created.", reason="logs_dir") from None
         agent.install(label, plist)
     state = agent.state(label)
-    result = _result(agent, "install", label, dry_run=dry_run, installed=state.installed, loaded=state.loaded,
-                     schedule=schedule)  # fmt: skip
+    result = reads.schedule_result(
+        agent, "install", label, dry_run=dry_run, installed=state.installed, loaded=state.loaded, schedule=schedule
+    )
     text = _text(result)
     if dry_run:
         preview = agent.shown_text(plist.decode("utf-8"))
@@ -100,14 +97,15 @@ def remove(
     context = open_workspace(invocation, workspace)
     agent = wiring.launchd()
     agent.check_platform()
-    label = _label(context)
+    label = reads.schedule_label(context)
     before = agent.state(label)
     schedule = read_schedule(before.plist) if before.plist else None
     if not dry_run:
         agent.remove(label)
     after = before if dry_run else agent.state(label)
-    result = _result(agent, "remove", label, dry_run=dry_run, installed=after.installed, loaded=after.loaded,
-                     schedule=schedule)  # fmt: skip
+    result = reads.schedule_result(
+        agent, "remove", label, dry_run=dry_run, installed=after.installed, loaded=after.loaded, schedule=schedule
+    )
     return CommandOutput(COMMAND, result, _text(result))
 
 
@@ -122,44 +120,8 @@ def status(
     """Whether this workspace's agent is installed and loaded, and its schedule."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    agent = wiring.launchd()
-    agent.check_platform()
-    label = _label(context)
-    state = agent.state(label)
-    schedule = read_schedule(state.plist) if state.plist else None
-    result = _result(agent, "status", label, dry_run=False, installed=state.installed, loaded=state.loaded,
-                     schedule=schedule)  # fmt: skip
+    result = cast(ScheduleResult, reads.SCHEDULE_STATUS.run(context, reads.NoArgs()))
     return CommandOutput(COMMAND, result, _text(result))
-
-
-def _label(context: ServiceContext) -> str:
-    return launchd_label(sha256_hex(str(context.paths.root).encode("utf-8")))
-
-
-def _result(
-    agent: wiring.Launchd,
-    action: str,
-    label: str,
-    *,
-    dry_run: bool,
-    installed: bool,
-    loaded: bool,
-    schedule: Schedule | None,
-) -> ScheduleResult:
-    return ScheduleResult.model_validate(
-        {
-            "action": action,
-            "dry_run": dry_run,
-            "label": label,
-            "plist": agent.shown(agent.plist_path(label)),
-            "installed": installed,
-            "loaded": loaded,
-            "weekday": schedule.weekday if schedule else None,
-            "hour": schedule.hour if schedule else None,
-            "minute": schedule.minute if schedule else None,
-            "log": WATCH_LOG,
-        }
-    )
 
 
 _DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")

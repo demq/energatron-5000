@@ -4,6 +4,7 @@ from typing import Annotated, cast
 
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.common import DebugFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin, open_workspace
 from energatron.adapters.cli.output import CommandOutput
 from energatron.core.errors import UsageError
@@ -37,7 +38,8 @@ def compare(
     if fuel is not None and fuel not in compare_service.FUELS:
         raise UsageError("--fuel is electricity or gas.", parameter="--fuel")
     context = open_workspace(invocation, workspace)
-    result = compare_service.compare(context, fuel=cast(Fuel | None, fuel), limit=limit, brand=brand)
+    args = reads.CompareArgs(fuel=cast(Fuel | None, fuel), limit=limit, brand=brand)
+    result = cast(CompareResult, reads.COMPARE.run(context, args))
     return CommandOutput(COMMAND, result, text(result))
 
 

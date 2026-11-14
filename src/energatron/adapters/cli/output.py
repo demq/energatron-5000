@@ -7,24 +7,23 @@
   private config plus `private/denylist.txt`, once the workspace is open.
 """
 
-import json
 import logging
 import sys
 from collections.abc import Collection, Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
-from typing import ClassVar, Literal, TextIO
+from typing import TextIO
 
 import typer
-from pydantic import BaseModel, ConfigDict, Field
 
-import energatron
-from energatron.core.canonical import JSONValue
-from energatron.core.errors import Category, ConfirmationRequiredError, EnergatronError, ResultWarning
-from energatron.core.persisted import Persisted
-from energatron.core.privacy import DenyEntry, redact, redact_json
+from energatron.adapters import envelope
+from energatron.adapters.envelope import CliError, CliResult
+from energatron.core.errors import ConfirmationRequiredError, EnergatronError
+from energatron.core.privacy import DenyEntry, redact
 from energatron.services.context import ServiceResult
 from energatron.services.stages.runner import StageResult
+
+__all__ = ["CliError", "CliResult"]  # moved to `adapters/envelope.py` (P10 spec §3.1); still importable from here
 
 JSON_ENV = "ENERGATRON_JSON"
 """`ENERGATRON_JSON=1` does what `--json` does (D1 §8.2)."""
@@ -50,35 +49,6 @@ class CommandOutput:
     result: ServiceResult | StageResult
     text: str
     error: EnergatronError | None = None  # a failure that still has a result: `E_PARTIAL` (exit 8, D1 §8.5)
-
-
-class CliError(BaseModel):
-    """`error` in the envelope: `{"code", "category", "message", "details"}` (D1 §8.5)."""
-
-    model_config = ConfigDict(extra="forbid", frozen=True, hide_input_in_errors=True, allow_inf_nan=False)
-
-    code: str
-    category: Category
-    message: str
-    details: dict[str, JSONValue] = Field(default_factory=dict)
-
-
-class CliResult(Persisted):
-    """`cli_result` v1, the JSON envelope (D1 §8.5). `data` is the service's result model, dumped; null on failure
-    except for exit code 8, where it holds the per-item results. `warnings` are the result's (D1 §7)."""
-
-    KIND: ClassVar[str] = "cli_result"
-    SCHEMA_VERSION: ClassVar[int] = 1
-    kind: Literal["cli_result"] = "cli_result"
-    schema_version: Literal[1] = 1
-
-    command: str | None
-    ok: bool
-    exit_code: int = Field(ge=0)
-    energatron_version: str
-    data: dict[str, JSONValue] | None
-    warnings: tuple[ResultWarning, ...] = ()
-    error: CliError | None
 
 
 def prescan(args: Sequence[str], env: Mapping[str, str]) -> tuple[bool, bool]:
@@ -139,18 +109,7 @@ def write_success(invocation: Invocation, output: CommandOutput) -> int:
     """
     result, warnings, error = output.result, output.result.warnings, output.error
     if invocation.json_mode:
-        _write_envelope(
-            invocation,
-            CliResult(
-                command=output.command,
-                ok=error is None,
-                exit_code=0 if error is None else error.exit_code,
-                energatron_version=energatron.__version__,
-                data=result.model_dump(mode="json"),
-                warnings=tuple(warnings),
-                error=None if error is None else _cli_error(error),
-            ),
-        )
+        _write_envelope(invocation, envelope.success(output.command, result, warnings, error))
     else:
         _write(invocation, sys.stdout, output.text)
         for warning in warnings:
@@ -163,24 +122,10 @@ def write_success(invocation: Invocation, output: CommandOutput) -> int:
 def write_failure(invocation: Invocation, command: str | None, error: EnergatronError) -> int:
     """Print an error: the envelope, or `energatron: error <code>: <message>` (and its hint) on stderr."""
     if invocation.json_mode:
-        _write_envelope(
-            invocation,
-            CliResult(
-                command=command,
-                ok=False,
-                exit_code=error.exit_code,
-                energatron_version=energatron.__version__,
-                data=None,
-                error=_cli_error(error),
-            ),
-        )
+        _write_envelope(invocation, envelope.failure(command, error))
     else:
         _write_error_text(invocation, error)
     return error.exit_code
-
-
-def _cli_error(error: EnergatronError) -> CliError:
-    return CliError(code=error.code, category=error.category, message=error.message, details=error.details)
 
 
 def _write_error_text(invocation: Invocation, error: EnergatronError) -> None:
@@ -190,10 +135,9 @@ def _write_error_text(invocation: Invocation, error: EnergatronError) -> None:
         _write(invocation, sys.stderr, f"{_PREFIX}hint: {hint}\n")
 
 
-def _write_envelope(invocation: Invocation, envelope: CliResult) -> None:
+def _write_envelope(invocation: Invocation, document: CliResult) -> None:
     """Redact the dumped envelope as data, then serialise it: one line (D1 §8.7)."""
-    document = redact_json(envelope.model_dump(mode="json"), invocation.denylist)
-    sys.stdout.write(json.dumps(document, ensure_ascii=False, allow_nan=False) + "\n")
+    sys.stdout.write(envelope.dumps(envelope.redacted(document, invocation.denylist)) + "\n")
     sys.stdout.flush()
 
 

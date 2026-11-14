@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Every read command's body is shared by the CLI and the coming web UI (P10): `adapters/reads.py` holds each read path
+  (its arguments and its work) and `adapters/envelope.py` the `cli_result` envelope. Output is unchanged.
 - Workspace template v2 (P9): `energatron init` writes four agent skills (monthly check-in, explain a recommendation,
   record a decision, transcribe a gas bill) under `.claude/skills/` with `.agents/skills/` links for Codex, and
   `.mcp.json` registering `energatron mcp`; `energatron upgrade` adds them to a version 1 workspace. The privacy guard

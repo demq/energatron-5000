@@ -98,26 +98,27 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P10.1.1
-- Last commit: energatron-5000 `P10.1.1: approve the P10 local web UI spec and apply plan rev 19 and D1 rev 11`
-- Checks: pytest -q 3858 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P10.2.1
+- Last commit: energatron-5000 `P10.2.1: share every read path and the envelope between the CLI and the coming web UI`
+- Checks: pytest -q 3899 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P10.2.1 (shared read paths and envelope); P9.3.2 (owner) is still open
+- Next: P10.2.2 (the JSON API); P9.3.2 (owner) is still open
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 is done but for P9.3.2, the owner's (a real agent
   check-in, push, backup). P10 (local web UI) runs under the owner's `/phase 10` (2026-11-14): spec approved; P10.2.1-
-  P10.2.4 build it, P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
+  P10.2.4 build it (P10.2.1 done: shared read paths), P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
 
 **Read first** (for the next session)
 - The P10 spec (`agent_docs/2026-11/2026-11-14_p10-local-web-ui-spec.md`), the sections the sub-task names; D1 rev 11
   §3 (the `http` contracts), §8.4, §8.5, §8.7.
 
 **Facts**
-- Every read command is thin (open the workspace, maybe `wiring.code_state`, one service); P10.2.1 moves those bodies
-  into `adapters/reads.py` so the CLI and `http` share them, and `CliResult` into `adapters/envelope.py`, output unchanged.
+- `adapters/reads.py`: `READS` (15 `ReadPath`s: `name`, `command`, `argv`, `args` model, `run(context, args)`, `parse(values)`
+  → `E_USAGE` with `details.parameter`), `open_context(paths)` → `(context, denylist)`. `adapters/envelope.py`: `success`,
+  `failure`, `redacted(envelope, denylist)`, `dumps`. HTTP routes call these; nothing else is needed from the CLI.
 - `denylist --check` takes the lock, so it isn't a read path; `backup --status`, `fingerprint --check`, `pipeline sync
   --check`, `schedule status`, `landing list` and `version` are.
 - The reports are `data/reports/{usage,recommendations}/index.html`, self-contained, no `<script>`.
@@ -621,8 +622,8 @@ CLI read path is available in the browser with no new logic outside the adapters
   - Handover: P10 spec approved on the owner's `/phase 10` (self-review: cookie name per port, access checks as §5.4, pages render
     from redacted documents only); plan rev 19, D1 rev 11. Watch: no script frontend, so no Node; `serve` is read-only.
 
-#### P10.2 Build ⬜
-- ⬜ **P10.2.1** Shared read paths and envelope.
+#### P10.2 Build 🔄
+- ✅ **P10.2.1** Shared read paths and envelope.
   - `adapters/envelope.py` (`CliResult`, `CliError` moved from `cli/output.py`, `success`, `failure`, `redacted`);
     `adapters/reads.py` (`open_context`, `ReadPath`, `READS`: each read path's args model and body, moved from its
     command); the CLI read commands call it with no change in output; `test_reads` classifies every CLI command.
@@ -630,6 +631,8 @@ CLI read path is available in the browser with no new logic outside the adapters
   - Files: `src/energatron/adapters/{envelope,reads}.py`, `src/energatron/adapters/cli/{output,common}.py`,
     `src/energatron/adapters/cli/commands/` (the read commands), `tests/unit/adapters/test_reads.py`, `CHANGELOG.md`.
   - Done when: the standard checks pass with the existing CLI tests unchanged; `test_reads` passes.
+  - Handover: `adapters/envelope.py` (`success`, `failure`, `redacted`, `dumps`), `adapters/reads.py` (15 `ReadPath`s, `open_context`, `parse`),
+    CLI read commands call them (3899 tests). Decision: the CLI keeps its own `--source`/`--fuel` messages (spec noted). Watch: `version` runs with no context.
 - ⬜ **P10.2.2** The JSON API.
   - `fastapi`, `uvicorn` (runtime) and `httpx` (dev) through `uv add`; `adapters/http/{app,security,api}.py`: one route
     per read path answering the CLI's envelope, status codes, the gas bill check `POST`, the opt-in bill text, access
@@ -671,6 +674,7 @@ CLI read path is available in the browser with no new logic outside the adapters
 
 ## Log (newest first)
 
+- 2026-11-14 · P10.2.1 · shared read paths (`adapters/reads.py`, 15 entries) and envelope (`adapters/envelope.py`); CLI read commands call them, output unchanged; `test_reads` classifies every command (3899 tests); self-review · energatron-5000 `P10.2.1: share every read path and the envelope between the CLI and the coming web UI`
 - 2026-11-14 · P10.1.1 · P10 local web UI spec drafted and approved on the owner's `/phase 10` (self-review); plan rev 19, D1 rev 11; P10.2-P10.3 added from its §2 · energatron-5000 `P10.1.1: approve the P10 local web UI spec and apply plan rev 19 and D1 rev 11`
 - 2026-11-14 · P9.3.1 · P9 acceptance (agent part): scripted MCP check-in in a fresh demo workspace (11 tool calls, `fetch_offers` dry run, no identifier, raw file name, interval key or `private/` path), 6 read tools in the real workspace (denylist scan 0, workspace untouched), workspace gains `.mcp.json` and tool-aware skills, `upgrade --dry-run` from v1 lists 9 `added` · energatron-5000 `P9.3.1: record P9 acceptance (agent part)`; demq-elektric `P9.3.1: register the energatron MCP server and use the tool-aware skills`
 - 2026-11-14 · P9.2.4 · template v2: four workspace skills, `.agents/skills` links, `.mcp.json`; `upgrade` adds introduced paths; guard allows `.mcp.json`; README "Agents"; scripted MCP check-in test (3858 tests); self-review; P9.2 ticked · energatron-5000 `P9.2.4: add the workspace skills and .mcp.json to the template (v2) and the README's agent guide`

@@ -4,11 +4,11 @@ The live entries come from `wiring.code_fingerprint()`. Writing takes the worksp
 `--check` writes nothing and takes no lock (D1 §8.8).
 """
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
-from energatron.adapters import wiring
+from energatron.adapters import reads, wiring
 from energatron.adapters.cli.common import (
     DebugFlag,
     DryRunFlag,
@@ -47,7 +47,7 @@ def fingerprint(
     context = open_workspace(invocation, workspace)
     path = context.paths.root / CODE_FINGERPRINT_PATH
     if check:
-        result = wiring.refresh_fingerprint(path, wiring.code_fingerprint(), check=True)
+        result = cast(wiring.FingerprintResult, reads.FINGERPRINT_CHECK.run(context, reads.NoArgs()))
     else:
         with workspace_lock(context.paths):
             result = wiring.refresh_fingerprint(path, wiring.code_fingerprint(), dry_run=dry_run)

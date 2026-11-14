@@ -6,13 +6,12 @@ from typing import Annotated
 
 import typer
 
-from energatron.adapters import wiring
+from energatron.adapters import reads
 from energatron.adapters.cli.output import Invocation, set_verbosity
 from energatron.adapters.workspace import find_workspace
 from energatron.core.errors import InternalError
-from energatron.core.privacy import derive_denylist
+from energatron.core.privacy import DenyEntry
 from energatron.services.context import ServiceContext
-from energatron.services.denylist import read_manual_denylist
 
 # Every command accepts these, after the command name (D1 §8.2). `--json` and `--debug` are also pre-scanned by
 # `main()`, which decides the output mode before typer parses anything (§8.5).
@@ -53,9 +52,10 @@ def open_workspace(invocation: Invocation, option: str | None) -> ServiceContext
     read (D1 §8.7), so it never depends on the generated file being current.
     """
     paths = find_workspace(option, cwd=Path.cwd(), env=os.environ)
-    manual = read_manual_denylist(paths)
-    invocation.denylist = manual
-    context = wiring.build_context(paths)
-    if context.private is not None:
-        invocation.denylist = (*derive_denylist(context.private), *manual)
+
+    def hold(manual: tuple[DenyEntry, ...]) -> None:
+        invocation.denylist = manual
+
+    context, denylist = reads.open_context(paths, on_manual=hold)
+    invocation.denylist = denylist
     return context

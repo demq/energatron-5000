@@ -1,9 +1,10 @@
 """`energatron usage [--months N]` (P9 spec §3.2): the usage aggregates behind the costs. Read-only."""
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.common import DebugFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin, open_workspace
 from energatron.adapters.cli.output import CommandOutput
 from energatron.services import usage_summary
@@ -26,7 +27,7 @@ def usage(
     """Summarise electricity and gas usage: the profile's figures and monthly totals (no interval rows)."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    result = usage_summary.usage(context, months=months)
+    result = cast(UsageResult, reads.USAGE.run(context, reads.UsageArgs(months=months)))
     return CommandOutput(COMMAND, result, text(result))
 
 

@@ -4,8 +4,11 @@
 lock; without `--dry-run` it needs `--yes` or a "yes" at a prompt, because it deletes the owner's files.
 """
 
+from typing import cast
+
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.common import (
     DebugFlag,
     DryRunFlag,
@@ -39,7 +42,7 @@ def list_inbox(
     """List the inbox files and whether each is already landed."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    result = landing_service.landing_list(context)
+    result = cast(LandingResult, reads.LANDING.run(context, reads.NoArgs()))
     return CommandOutput(COMMAND, result, _text(result))
 
 

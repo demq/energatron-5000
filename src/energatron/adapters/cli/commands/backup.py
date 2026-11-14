@@ -4,10 +4,11 @@
 included. `--status` takes no lock and never touches a backup location: agents may run it.
 """
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.common import (
     DebugFlag,
     DryRunFlag,
@@ -47,7 +48,7 @@ def backup(
         raise UsageError("--status and --dry-run can't be combined: --status writes nothing anyway.")
     context = open_workspace(invocation, workspace)
     if status:
-        result = backup_service.backup_status(context)
+        result = cast(BackupStatusResult, reads.BACKUP_STATUS.run(context, reads.NoArgs()))
         return CommandOutput("backup", result, _status_text(result))
     with workspace_lock(context.paths):
         done = backup_service.backup(context, dry_run=dry_run)

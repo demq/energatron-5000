@@ -1,9 +1,10 @@
 """`energatron datasets [--source SOURCE] [--limit N]` (P9 spec §3.1): the landed datasets, newest first. Read-only."""
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.commands.land import source_type
 from energatron.adapters.cli.common import DebugFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin, open_workspace
 from energatron.adapters.cli.output import CommandOutput
@@ -31,7 +32,7 @@ def datasets(
     invocation = begin(ctx, verbose=verbose, debug=debug)
     kind = source_type(source)
     context = open_workspace(invocation, workspace)
-    result = datasets_service.datasets(context, source=kind, limit=limit)
+    result = cast(DatasetsResult, reads.DATASETS.run(context, reads.DatasetsArgs(source=kind, limit=limit)))
     return CommandOutput(COMMAND, result, text(result))
 
 

@@ -1,15 +1,16 @@
 """`energatron status` (P7 spec §4): where the workspace stands, with reminders. Read-only: no lock; agents may run it.
 
-The command computes the live code fingerprint against the recorded one (services can't, D1 §11.4) and passes the
-stale stage names and `tool_dirty` to the service.
+Its body is `reads.STATUS` (P10 spec §3.2), shared with the web UI: it computes the live code fingerprint against the
+recorded one (services can't, D1 §11.4) and passes the stale stage names and `tool_dirty` to the service.
 """
+
+from typing import cast
 
 import typer
 
-from energatron.adapters import wiring
+from energatron.adapters import reads
 from energatron.adapters.cli.common import DebugFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin, open_workspace
 from energatron.adapters.cli.output import CommandOutput
-from energatron.services import status as status_service
 from energatron.services.status import StatusResult
 
 COMMAND = "status"
@@ -25,9 +26,7 @@ def status(
     """Summarise the workspace: pipeline, last run, recommendation, offers, inbox, backup and drill, with reminders."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    stale, tool_dirty = wiring.code_state(context.paths)
-    unpublished = wiring.tool_unpublished(context.paths)
-    result = status_service.status(context, code_stale=stale, tool_dirty=tool_dirty, tool_unpublished=unpublished)
+    result = cast(StatusResult, reads.STATUS.run(context, reads.NoArgs()))
     return CommandOutput(COMMAND, result, text(result))
 
 

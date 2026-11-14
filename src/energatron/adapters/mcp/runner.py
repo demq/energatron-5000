@@ -18,8 +18,7 @@ from typing import Any, Final
 
 from pydantic import ValidationError
 
-import energatron
-from energatron.adapters.cli.output import CliError, CliResult
+from energatron.adapters.envelope import CliResult, failure
 from energatron.adapters.mcp.tools import CLI_COMMAND, LandFile, Tool
 from energatron.core.errors import EnergatronError, SubprocessError, UsageError
 
@@ -112,11 +111,4 @@ def parse_envelope(out: bytes) -> dict[str, Any] | None:
 
 def envelope_for(command: str, error: EnergatronError) -> dict[str, Any]:
     """An error envelope the server builds itself, as the CLI would print it."""
-    return CliResult(
-        command=command,
-        ok=False,
-        exit_code=error.exit_code,
-        energatron_version=energatron.__version__,
-        data=None,
-        error=CliError(code=error.code, category=error.category, message=error.message, details=error.details),
-    ).model_dump(mode="json")
+    return failure(command, error).model_dump(mode="json")

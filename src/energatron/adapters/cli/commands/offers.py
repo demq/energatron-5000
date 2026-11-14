@@ -1,12 +1,13 @@
 """`energatron offers diff [--plan PLAN_ID]` (P4 spec §11): read-only, takes no lock."""
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.common import DebugFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin, open_workspace
 from energatron.adapters.cli.output import CommandOutput
-from energatron.services.offer_diff import OfferDiffResult, offer_diff
+from energatron.services.offer_diff import OfferDiffResult
 
 COMMAND = "offers"
 
@@ -29,7 +30,7 @@ def diff(
     """Show what changed between each plan's two newest landed snapshots."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    result = offer_diff(context, plan=plan)
+    result = cast(OfferDiffResult, reads.OFFERS_DIFF.run(context, reads.OffersDiffArgs(plan=plan)))
     return CommandOutput(COMMAND, result, _text(result))
 
 

@@ -24,6 +24,7 @@ from energatron.adapters.offers.cdr import DEFAULT_ROOT, CdrProvider
 from energatron.adapters.offers.frozen import FrozenProvider
 from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
+from energatron.adapters.pipeline.fingerprint import FingerprintResult as FingerprintResult  # for `reads`
 from energatron.adapters.pipeline.fingerprint import (
     InstalledDistributions,
     commit_published,

@@ -1,13 +1,14 @@
 """`energatron explain [REC_ID] [--options N]` (P9 spec §3.4): the current recommendation explained. Read-only.
 
-The command computes the stale stages from the live code fingerprint (services can't, D1 §11.4), as `status` does.
+Its body is `reads.EXPLAIN` (P10 spec §3.2): the stale stages come from the live code fingerprint (services can't, D1
+§11.4), as for `status`.
 """
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
-from energatron.adapters import wiring
+from energatron.adapters import reads
 from energatron.adapters.cli.common import DebugFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin, open_workspace
 from energatron.adapters.cli.output import CommandOutput
 from energatron.services import explain as explain_service
@@ -32,8 +33,7 @@ def explain(
     """Explain the current recommendation: what to do, how sure it is, what to check, and where it came from."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
     context = open_workspace(invocation, workspace)
-    stale, _ = wiring.code_state(context.paths)
-    result = explain_service.explain(context, rec_id, options=options, code_stale=stale)
+    result = cast(ExplainResult, reads.EXPLAIN.run(context, reads.ExplainArgs(rec_id=rec_id, options=options)))
     return CommandOutput(COMMAND, result, text(result))
 
 

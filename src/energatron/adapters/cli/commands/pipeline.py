@@ -4,10 +4,11 @@
 `land`'s commit hook while `land` holds it (D1 §8.8). Never commits: the result lists what to commit.
 """
 
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 
+from energatron.adapters import reads
 from energatron.adapters.cli.common import (
     DebugFlag,
     DryRunFlag,
@@ -57,15 +58,7 @@ def sync(
         raise UsageError("--check and --dry-run can't be combined: --check writes nothing anyway.")
     context = open_workspace(invocation, workspace)
     if check:
-        pipeline_sync.check(context)
-        result = PipelineSyncResult(
-            dvc_yaml_written=False,
-            params_written=False,
-            params_rewritten=False,
-            catalogs_created=[],
-            pointer_files=[],
-            dry_run=False,
-        )
+        result = cast(PipelineSyncResult, reads.PIPELINE_CHECK.run(context, reads.NoArgs()))
         return CommandOutput(COMMAND, result, "The pipeline files are in sync with the tool.\n")
     with workspace_lock(context.paths):
         result = pipeline_sync.sync(context, dry_run=dry_run)

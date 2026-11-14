@@ -115,7 +115,9 @@ which then calls it).
 
 Each CLI read command becomes: `begin`, `open_workspace`, `reads.<path>.run(context, args)`, `CommandOutput` with its
 text. Arguments the CLI validates by hand today (`--fuel`, `--source`) are validated by the args model and raise the same
-`E_USAGE`. Nothing in `reads.py` computes a figure: it only calls services and wiring, as the commands did.
+`E_USAGE`. (Built so in P10.2.1: the CLI keeps its own checks and messages for those two, so its output is unchanged;
+the args model's `parse` validates loose values, such as an HTTP query, raising `E_USAGE` with `details.parameter` the
+field's name and a generic message.) Nothing in `reads.py` computes a figure: it only calls services and wiring, as the commands did.
 
 `READS` (the table) is ordered as above. `test_reads` (§8) fails when a CLI command (or subcommand) is neither in `READS`
 nor in the test's list of commands that write, lock or serve, so a new command has to be classified.
