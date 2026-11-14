@@ -98,17 +98,17 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P9.2.4
-- Last commit: energatron-5000 `P9.2.4: add the workspace skills and .mcp.json to the template (v2) and the README's agent guide`
+- Last done: P9.3.1
+- Last commit: energatron-5000 `P9.3.1: record P9 acceptance (agent part)`; demq-elektric `P9.3.1: register the energatron MCP server and use the tool-aware skills`
 - Checks: pytest -q 3858 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P9.3.1 (P9 acceptance, agent part)
+- Next: P9.3.2 (owner: a real agent check-in, push, backup)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 (agent interface) runs under the owner's `/phase 9`
-  (2026-11-14): spec approved, P9.2 is built (read commands, gas bill tools, MCP server, template v2 with skills), P9.3.1 is the agent's acceptance,
+  (2026-11-14): spec approved, P9.2 built, P9.3.1 (agent acceptance) passed; only P9.3.2, the owner's, is left, P9.3.1 is the agent's acceptance,
   P9.3.2 the owner's.
 
 **Read first** (for the next session)
@@ -585,8 +585,8 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
   - Handover: template v2 (four skills, `.agents/skills` links, `.mcp.json`), `upgrade` adds what a newer template introduced (`INTRODUCED`),
     guard allows `.mcp.json`, README "Agents", `test_mcp_check_in` (3858 tests). Decision: introduced paths are added only once (a removed one stays removed). Watch: the check-in test runs a draft.
 
-#### P9.3 Acceptance ⬜
-- ⬜ **P9.3.1** P9 acceptance (agent part).
+#### P9.3 Acceptance 🔄
+- ✅ **P9.3.1** P9 acceptance (agent part).
   - The P9 spec §11 checks 1-4: the scripted check-in in a fresh demo workspace (`fetch_offers` as a dry run); the
     read-only tools in the owner's workspace through the server, denylist-checked; the owner's workspace gains
     `.mcp.json` and the four tool-aware skills (replacing its own), committed as one workspace commit; `upgrade
@@ -595,6 +595,8 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
   - Files: `TASKS.md`; (`demq-elektric/`) `.mcp.json`, `.claude/skills/*/SKILL.md`, `.agents/skills/*`.
   - Done when: checks 1-4 pass; `TASKS.md` gets counts and pass/fail only.
   - On /done: commit the workspace files as one workspace commit; report the pending backup.
+  - Handover: check 1 pass (demo check-in via MCP, 11 calls, `fetch_offers` dry run, 0 forbidden strings); check 2 pass (6 read tools in the real
+    workspace, denylist 0, workspace untouched); check 3 workspace commit; check 4 pass (9 `added`). Watch: real workspace `W_RUN_BEHIND` (tool changed).
 - ⬜ **P9.3.2** Owner: a real agent check-in, push, backup.
   - Why: a real agent session, approving the MCP server, pushing and backups are the owner's.
   - Refs: the P9 spec §11 checks 5-7.
@@ -604,6 +606,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
 
 ## Log (newest first)
 
+- 2026-11-14 · P9.3.1 · P9 acceptance (agent part): scripted MCP check-in in a fresh demo workspace (11 tool calls, `fetch_offers` dry run, no identifier, raw file name, interval key or `private/` path), 6 read tools in the real workspace (denylist scan 0, workspace untouched), workspace gains `.mcp.json` and tool-aware skills, `upgrade --dry-run` from v1 lists 9 `added` · energatron-5000 `P9.3.1: record P9 acceptance (agent part)`; demq-elektric `P9.3.1: register the energatron MCP server and use the tool-aware skills`
 - 2026-11-14 · P9.2.4 · template v2: four workspace skills, `.agents/skills` links, `.mcp.json`; `upgrade` adds introduced paths; guard allows `.mcp.json`; README "Agents"; scripted MCP check-in test (3858 tests); self-review; P9.2 ticked · energatron-5000 `P9.2.4: add the workspace skills and .mcp.json to the template (v2) and the README's agent guide`
 - 2026-11-14 · P9.2.3 · `energatron mcp`: stdio MCP server, 15 tools each running the CLI command as a child, `--allow-documents`, `mcp-via-cli` import contract (3850 tests); self-review · energatron-5000 `P9.2.3: add energatron mcp, a stdio MCP server whose tools run the CLI`
 - 2026-11-14 · P9.2.2 · `gas_bill_record` v2 with `extracted_by` (v1 upgraded on read, catalog `extra.extracted_by`), `gas-bill check`, `write`, `text`, `new --extracted-by` (3774 tests); self-review · energatron-5000 `P9.2.2: add gas bill records v2 with extracted_by and gas-bill check, write and text`
