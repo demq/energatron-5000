@@ -20,6 +20,7 @@ from energatron.adapters.cli.commands import (
     decide,
     demo,
     denylist,
+    diagnose,
     fetch_offers,
     fingerprint,
     gas_bill,
@@ -66,6 +67,7 @@ app.command("init")(init.init)
 app.command("demo")(demo.demo)
 app.command("upgrade")(upgrade.upgrade)
 app.command("migrate")(migrate.migrate)
+app.command("diagnose")(diagnose.diagnose)
 app.command("denylist")(denylist.denylist)
 app.command("backup")(backup.backup)
 app.command("fingerprint")(fingerprint.fingerprint)

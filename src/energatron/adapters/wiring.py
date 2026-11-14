@@ -34,7 +34,7 @@ from energatron.adapters.pipeline.fingerprint import read_fingerprint as read_fi
 from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refresh_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
 from energatron.adapters.schedule.launchd import Launchd as Launchd  # for the CLI
-from energatron.adapters.setup.subprocesses import SubprocessSetup
+from energatron.adapters.setup.subprocesses import SubprocessSetup, tool_version
 from energatron.adapters.sources.registry import parsers_for
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
@@ -247,3 +247,8 @@ def demo_provider(clock: Clock, region: RegionProfile) -> FrozenProvider:
         lists={demo.DEMO_BASE: demo.list_body(plans)},
         details={(demo.DEMO_BASE, plan["planId"]): demo.detail_body(plan) for plan in plans},
     )
+
+
+def program_versions() -> dict[str, str | None]:
+    """The version numbers of git, uv and DVC, for `diagnose` (P8 spec §8); None for one that can't be run."""
+    return {program: tool_version(program) for program in ("git", "uv", "dvc")}

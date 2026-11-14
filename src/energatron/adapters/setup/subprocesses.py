@@ -6,6 +6,7 @@ Output of the commands is never logged or returned: a failure names the step and
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -99,3 +100,20 @@ class SubprocessSetup:
             raise SubprocessError("The demo failed.", step="demo", exit_code=result.returncode, demo_error=code)
         data: JSONValue = envelope.get("data")
         return data
+
+
+_VERSION: Final = re.compile(r"[0-9]+(?:\.[0-9]+)+")
+
+
+def tool_version(program: str, bin_dir: Path | None = None) -> str | None:
+    """`<program> --version`'s version number (`2.50.1`), or None when it can't be run. Only the number is kept."""
+    beside = (bin_dir or Path(sys.executable).parent) / program
+    executable = str(beside) if beside.is_file() else shutil.which(program)
+    if executable is None:
+        return None
+    try:
+        result = subprocess.run([executable, "--version"], capture_output=True, text=True, timeout=60, check=False)
+    except OSError, subprocess.TimeoutExpired:
+        return None
+    found = _VERSION.search(result.stdout + result.stderr) if result.returncode == 0 else None
+    return found.group() if found else None
