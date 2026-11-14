@@ -22,6 +22,7 @@ from energatron.adapters.cli.commands import (
     fetch_offers,
     fingerprint,
     gas_bill,
+    init,
     land,
     landing,
     offers,
@@ -58,6 +59,7 @@ app = typer.Typer(
     pretty_exceptions_enable=False,
 )
 app.command("version")(version.version)
+app.command("init")(init.init)
 app.command("denylist")(denylist.denylist)
 app.command("backup")(backup.backup)
 app.command("fingerprint")(fingerprint.fingerprint)

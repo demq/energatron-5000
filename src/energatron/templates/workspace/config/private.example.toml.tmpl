@@ -1,0 +1,21 @@
+# Copy to private/config.toml, fill in your values, then run `uv run energatron denylist` and commit private.dvc.
+# private/ is DVC-tracked: its contents never reach git. Leave out what you don't have.
+kind = "private_config"
+schema_version = 1
+salt = "<32 lowercase hex characters, generated once>"
+
+[premises]
+nmi = "<NMI>"                          # 10 characters, or 11 including the checksum digit
+meter_serials = ["<meter serial>"]
+street = "<street number and name>"    # optional, but the denylist is weaker without it
+postcode = "<postcode>"                # optional; also filters the offers fetched
+network_tariff = "<network tariff code>"   # optional
+gas_mirn = "<MIRN>"                    # optional
+
+[accounts]
+electricity = ["<retailer account or customer number>"]   # optional; any number of entries
+gas = []
+
+[current_plans]
+electricity = "<offer snapshot id>"    # optional: the plan you're on, from a recommendation's options
+gas = "<offer snapshot id>"            # optional

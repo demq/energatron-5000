@@ -1,0 +1,16 @@
+[project]
+name = "{{name}}"
+version = "0"
+requires-python = ">=3.14,<3.15"
+dependencies = ["energatron-5000"]
+
+[tool.uv]
+package = false
+required-version = ">=0.12.19"
+python-preference = "only-managed"
+
+[tool.uv.sources]
+{{tool_source}}
+
+[dependency-groups]
+dev = ["dvc>=3.67.1", "pre-commit>=4.7", "nbstripout>=0.9.1"]

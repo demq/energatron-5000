@@ -1,0 +1,12 @@
+# {{name}}
+
+An energy workspace for energatron: your meter data, bills, offers and recommendations. It is private: git holds
+config and DVC pointers only, and the data stays on this machine unless you back it up somewhere yourself.
+
+```bash
+uv run energatron status                     # where things stand, with reminders
+uv run energatron land data/landing/         # land what you downloaded into data/landing/
+uv run energatron run                        # run the pipeline; the recommendation is in data/reports/
+```
+
+The tool's README is the full manual.

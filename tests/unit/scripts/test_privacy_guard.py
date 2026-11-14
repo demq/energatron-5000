@@ -499,7 +499,13 @@ def test_container_types_in_the_workspace(tmp_path: Path, suffix: str) -> None:
 
 @pytest.mark.parametrize(
     ("path", "code"),
-    [("config/x.json", 0), (".energatron/code_fingerprint.json", 0), (".claude/settings.json", 0), ("x.csv", 1)],
+    [
+        ("config/x.json", 0),
+        (".energatron/code_fingerprint.json", 0),
+        (".energatron/template.json", 0),
+        (".claude/settings.json", 0),
+        ("x.csv", 1),
+    ],
 )
 def test_data_file_types_in_the_workspace(tmp_path: Path, path: str, code: int) -> None:
     repo = make_workspace_repo(tmp_path)

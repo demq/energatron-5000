@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "Read({{deny_root}}/private/**)",
+      "Edit({{deny_root}}/private/**)",
+      "Edit({{deny_root}}/data/raw/**)",
+      "Bash(git push --force:*)",
+      "Bash(git commit --no-verify:*)",
+      "Bash(dvc gc:*)",
+      "Bash(uv run dvc gc:*)"
+    ]
+  }
+}

@@ -64,7 +64,7 @@ def test_the_vcs_adapter_gets_the_bundle_folder_policy_and_clock(
     vcs = wiring.build_context(paths, clock=clock).vcs
     assert isinstance(vcs, RecordingVcs)
     assert vcs.paths == paths
-    assert vcs.kwargs == {"clock": clock, "bundle_dir": target, "policy": BackupPolicy(keep_latest=5)}
+    assert vcs.kwargs == {"clock": clock, "bundle_dir": target, "policy": BackupPolicy(keep_latest=5), "dvc": None}
 
 
 def test_no_local_config_means_no_bundle_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

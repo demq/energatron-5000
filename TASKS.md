@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P8.1.1
-- Last commit: energatron-5000 `P8.1.1: approve the P8 open-source readiness spec and apply plan rev 17 and D1 rev 9`
-- Checks: pytest -q 3616 passed; ruff, pyright, lint-imports clean; privacy scan clean; workspace `status` no reminders
+- Last done: P8.2.1
+- Last commit: energatron-5000 `P8.2.1: add the workspace template and energatron init`
+- Checks: pytest -q 3655 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P8.2.1 (workspace template and `energatron init`)
+- Next: P8.2.2 (the demo: `energatron demo` and `init --demo`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,13 +110,18 @@ Then clear the context and type `/next`.
   invoices, pushed the tool, ran (`REC-20261110-982097a0`, switch, robust) and passed the restore drill (recorded).
 - The tool repo's `main` matches origin. The workspace is backed up; `status` shows no reminders.
 - No weekly schedule: the owner removed the launchd agent (2026-11-14) and doesn't want it.
-- P8 (open-source readiness) is started: its spec is approved (agent, on the owner's instruction); P8.2.1 is next.
+- P8 (open-source readiness): spec approved (agent, on the owner's instruction); P8.2.1 (template + `init`) done;
+  P8.2.2 (the demo) is next.
   P9-P11 are not scheduled.
 
 **Read first** (for the next session)
 - The P8 spec (`agent_docs/2026-11/2026-11-14_p8-open-source-readiness-spec.md`), the section the sub-task names; D2 §6, §10, §11 for the workspace the template copies.
 
 **Facts**
+- `init` writes the template (`src/energatron/templates/workspace/*.tmpl`; `core/workspace_template.py` lists them),
+  runs git/uv/DVC/pre-commit through `adapters/setup/subprocesses.py`, then the denylist, `pipeline sync` and one commit.
+  `--no-sync` (tests) uses the running venv's DVC. `build_context(paths, dvc=…)` picks the DVC executable.
+- The template's hook scripts are byte copies of `scripts/` (`test_template_scripts`): copy both when a script changes.
 - `status` is the starting point of every check-in; `watch` is the manual weekly check (no schedule installed).
 - The drill clones the tool from origin and checks out the last run's tool commit: push before a drill
   (`W_TOOL_UNPUBLISHED` says so).
@@ -542,7 +547,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
     Decision: built-in `upgrade`, no copier. Watch: template files end in `.tmpl` (the guard rejects `.json` in package data).
 
 #### P8.2 Build ⬜
-- ⬜ **P8.2.1** Workspace template and `energatron init`.
+- ✅ **P8.2.1** Workspace template and `energatron init`.
   - `templates/workspace/*.tmpl`, `core/workspace_template.py` (`render`, `TEMPLATE_VERSION`), `template_state` and
     `init_result` v1, `adapters/setup/` (git, uv, dvc, pre-commit subprocesses), `services/init.py`, the `init`
     command (prompts only on a terminal), golden schemas.
@@ -554,6 +559,8 @@ GitHub repo public, pushing and publishing a release stay the owner's.
     `tests/unit/services/test_init.py`, `tests/integration/test_init_cli.py`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; `init --no-sync` makes a workspace that `status` accepts and whose first commit
     the privacy guard passes.
+  - Handover: template (`.tmpl`, seed/managed), `render`, `template_state`/`init_result` v1, `WorkspaceSetup` port + `adapters/setup`, `init`
+    (21 s with a real `uv sync`); 3655 tests. Decision: the guard allows `.energatron/template.json`. Watch: `--demo` is P8.2.2's.
 - ⬜ **P8.2.2** The demo: `energatron demo` and `init --demo`.
   - `services/demo.py` (generators, the build), `adapters/offers/frozen.py`, `demo_result` v1, the `demo` command and
     `init --demo`, `test_demo`, `test_frozen_provider`.
@@ -600,6 +607,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
 
 ## Log (newest first)
 
+- 2026-11-14 · P8.2.1 · workspace template, `template_state`/`init_result` v1, `WorkspaceSetup` port and adapter, `energatron init` (real init in 21 s), guard allows `.energatron/template.json` (3655 tests); self-review · energatron-5000 `P8.2.1: add the workspace template and energatron init`
 - 2026-11-14 · P8.1.1 · P8 open-source readiness spec drafted and approved on the owner's instruction (self-review); plan rev 17, D1 rev 9; P8.2-P8.3 added from its §2 · energatron-5000 `P8.1.1: approve the P8 open-source readiness spec and apply plan rev 17 and D1 rev 9`
 - 2026-11-14 · P7.3.2 · owner acceptance: new SAPN download and invoices landed, tool pushed, full `run`, drill passed and recorded; no weekly schedule (agent removed); P7 ticked and archived · energatron-5000 `P7.3.2: record the owner's P7 acceptance and close P7`
 - 2026-11-12 · P7.4.2 · the drill and `status` tell the owner to push the tool repo first (3616 tests); history rewritten on the owner's instruction to drop three gas-bill figures · energatron-5000 `P7.4.2: tell the owner to push the tool repo before a restore drill`

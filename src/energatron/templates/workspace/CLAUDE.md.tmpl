@@ -1,0 +1,27 @@
+# {{name}} (energatron workspace)
+
+A household energy workspace for the `energatron` tool. Git holds config and DVC pointers only; every data byte is
+DVC-managed. This repo must never get a git remote on a public host.
+
+## Never
+- Read anything under `private/` (identifiers). Change private values only by asking the owner.
+- Edit `data/raw/**`: landed files are immutable.
+- Commit data: only `*.dvc`, `dvc.lock` and config reach git. Stage exact paths; never `git add -A` or `.`.
+- Put identifiers (NMI, meter serial, account numbers, MIRN, address) or usage or cost figures in commit messages, or
+  copy workspace contents anywhere outside this folder.
+- Run `dvc gc`, or delete anything, unless the owner asks.
+- Run `energatron backup`, `schedule install` or `landing clear` (the owner's), or push anywhere.
+
+## Commands (run here, through uv; each supports `--json`)
+- `uv run energatron status`: where things stand, with reminders. Start here.
+- `uv run energatron land data/landing/ --dry-run`, then without `--dry-run`: land downloaded files.
+- `uv run energatron fetch-offers`, `uv run energatron run`: fetch offers and run the pipeline.
+- `uv run energatron diagnose --json`: a redacted report for a bug report (holds no values).
+- `uv run energatron upgrade`, `uv run energatron migrate`, `uv run energatron pipeline sync`: after a tool update.
+- `uv run energatron backup --status`: is the last commit backed up?
+
+## Layout
+- `data/landing/`: the inbox, git-ignored. `data/raw/`: landed datasets. `data/reports/`: the usage report and the
+  recommendation.
+- `private/`: DVC-tracked private config and denylist. `config/`: local offer and bundle rules.
+- `.energatron/`: workspace settings, the code fingerprint, the hook scripts (managed by `energatron upgrade`).

@@ -6,12 +6,15 @@ fingerprint of every registered stage, and `stage_code()` one stage's live entry
 registered parsers the workspace region's profile lists (D3 §10.3); `region` is that profile (P2 spec §5.3).
 """
 
+import importlib.metadata
 import importlib.resources
+import json
 import os
 import sys
+import urllib.parse
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Final
+from typing import Final, Literal
 
 import yaml
 
@@ -30,6 +33,7 @@ from energatron.adapters.pipeline.fingerprint import read_fingerprint as read_fi
 from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refresh_fingerprint  # for the CLI
 from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
 from energatron.adapters.schedule.launchd import Launchd as Launchd  # for the CLI
+from energatron.adapters.setup.subprocesses import SubprocessSetup
 from energatron.adapters.sources.registry import parsers_for
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog
@@ -57,13 +61,14 @@ class SystemClock:
         return datetime.now(UTC)
 
 
-def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> ServiceContext:
+def build_context(paths: WorkspacePaths, *, clock: Clock | None = None, dvc: Path | None = None) -> ServiceContext:
     """Read the workspace's config files and build every port for one run.
 
     `workspace.toml` gives the region, whose profile picks the parsers (D3 §10.3), and the backup policy;
     `local.toml` the bundle folder, `~` expanded and unchecked (None when unset; the real `backup` alone checks it,
     D2 §8.1 step 1); `private/config.toml` the private config, or None when it's missing. The CDR offer provider is
-    `offers["cdr"]` (P4 spec §3.1).
+    `offers["cdr"]` (P4 spec §3.1). `dvc` names the DVC executable git and DVC use (`init` passes the new workspace's
+    venv's, P8 spec §4.3); by default the one beside the running interpreter.
     """
     clock = clock if clock is not None else SystemClock()
     config = read_workspace_config(paths)
@@ -71,7 +76,7 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None) -> Servi
     private = read_private_config(paths)
     region = load_region_profile(config.region)
     parsers = parsers_for(region)
-    vcs = GitDvcVersionControl(paths, clock=clock, bundle_dir=bundle_dir, policy=config.backup)
+    vcs = GitDvcVersionControl(paths, clock=clock, bundle_dir=bundle_dir, policy=config.backup, dvc=dvc)
     return ServiceContext(
         paths=paths,
         config=config,
@@ -176,3 +181,56 @@ def stage_code(name: str) -> StageCode:
     return _stage_code(
         spec.impl.__module__, spec.package_data, package_dir=package_dir(), distributions=InstalledDistributions()
     )
+
+
+# P8: init (P8 spec §4)
+
+
+def workspace_setup() -> SubprocessSetup:
+    """The `WorkspaceSetup` adapter for `init`."""
+    return SubprocessSetup()
+
+
+def region_names() -> list[str]:
+    """The region profiles this version ships, sorted (P8 spec §9)."""
+    folder = importlib.resources.files("energatron").joinpath("regions")
+    return sorted(item.name.removesuffix(".yaml") for item in folder.iterdir() if item.name.endswith(".yaml"))
+
+
+def template_sources() -> dict[str, str]:
+    """Every workspace template file's text, by its name under `templates/workspace/` (P8 spec §3.1)."""
+    from energatron.core.workspace_template import TEMPLATE_FILES
+
+    folder = importlib.resources.files("energatron").joinpath("templates", "workspace")
+    found: dict[str, str] = {}
+    for spec in TEMPLATE_FILES:
+        resource = folder.joinpath(*spec.source.split("/"))
+        if resource.is_file():
+            found[spec.source] = resource.read_text(encoding="utf-8")
+    return found
+
+
+def running_tool_source() -> tuple[Literal["path", "git", "index"], str | None, str | None]:
+    """Where the running tool came from, as a new workspace should depend on it (P8 spec §4.2): an editable folder,
+    a git URL and commit, or nothing (an index install). Read from the install's `direct_url.json` (PEP 610)."""
+    try:
+        text = importlib.metadata.distribution("energatron-5000").read_text("direct_url.json")
+    except importlib.metadata.PackageNotFoundError:
+        return "index", None, None
+    if text is None:
+        return "index", None, None
+    try:
+        document = json.loads(text)
+    except ValueError:
+        return "index", None, None
+    url = document.get("url") if isinstance(document, dict) else None
+    if not isinstance(url, str):
+        return "index", None, None
+    vcs = document.get("vcs_info")
+    if isinstance(vcs, dict) and vcs.get("vcs") == "git":
+        commit = vcs.get("commit_id")
+        return "git", url.removeprefix("git+"), commit if isinstance(commit, str) else None
+    directory = document.get("dir_info")
+    if isinstance(directory, dict) and url.startswith("file://"):
+        return "path", urllib.parse.unquote(urllib.parse.urlparse(url).path), None
+    return "index", None, None

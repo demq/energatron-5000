@@ -212,7 +212,7 @@ def test_the_version_control_port_has_six_methods() -> None:
 def test_every_port_module_defines_only_protocols() -> None:
     import_all_modules()
     port_modules = sorted(name for name in dir(ports) if not name.startswith("_"))
-    assert port_modules == ["blobs", "catalog", "clock", "offers", "pipeline", "sources", "vcs"]
+    assert port_modules == ["blobs", "catalog", "clock", "offers", "pipeline", "setup", "sources", "vcs"]
     for module_name in port_modules:
         module = getattr(ports, module_name)
         own = [

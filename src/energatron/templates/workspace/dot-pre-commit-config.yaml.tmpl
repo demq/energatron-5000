@@ -1,0 +1,44 @@
+# Managed by `energatron upgrade`: edit it and upgrade leaves it alone (W_TEMPLATE_MODIFIED).
+default_install_hook_types: [pre-commit, commit-msg, post-checkout]
+repos:
+  - repo: local
+    hooks:
+      - id: privacy-guard
+        name: privacy guard
+        entry: uv run --frozen python .energatron/scripts/privacy_guard.py --mode workspace --staged
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: privacy-guard-msg
+        name: privacy guard (commit message)
+        entry: uv run --frozen python .energatron/scripts/privacy_guard.py --mode workspace --commit-msg
+        language: system
+        stages: [commit-msg]
+      - id: nbstripout
+        name: nbstripout
+        entry: uv run --frozen nbstripout
+        language: system
+        files: \.ipynb$
+        stages: [pre-commit]
+      - id: pipeline-sync
+        name: pipeline in sync with the tool
+        entry: uv run --frozen energatron pipeline sync --check
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: agent-links
+        name: agent links
+        entry: uv run --frozen python .energatron/scripts/check_agent_links.py
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: dvc-post-checkout
+        name: dvc checkout
+        entry: uv run --frozen dvc git-hook post-checkout
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [post-checkout]

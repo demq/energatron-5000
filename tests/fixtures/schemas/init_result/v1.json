@@ -1,0 +1,1 @@
+{"kind": "init_result", "schema_version": 1, "root_name": "synthetic-workspace", "region": "sa", "tool_source_kind": "path", "files": [".gitignore", "pyproject.toml"], "steps": [{"name": "write_files", "status": "done"}, {"name": "uv_sync", "status": "skipped"}], "git_identity_set": false, "private_config": true, "demo": null, "dry_run": false, "next_steps": ["Run `uv sync`."]}
