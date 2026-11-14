@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Read commands for agents and people (P9): `energatron datasets` (the landed datasets, newest first, no file names),
+  `usage` (the usage aggregates behind the costs), `compare` (the recommendation's ranked options and plans) and
+  `explain` (what the current recommendation says, how sure it is and where it came from). All read-only.
 - Open-source readiness (P8): `energatron init` creates a workspace from a template (git, uv, DVC, an optional local
   backup remote, the private config, the hooks, one commit) and `init --demo` fills it with synthetic data and runs it
   to a recommendation (`energatron demo`); `energatron upgrade` refreshes the template-managed files, `energatron

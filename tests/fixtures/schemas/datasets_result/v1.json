@@ -1,0 +1,30 @@
+{
+  "counts": {
+    "elec_bill": 0,
+    "gas_bill": 1,
+    "gas_bill_record": 0,
+    "offer_cdr": 0,
+    "offer_cdr_index": 1,
+    "offer_manual": 0,
+    "retailer_txn": 0,
+    "retailer_usage": 0,
+    "sapn_interval": 0,
+    "sapn_summary": 0
+  },
+  "datasets": [
+    {
+      "coverage": null,
+      "dataset_id": "gas_bill-20261005T013000-71af25c5",
+      "detector": "gas_bill v2",
+      "extracted_by": null,
+      "landed_at": "2026-11-02T01:00:00Z",
+      "source": "gas_bill",
+      "source_ts": "2026-10-05T12:00:00+10:30",
+      "supersedes": null
+    }
+  ],
+  "kind": "datasets_result",
+  "schema_version": 1,
+  "shown": 1,
+  "total": 2
+}

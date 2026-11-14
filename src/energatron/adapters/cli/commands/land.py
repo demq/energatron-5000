@@ -63,19 +63,17 @@ def land(
 ) -> CommandOutput:
     """Copy raw files into the raw zone, catalog them, track them with DVC and commit."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
-    source_type = _source_type(source)
+    kind = source_type(source)
     context = open_workspace(invocation, workspace)
     with workspace_lock(context.paths):
-        result = land_service.land(
-            context, paths, source=source_type, supersedes=supersedes, note=note, dry_run=dry_run
-        )
+        result = land_service.land(context, paths, source=kind, supersedes=supersedes, note=note, dry_run=dry_run)
     error = land_service.outcome(result)
     if error is not None and not isinstance(error, PartialError):
         raise error
     return CommandOutput(COMMAND, result, _text(result), error=error)
 
 
-def _source_type(value: str | None) -> SourceType | None:
+def source_type(value: str | None) -> SourceType | None:
     if value is None:
         return None
     try:

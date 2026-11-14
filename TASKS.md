@@ -98,17 +98,18 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P9.1.1
-- Last commit: energatron-5000 `P9.1.1: approve the P9 agent interface spec and apply plan rev 18, D1 rev 10 and D2 rev 3`
-- Checks: spec only; privacy scan clean; pre-commit passed
+- Last done: P9.2.1
+- Last commit: energatron-5000 `P9.2.1: add energatron datasets, usage, compare and explain`
+- Checks: pytest -q 3732 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P9.2.1 (read commands)
+- Next: P9.2.2 (gas bill transcription)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 (agent interface) runs under the owner's `/phase 9`
-  (2026-11-14): its spec is approved; P9.2.1-P9.2.4 build, P9.3.1 is the agent's acceptance, P9.3.2 the owner's.
+  (2026-11-14): spec approved, P9.2.1 (read commands) done; P9.2.2-P9.2.4 build, P9.3.1 is the agent's acceptance,
+  P9.3.2 the owner's.
 
 **Read first** (for the next session)
 - The P9 spec (`agent_docs/2026-11/2026-11-14_p9-agent-interface-spec.md`), the section the sub-task names; D1 rev 10
@@ -535,8 +536,8 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
   - Handover: P9 spec approved on the owner's `/phase 9` (self-review: demo `fetch_offers` is a dry run, `compare`/`explain`
     nulls, transcription tools in the check-in test); plan rev 18, D1 rev 10, D2 rev 3. Watch: tools run the CLI as children.
 
-#### P9.2 Build ⬜
-- ⬜ **P9.2.1** Read commands: `datasets`, `usage`, `compare`, `explain`.
+#### P9.2 Build 🔄
+- ✅ **P9.2.1** Read commands: `datasets`, `usage`, `compare`, `explain`.
   - `services/{datasets,usage_summary,compare,explain}.py` with `datasets_result`, `usage_result`, `compare_result`,
     `explain_result` v1 (golden schemas); the four commands (`explain` gets the stale stages from the CLI as `status`
     does); no identifier, file name, note or raw row in any result.
@@ -546,6 +547,8 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
     `src/energatron/adapters/cli/{app.py,commands/}`, `tests/unit/services/test_{datasets,usage_summary,compare,explain}.py`,
     `tests/unit/adapters/` (CLI checks), `tests/fixtures/schemas/`, `CHANGELOG.md`.
   - Done when: the standard checks pass; each command runs in a scratch demo workspace and prints one envelope.
+  - Handover: `datasets`, `usage`, `compare`, `explain` (services + commands, four result kinds; 3732 tests). Decision: `land`'s
+    `source_type` is now public for reuse. Watch: `explain` needs the CLI's `code_state`; MCP tools reuse these commands as is.
 - ⬜ **P9.2.2** Gas bill transcription with validators and `extracted_by`.
   - `gas_bill_record` v2 (`extracted_by`) and its v1 → v2 migration; the skeleton at v2; the parser's
     `extra.extracted_by` (version +1); `gas-bill new --extracted-by`, `gas-bill check`, `gas-bill write`, `gas-bill
@@ -595,6 +598,7 @@ transcription that deterministic checks accept or reject, with `extracted_by` re
 
 ## Log (newest first)
 
+- 2026-11-14 · P9.2.1 · `energatron datasets`, `usage`, `compare`, `explain` (read-only; four result kinds; no file names, notes or raw rows) (3732 tests); self-review · energatron-5000 `P9.2.1: add energatron datasets, usage, compare and explain`
 - 2026-11-14 · P9.1.1 · P9 agent interface spec drafted and approved on the owner's `/phase 9` (self-review); plan rev 18, D1 rev 10, D2 rev 3; P9.2-P9.3 added from its §2; the owner's `/phase` skill committed with it · energatron-5000 `P9.1.1: approve the P9 agent interface spec and apply plan rev 18, D1 rev 10 and D2 rev 3`
 - 2026-11-14 · P8.3.2 · owner acceptance: workspace config-rewrite dry run clean, history audit clean, pushed, CI `check` and `demo` green, repo public, private vulnerability reporting on; clean-Mac check waived, no release yet; P8 ticked and archived · energatron-5000 `P8.3.2: record the owner's P8 acceptance and close P8`
 - 2026-11-14 · P8.3.1 · P8 acceptance (agent part): quickstart through `uvx --from git+file://` to a recommendation in about a minute, demo checks clean, one tool fix (`/private` in the template's ignore), real workspace `diagnose` clean and untouched; its config-rewrite dry run left to the owner · energatron-5000 `P8.3.1: keep /private in the template's .gitignore`, `P8.3.1: record P8 acceptance (agent part)`

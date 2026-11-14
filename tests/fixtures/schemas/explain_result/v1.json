@@ -1,0 +1,149 @@
+{
+  "action": "switch",
+  "as_of": "2026-11-01",
+  "behind": {
+    "code_stale": [
+      "recommend"
+    ],
+    "datasets_not_in_run": 1
+  },
+  "checks": {
+    "as_of_known": true,
+    "id_recomputes": true,
+    "ids_resolve": true,
+    "options_present": true
+  },
+  "chosen": {
+    "electricity": {
+      "approximations": [],
+      "brand": "Synthetic",
+      "display_name": "Synthetic Saver",
+      "notes": [],
+      "offer_snapshot_id": "SYN-E-1~20261101T000000Z~0123abcd",
+      "status": "normalised"
+    }
+  },
+  "current": {
+    "adjustment": "0.00",
+    "annual_ongoing": "1200.00",
+    "annual_year1": "1200.00",
+    "electricity": {
+      "annual_ongoing": "1200.00",
+      "annual_year1": "1200.00",
+      "offer_snapshot_id": "SYN-E-NOW~20261101T000000Z~0123abcd",
+      "source": "backtest"
+    },
+    "gas": null,
+    "rules": []
+  },
+  "inputs": {
+    "dataset_count": 1,
+    "offer_snapshot_count": 2,
+    "params_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "stage_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "kind": "explain_result",
+  "missing": [],
+  "options": [
+    {
+      "adjustment": "0.00",
+      "annual_ongoing": "1000.00",
+      "annual_year1": "950.00",
+      "brand": null,
+      "electricity": {
+        "annual_ongoing": "1000.00",
+        "annual_year1": "950.00",
+        "approximations": [],
+        "brand": "Synthetic",
+        "display_name": "Synthetic Saver",
+        "notes": [],
+        "offer_snapshot_id": "SYN-E-1~20261101T000000Z~0123abcd",
+        "plan_id": "SYN-E-1",
+        "rank": 1,
+        "source": "cdr",
+        "status": "normalised"
+      },
+      "gas": null,
+      "kind": "independent",
+      "option_key": "SYN-E-1~20261101T000000Z~0123abcd|-",
+      "rank": 1,
+      "rules": [],
+      "saving_ongoing": "200.00",
+      "saving_year1": "250.00"
+    }
+  ],
+  "outcomes": {
+    "checks": {
+      "decisions_valid": true
+    },
+    "decisions": [
+      "DEC-20250101-01"
+    ],
+    "kind": "outcomes_summary",
+    "outcomes": {
+      "DEC-20250101-01": {
+        "gas": {
+          "actual": "150.00",
+          "bills": 2,
+          "diff_pct": 1.35,
+          "projected": "148.00"
+        }
+      }
+    },
+    "schema_version": 1
+  },
+  "recheck_by": "2027-01-30",
+  "recommendation_id": "REC-20261101-0123abcd",
+  "robust": true,
+  "run": {
+    "draft": false,
+    "finished_at": "2026-11-10T09:03:00Z",
+    "run_id": "run-20261102T000000Z-a1b2c3d",
+    "tool_commit": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "tool_dirty": false,
+    "workspace_head": "a1b2c3d000000000000000000000000000000000"
+  },
+  "schema_version": 1,
+  "sensitivity": [
+    {
+      "base_top_rank": 1,
+      "holds": true,
+      "top_option_key": "SYN-E-1~20261101T000000Z~0123abcd|-",
+      "variation": "conditions_not_met"
+    }
+  ],
+  "trace": {
+    "electricity": [
+      "data/marts/costs/elec"
+    ],
+    "gas": [
+      "data/marts/costs/gas"
+    ],
+    "offers": [
+      "data/marts/offers",
+      "data/marts/offers_gas"
+    ],
+    "options": [
+      "data/marts/costs/bundles"
+    ],
+    "recommendation": [
+      "data/reports/recommendations/recommendation.json"
+    ],
+    "usage": [
+      "data/marts/usage_profile",
+      "data/marts/gas_profile"
+    ]
+  },
+  "usage": {
+    "electricity": {
+      "window_end": "2026-10",
+      "window_start": "2025-11"
+    },
+    "gas": {
+      "partial_year": true,
+      "reference_days": 304,
+      "reference_end": "2026-10-31",
+      "reference_start": "2026-01-01"
+    }
+  }
+}

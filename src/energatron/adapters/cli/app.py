@@ -17,10 +17,13 @@ import typer
 from energatron.adapters import wiring
 from energatron.adapters.cli.commands import (
     backup,
+    compare,
+    datasets,
     decide,
     demo,
     denylist,
     diagnose,
+    explain,
     fetch_offers,
     fingerprint,
     gas_bill,
@@ -35,6 +38,7 @@ from energatron.adapters.cli.commands import (
     stage,
     status,
     upgrade,
+    usage,
     verify,
     version,
     watch,
@@ -82,6 +86,10 @@ app.command("run")(run.run)
 app.command("decide")(decide.decide)
 app.add_typer(landing.app, name="landing")
 app.command("status")(status.status)
+app.command("datasets")(datasets.datasets)
+app.command("usage")(usage.usage)
+app.command("compare")(compare.compare)
+app.command("explain")(explain.explain)
 app.command("watch")(watch.watch)
 app.add_typer(schedule.app, name="schedule")
 

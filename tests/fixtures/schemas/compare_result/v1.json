@@ -1,0 +1,71 @@
+{
+  "action": "switch",
+  "as_of": "2026-11-01",
+  "current": {
+    "adjustment": "0.00",
+    "annual_ongoing": "1200.00",
+    "annual_year1": "1200.00",
+    "electricity": {
+      "annual_ongoing": "1200.00",
+      "annual_year1": "1200.00",
+      "offer_snapshot_id": "SYN-E-NOW~20261101T000000Z~0123abcd",
+      "source": "backtest"
+    },
+    "gas": null,
+    "rules": []
+  },
+  "kind": "compare_result",
+  "missing": [],
+  "options": [
+    {
+      "adjustment": "0.00",
+      "annual_ongoing": "1000.00",
+      "annual_year1": "950.00",
+      "brand": null,
+      "electricity": {
+        "annual_ongoing": "1000.00",
+        "annual_year1": "950.00",
+        "approximations": [],
+        "brand": "Synthetic",
+        "display_name": "Synthetic Saver",
+        "notes": [],
+        "offer_snapshot_id": "SYN-E-1~20261101T000000Z~0123abcd",
+        "plan_id": "SYN-E-1",
+        "rank": 1,
+        "source": "cdr",
+        "status": "normalised"
+      },
+      "gas": null,
+      "kind": "independent",
+      "option_key": "SYN-E-1~20261101T000000Z~0123abcd|-",
+      "rank": 1,
+      "rules": [],
+      "saving_ongoing": "200.00",
+      "saving_year1": "250.00"
+    }
+  ],
+  "plans": {
+    "electricity": {
+      "current_rank": 3,
+      "items": [
+        {
+          "annual_ongoing": "1000.00",
+          "annual_year1": "1000.00",
+          "approximations": [],
+          "brand": "Synthetic",
+          "display_name": "Synthetic Saver",
+          "notes": [],
+          "offer_snapshot_id": "SYN-E-1~20261101T000000Z~0123abcd",
+          "plan_id": "SYN-E-1",
+          "rank": 1,
+          "source": "cdr",
+          "status": "normalised"
+        }
+      ],
+      "shown": 1,
+      "total": 3
+    }
+  },
+  "recommendation_id": "REC-20261101-0123abcd",
+  "schema_version": 1
+}
