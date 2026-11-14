@@ -90,3 +90,34 @@ def test_each_launch_has_its_own_token(
     for _ in range(2):
         run_cli(capsys, "serve", "--port", "0", "--json", "--workspace", str(paths.root))
     assert ran_server[0]["access"].token != ran_server[1]["access"].token
+
+
+def test_the_cli_starts_without_the_web_stack() -> None:
+    """A workspace whose lock predates fastapi and uvicorn must still run every other command (P10.3.1's fix)."""
+    import subprocess
+    import sys
+
+    code = (
+        "import sys; import energatron.adapters.cli.app; "
+        "print(sorted(m for m in ('fastapi', 'starlette', 'uvicorn', 'energatron.adapters.http') if m in sys.modules))"
+    )
+    done = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert done.stdout.strip() == "[]"
+
+
+def test_serve_without_the_web_stack_says_what_to_do(
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+    fake_vcs: FakeVcsState,
+    monkeypatch: pytest.MonkeyPatch,
+    ran_server: list[Any],
+) -> None:
+    import sys
+
+    monkeypatch.setitem(sys.modules, "energatron.adapters.http.server", None)  # importing it now fails
+    monkeypatch.delattr("energatron.adapters.http.server", raising=False)
+    paths = make_workspace(tmp_path)
+    ran = run_cli(capsys, "serve", "--port", "0", "--json", "--workspace", str(paths.root))
+    error = ran.envelope()["error"]
+    assert ran.code == 2 and error["code"] == "E_USAGE"
+    assert error["details"]["reason"] == "web_dependencies_missing" and "uv lock" in error["details"]["hint"]

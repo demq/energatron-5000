@@ -313,6 +313,8 @@ scripts send `Authorization: Bearer <token>`).
   token or from other sites. Nothing leaves the machine.
 - `--allow-documents` also serves a landed gas bill's text (`/gas-bill/text/<dataset id>`), personal details included.
 - The port is taken: pick another with `--port`, or `--port 0` for any free one.
+- `serve` says `web_dependencies_missing` in a workspace made before this version: run `uv lock` and `uv sync` there,
+  then commit `uv.lock`. Every other command works without them.
 
 ## Agents
 

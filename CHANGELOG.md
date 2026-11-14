@@ -12,7 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - `energatron serve` (P10): the local web UI and JSON API for a workspace, read-only, on `127.0.0.1` (or `localhost`,
   `::1`) only, with a per-launch token in the printed address; `--open` opens it, `--port 0` picks a free port,
   `--allow-documents` adds a bill's text. It prints one result (`serve_result`) and serves until Ctrl-C or SIGTERM.
-  README "Web UI".
+  README "Web UI". The CLI loads the web stack only for `serve`, so a workspace whose lock predates it still runs
+  every other command.
 - Web pages over the same read paths (P10): overview, recommendation and ranked plans, usage, datasets, offer changes,
   inbox, health (backup, fingerprint, pipeline files, schedule, diagnosis), a gas bill record check form, and the
   pipeline's two HTML reports. Server-rendered, no JavaScript, every value escaped and redacted; each section links to

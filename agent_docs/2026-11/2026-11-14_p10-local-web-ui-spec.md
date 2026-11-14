@@ -280,6 +280,9 @@ with their own CSP (§5.4's table). A missing file → 404 with a page saying to
   only set a stop flag (so a signal right after the address is printed still exits 0), and uvicorn's server is
   subclassed so it doesn't re-raise a caught signal after shutting down (which made Ctrl-C exit 130 and SIGTERM a
   kill). A bind failure other than a busy port is `E_USAGE` with `reason: "bind_failed"`.
+- Built so in P10.3.1 (a fix): the command imports `adapters/http` only when it runs, so a workspace whose `uv.lock`
+  predates `fastapi` and `uvicorn` still runs every other command; `serve` there is `E_USAGE` with `reason:
+  "web_dependencies_missing"` and a hint to run `uv lock` and `uv sync` and commit `uv.lock`.
 
 ---
 
