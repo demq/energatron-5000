@@ -6,7 +6,8 @@ design docs only; real data lives in a workspace repo (the owner's is `../demq-e
 
 ## Read first
 - `TASKS.md`: state, rules, hand-over and the current sub-task. Work happens through `/next`, `/examine` and
-  `/done` (Codex: `$next`, `$examine`, `$done`); see the table at the top of `TASKS.md`.
+  `/done` (Codex: `$next`, `$examine`, `$done`), or `/phase` for a whole phase at once; see the table at the top of
+  `TASKS.md`.
 - `agent_docs/2026-10/2026-10-23_core-architecture-spec.md` (D1) before changing any code. It is binding.
 - The phase spec for the code you are touching, listed in the sub-task's Refs.
 

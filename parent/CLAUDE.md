@@ -19,6 +19,7 @@ State, Hand-over and Current sub-task sections.
 | `changes: …` | applies the changes and re-runs the checks |
 | `/examine` | has a fresh reviewer check the uncommitted work and records findings |
 | `/done` | the owner's approval: checks, ticks, hand-over, commits, then says whether a workspace backup is pending (the owner runs backups) |
+| `/phase [P<n>]` (Codex: `$phase`) | the owner's approval for a whole phase: drafts and self-approves its spec, then does, self-reviews and commits each sub-task until only owner steps remain, and gives step-by-step instructions for those |
 
 The context is cleared between sub-tasks, so everything the next session needs goes into `TASKS.md`.
 

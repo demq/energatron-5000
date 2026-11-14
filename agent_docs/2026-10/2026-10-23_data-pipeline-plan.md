@@ -88,6 +88,10 @@
   copier; `uvx --from git+…` then `energatron init`, the workspace pinning the tool commit it ran from; the demo uses a
   frozen, code-generated offer set; `diagnose` is always redacted; SA stays the only region profile in P8 (§14.3, §14.4,
   §15).
+  2026-11-14 rev 18 — P9 agent interface spec (`2026-11-14_p9-agent-interface-spec.md`) approved, and its §10 edits
+  applied: the MCP tools as built, each running the CLI command as a child process; `--allow-documents` as the opt-in;
+  `extracted_by` in `gas_bill_record` v2 and the catalog's `extra`; no agent-drafted offer rules in P9; the workspace
+  skills ship in the template (§14.5, §14.7, §15).
 - **Scope:** Electricity usage analysis from SA Power Networks (SAPN) interval data, gas usage from monthly bills,
   and comparison of retail offers (electricity, gas, and electricity + gas combos), with end-to-end traceability
   from every recommendation back to the exact data, offers and code that produced it.
@@ -1086,17 +1090,22 @@ instructions and skills, so there is no second copy to maintain.
   `explain-recommendation`, `monthly-check-in` (fetch offers → run → summarise what changed since the last
   recommendation) and `record-decision` (P6).
 
-**Later (P9)**
-- **Local MCP server** (`energatron mcp`) exposing the service layer as tools: `list_datasets`, `land_file`,
+**P9 (rev 18; the P9 spec)**
+- **Local MCP server** (`energatron mcp`, stdio) exposing the service layer as tools: `list_datasets`, `land_file`,
   `fetch_offers`, `run_pipeline`, `usage_summary`, `compare_offers`, `explain_recommendation`,
-  `record_decision`. Claude Code and Codex can both use MCP servers, so this stays shared too.
+  `record_decision`, plus `status`, `list_inbox`, `offers_diff` and the gas bill tools. Each tool runs the matching
+  `energatron … --json` command as a child process, so MCP and shell agents get the same results. Claude Code and
+  Codex can both use MCP servers, so this stays shared too. The workspace skills ship in the template.
 - **Agent proposes, validators decide.** An agent can transcribe a gas bill PDF into the `gas_bill_record`
   YAML, or draft offer rules from free-text eligibility. The deterministic checks (totals recompute, TOU windows
   cover the day exactly) accept or reject the result, and rule changes go through review. The catalog records
-  `extracted_by` (`manual`, `parser vN`, or `agent:<model id>`), so the extraction method is traceable.
+  `extracted_by` (`manual`, `parser vN`, or `agent:<model id>`), so the extraction method is traceable. As built in
+  P9: `gas_bill_record` v2 holds `extracted_by` (`manual` or `agent:<model id>`), the catalog carries it in
+  `extra.extracted_by`, and parsed sources keep `detector` (name and version) for "`parser vN`"; `gas-bill check`
+  and `gas-bill write` refuse a record that fails the P5 checks. Agent-drafted offer rules are not in P9.
 - **Privacy:** whatever a tool returns is sent to the model provider. Tools therefore return aggregates and IDs
   by default, never raw interval rows or identifiers, and `private/` is never exposed. Users opt in to
-  anything more.
+  anything more (P9: `energatron mcp --allow-documents` adds the bill-text tool).
 
 ### 14.6 Web app (P10; P11 only if justified)
 
@@ -1119,7 +1128,7 @@ instructions and skills, so there is no second copy to maintain.
 
 ### 14.7 Deliberately not built yet
 
-MCP server, HTTP API, frontend, plugin entry points (a simple registry dict is enough), DB-backed catalog, job
+HTTP API, frontend, plugin entry points (a simple registry dict is enough), DB-backed catalog, job
 queue, auth, docs site, package publishing, and region profiles beyond SA. Each has a seam above, so it can be
 added without refactoring the core.
 
@@ -1138,11 +1147,11 @@ added without refactoring the core.
 | **P6 Bundles, recommendation, decisions** | Bundle rules, ranking, sensitivity, REC JSON + HTML, `energatron run`, `energatron decide`, outcomes report | The recommendation cites offer snapshot IDs, dataset IDs, run ID and commit; a clean-checkout re-run reproduces the same recommendation ID; decision entries link back (made concrete as the P6 spec §14) |
 | **P7 Operations** | README runbooks; optional weekly launchd `fetch-offers`, with a notification when a cheaper plan appears; quarterly restore-drill reminder (the drill ends with `energatron verify`) | One full cycle (new SAPN download → recommendation) completed using only the README (made concrete as the P7 spec §13) |
 | **P8 Open-source readiness** | Workspace template + `energatron init` / `--demo` / `upgrade` / `migrate`; region profiles; `diagnose --redacted`; README quickstart, CONTRIBUTING, release workflow | A new user on a clean Mac gets from README to a demo report in under 15 minutes; the demo end-to-end test runs in CI (made concrete as the P8 spec §13) |
-| **P9 Agent interface** *(later)* | Local MCP server over the services; workspace skills/commands; agent-assisted bill transcription with validators and `extracted_by` | An agent completes a "monthly check-in" using only the tools, without reading `private/` or raw intervals |
+| **P9 Agent interface** *(later)* | Local MCP server over the services; workspace skills/commands; agent-assisted bill transcription with validators and `extracted_by` | An agent completes a "monthly check-in" using only the tools, without reading `private/` or raw intervals (made concrete as the P9 spec §11) |
 | **P10 Local web UI** *(later)* | `energatron serve`: FastAPI + frontend over the services | All CLI read paths are available in the browser; no new logic outside adapters |
 | **P11 Hosted service** *(only if justified)* | Postgres/S3 implementations of the ports, job queue, auth, tenancy, privacy compliance | Separate design doc and security review before any build |
 
-P9–P11 are not scheduled (P8 started 2026-11-14). They are listed so that P0–P7 leave the right seams.
+P9 started 2026-11-14; P10–P11 are not scheduled. They are listed so that P0–P7 leave the right seams.
 
 ---
 

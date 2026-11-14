@@ -5,6 +5,7 @@
 - **Revisions:** 2026-11-10 rev 2 (P7.1.1, P7 spec §9): `icloud_backup.py` writes `.energatron/drill_state.json`
   (`drill_state` v1, git-ignored) in the workspace after a passed restore drill (`drill` or `backup --drill`), so
   `energatron status` can remind when the quarterly drill is due; the drill itself still leaves the workspace untouched
+  2026-11-14 rev 3 (P9.1.1, P9 spec §7.2): `.mcp.json` at the repo root is an allowed JSON path in both modes (§7.4)
 - **Deliverable:** D2 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 7 ("the plan") and
   [`2026-10-23_core-architecture-spec.md`](2026-10-23_core-architecture-spec.md) ("D1", binding for all code)
@@ -710,8 +711,8 @@ Tests use synthetic NMIs with worked examples in the test file.
 | Workspace data | workspace | under `data/`, anything but `*.dvc` and `.gitignore`; anything under `private/`, `legacy/`, `.venv/`; `.energatron/local.toml`, `.energatron/lock`, `.energatron/tmp/**` |
 | Notebook outputs | workspace | an `*.ipynb` with a non-empty `outputs` or a non-null `execution_count` in any cell |
 
-- **Allowed places for data types:** `tests/fixtures/**` in both modes, `.claude/settings.json` in both,
-  `config/**` (workspace), `.energatron/code_fingerprint.json` (workspace).
+- **Allowed places for data types:** `tests/fixtures/**` in both modes, `.claude/settings.json` and `.mcp.json` (P9) in
+  both, `config/**` (workspace), `.energatron/code_fingerprint.json` and `.energatron/template.json` (P8) (workspace).
 - **Matching:** every entry becomes a regex. The value is escaped, each space matches `\s+`, and matching is
   case-insensitive.
   - `word` entries are wrapped in `(?<![0-9A-Za-z_-])…(?![0-9A-Za-z_-])`. So a postcode equal to the number in

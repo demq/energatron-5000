@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec); rev 9 approved 2026-11-14 (with the P8 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec); rev 9 approved 2026-11-14 (with the P8 spec); rev 10 approved 2026-11-14 (with the P9 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -25,6 +25,9 @@
   2026-11-14 rev 9 (P8.1.1): the changes the P8 spec (`2026-11-14_p8-open-source-readiness-spec.md`) §12 lists: the
   P8 modules and commands (`init`, `demo`, `upgrade`, `migrate`, `diagnose`), the `setup` and frozen-offer adapters,
   `.tmpl` templates without `dvc.yaml`, the locks and `W_TEMPLATE_MODIFIED`, edited in place
+  2026-11-14 rev 10 (P9.1.1): the changes the P9 spec (`2026-11-14_p9-agent-interface-spec.md`) §10 lists: the P9 read
+  services and commands, the `mcp` adapter and command (tools run the CLI as child processes; stdout is the protocol),
+  its import contract, `gas_bill_record` v2 and the locks, edited in place
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -172,12 +175,14 @@ src/energatron/
 │   ├── run.py  decide.py  stages/{sensitivity,bundles,recommend,outcomes}.py                      P6
 │   ├── status.py  landing.py  watch.py                                                           P7
 │   ├── init.py  demo.py  upgrade.py  migrate.py  diagnose.py  (P8 spec §4-§8)                    P8
-│   └── compare.py  explain.py                                                                    P9+
+│   └── datasets.py  usage_summary.py  compare.py  explain.py  (P9 spec §3)                      P9
 ├── adapters/
 │   ├── wiring.py            composition root: build_context() (P0), code_fingerprint() (P1)       P0
 │   │                        notifier(), launchd() (P7)
 │   ├── notify.py  schedule/launchd.py  (P7 spec §7, §8)                                       P7
 │   ├── setup/  offers/frozen.py  (P8 spec §4, §5.3: set-up subprocesses, the demo's offers)    P8
+│   ├── mcp/                 protocol.py, tools.py, runner.py, server.py (P9 spec §5, §6); cli/commands/  P9
+│   │                        gains datasets.py, usage.py, compare.py, explain.py, mcp.py
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
 │   ├── storage/             jsonl_catalog.py, fs_blobs.py                                         P1
 │   ├── sources/             registry.py, plus one module per source type                          P1
@@ -212,6 +217,8 @@ Rules inside `adapters`:
 - **Driven adapters** (`storage`, `sources`, `vcs`, `pipeline`, `offers`) are independent of each other.
 - **Driving adapters** (`cli` now; `mcp` and `http` later) call services. They reach driven adapters only
   through `adapters/wiring.py`, which builds the `ServiceContext`.
+- `mcp` (P9) runs each tool as an `energatron … --json` child process, the CLI adapter, so it imports no services and
+  no driven adapters (P9 spec §5.4); its contract below forbids both.
 - `adapters/workspace.py` may be imported by `wiring` and by driving adapters.
 
 Why services may touch files at all: stage outputs are working files that the runner manages. A hosted runner
@@ -283,6 +290,20 @@ name = CLI reaches driven adapters only through wiring
 type = forbidden
 source_modules = energatron.adapters.cli
 forbidden_modules =
+    energatron.adapters.storage
+    energatron.adapters.sources
+    energatron.adapters.vcs
+    energatron.adapters.pipeline
+    energatron.adapters.offers
+allow_indirect_imports = True
+
+[importlinter:contract:mcp-via-cli]
+name = MCP runs the CLI and imports no services or driven adapters
+type = forbidden
+source_modules = energatron.adapters.mcp
+forbidden_modules =
+    energatron.services
+    energatron.adapters.wiring
     energatron.adapters.storage
     energatron.adapters.sources
     energatron.adapters.vcs
@@ -663,7 +684,8 @@ drift (D3 §10.1, §10.2). energatron's own readers still upgrade it in memory.
   `fingerprint_result`, whose fields the sub-tasks that build the commands set: P1.3.3 for `stage` (from
   §9.3 step 8) and P1.3.2 for `fingerprint`. Each is version 1.
 Later kinds include `run_manifest`, `recommendation`, `decision`, `offer_rule`, `offer_manual`,
-`gas_bill_record` and `tariff`.
+`gas_bill_record` and `tariff`. `gas_bill_record` is v2 from P9: `extracted_by` replaces `transcribed_by`, with a v1
+→ v2 migration (P9 spec §4.1).
 
 ---
 
@@ -801,6 +823,8 @@ Not found → `E_NOT_A_WORKSPACE`. Only `version`, `--help` and `init` (P8) work
 
 ### 8.4 Output streams
 - **stdout** carries the result only: human text, or exactly one JSON document followed by a newline.
+  - The one exception is `energatron mcp` (P9 spec §5.1): once it serves, stdout carries MCP JSON-RPC messages, one
+    per line. An error before it serves is printed as for any command.
 - **stderr** carries logs, progress, human-mode warnings and tracebacks.
 
 ### 8.5 JSON envelope (kind `cli_result`, version 1)
@@ -876,7 +900,7 @@ Commands that change the workspace take an exclusive, non-blocking lock on `.ene
 
 | Takes the lock | Never takes the lock |
 |---|---|
-| `land`, `fetch-offers`, `fingerprint` (it writes the file), `backup`, `run`, `decide`, `migrate`, `upgrade`, `demo`, `verify` (§11.4), and any later command that writes under `data/`, `.energatron/` or `private/` or commits | `stage`, `version`, read-only commands (`status`, `diagnose`, `fingerprint --check`, `offers diff`, `explain`, `compare`), `init` (no workspace yet), `stage --emit-dvc-yaml` |
+| `land`, `fetch-offers`, `fingerprint` (it writes the file), `backup`, `run`, `decide`, `migrate`, `upgrade`, `demo`, `verify` (§11.4), `gas-bill write` (P9), and any later command that writes under `data/`, `.energatron/` or `private/` or commits | `stage`, `version`, read-only commands (`status`, `diagnose`, `fingerprint --check`, `offers diff`, `explain`, `compare`, `datasets`, `usage`, `gas-bill check`, `gas-bill text`), `mcp` (its tool calls lock as their commands do), `init` (no workspace yet), `stage --emit-dvc-yaml` |
 
 - `energatron stage` never locks. `dvc repro` runs it as a child process, normally of `energatron run`, which
   already holds the lock; a child that tried to take it would fail with `E_LOCKED`. Its only writes under

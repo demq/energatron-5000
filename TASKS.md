@@ -15,6 +15,7 @@ Markers: ⬜ to do · 🔄 in progress (one at a time) · ✅ done (approved and
 | `changes: …` | Applies the changes in the same session, re-runs the checks and stops again. |
 | `/examine`, or `/examine <focus>` | A reviewer that didn't write the work (a sub-agent where the tool has them) checks the uncommitted change against its spec, its **Done when** check and the **Rules**. Records the verdict and numbered findings under **Current sub-task**. Changes nothing else. |
 | `/done`, or `/done <note>` | Your approval. Re-runs the checks, ticks the sub-task ✅ (and its task once every sub-task is ✅), writes its `Handover:` line, refreshes **State** and **Hand-over**, adds a **Log** line and commits in each repo the sub-task touched. Add `push` to also push the tool repo; add `anyway` to close despite open findings. |
+| `/phase`, or `/phase <id>` | Your standing approval for a whole phase. Drafts and self-approves its spec, adds its sub-tasks, then does, self-reviews and commits each one in turn (the `/next`, `/examine` and `/done` steps), and stops when only your steps are left, with step-by-step instructions for them. Stops early for a decision that is yours or a command a permission prompt holds. |
 
 Then clear the context and type `/next`.
 
@@ -97,46 +98,35 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P8.3.2
-- Last commit: energatron-5000 `P8.3.2: record the owner's P8 acceptance and close P8`
-- Checks: pytest -q 3689 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P9.1.1
+- Last commit: energatron-5000 `P9.1.1: approve the P9 agent interface spec and apply plan rev 18, D1 rev 10 and D2 rev 3`
+- Checks: spec only; privacy scan clean; pre-commit passed
 - Review: none
-- Next: none; P0-P8 are complete. P9-P11 are not scheduled (plan §15): the owner decides what comes next
+- Next: P9.2.1 (read commands)
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
-- P0-P8 are done and archived. The tool repo is public on GitHub; CI's `check` and `demo` (macOS) jobs are green.
-- The owner waived the clean-Mac 15-minute quickstart check (P8 spec §13 check 7). No release is tagged: the version is
-  still `0.1.0.dev0`.
-- No sub-task is queued. P9 (agent interface), P10 (local web UI) and P11 (hosted service) are listed in the plan but not
-  scheduled.
+- P0-P8 are done and archived; the tool repo is public. P9 (agent interface) runs under the owner's `/phase 9`
+  (2026-11-14): its spec is approved; P9.2.1-P9.2.4 build, P9.3.1 is the agent's acceptance, P9.3.2 the owner's.
 
 **Read first** (for the next session)
-- The plan §15 (P9-P11) if the owner starts a phase; the P8 spec and archive for how `init`, the demo and the template
-  work; `CONTRIBUTING.md` for how a release is cut.
+- The P9 spec (`agent_docs/2026-11/2026-11-14_p9-agent-interface-spec.md`), the section the sub-task names; D1 rev 10
+  §3 (the `mcp-via-cli` contract) and §8.
 
 **Facts**
-- New in P8: `init [--demo] [--remote] [--tool-source] [--no-sync]`, `demo`, `upgrade [--force]`, the config-rewrite
-  command (P8 spec §7), `diagnose [--redacted]`. Template: `src/energatron/templates/workspace/*.tmpl`, listed in
-  `core/workspace_template.py`; its hook scripts are byte copies of `scripts/` (`test_template_scripts`).
-- The repo is public: everything committed is published. The privacy guard and CI still enforce the no-data rules.
-- `status` is the starting point of every check-in; `schedule`, `landing clear`, push, backups and the drill are owner-run.
-- The next `run` in the real workspace reruns all twenty stages once (~4.5 minutes, same outputs): P8 changed
-  `core/errors.py`.
+- Read commands (`datasets`, `usage`, `compare`, `explain`) are lock-free and return no identifier, file name, note or
+  raw row; `status.py`'s `read_manifests`/`read_recommendation` read the run manifests and the recommendation.
+- MCP tools run `[sys.executable, "-m", "energatron", …, "--json", "--workspace", root]` as children; the server holds no
+  state and imports no services (contract `mcp-via-cli`).
+- `gas_bill_record` v2 changes `core/models/gas.py`: the gas stages rerun once. No new codes or warnings in P9.
+- Renaming a command, option or JSON field needs a deprecation (D1 §8.1); a template change bumps `TEMPLATE_VERSION`.
 
 **Open questions for the owner**
-- Optional: cut `v0.1.0` (bump `pyproject.toml`, rename `[Unreleased]` in `CHANGELOG.md`, `uv lock`, commit, tag `v0.1.0`,
-  push the tag); the release workflow does the rest.
-- Decide whether to switch (the recommendation says switch, robust); `record-decision` records it.
-- Set Keep Downloaded on the iCloud Backups folder (the last backup warned `W_BACKUP_DATALESS`).
-- Possible follow-ups: the NMI/MIRN in a bill's text for the premises check; demo `current_plans`, so the demo's
-  recommendation shows `switch`/`stay` rather than `no_current_plan`.
+- Optional: cut `v0.1.0`; decide whether to switch (`record-decision`); set Keep Downloaded on the iCloud Backups folder.
 
 **Watch out**
 - Never put a number or date read from a real bill into a test, docstring or doc, even as an example.
-- From now on, renaming a command, option or JSON field needs a deprecation first (D1 §8.1), and a template change needs
-  `TEMPLATE_VERSION` bumped, since other people's workspaces may exist.
 - pytest takes ~3 minutes in parallel (`test_demo` ~33 s); don't edit files while it runs.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
@@ -528,8 +518,84 @@ P7.4.1–P7.4.2, all ✅.
 Archived verbatim in `agent_docs/2026-11/2026-11-14_tasks-archive-p8.md`: P8.1.1, P8.2.1–P8.2.5, P8.3.1–P8.3.2, all ✅
 (P8.3.2's clean-Mac check waived by the owner).
 
+### P9: Agent interface 🔄
+
+From plan §15 (P9) and §14.5: a local MCP server over the tool's commands, workspace skills, and agent-assisted gas bill
+transcription that deterministic checks accept or reject, with `extracted_by` recorded. Started by the owner's `/phase
+9` of 2026-11-14. D1 binds all code. The owner keeps a real agent session's check-in, pushing and backups.
+
+#### P9.1 P9 spec ✅
+- ✅ **P9.1.1** Draft the P9 spec.
+  - Refs: plan §14.5, §14.7, §15 (P9); D1 §2, §3, §5, §8; the P5 spec §3 (gas bill records), the P6 spec §9, the P7
+    spec §4, the P8 spec §3, §6 (template, `upgrade`); D2 §7.4.
+  - Files: `agent_docs/2026-11/2026-11-14_p9-agent-interface-spec.md`, the plan and D1 (revision lines and edits),
+    D2 (§7.4 and a revision line), `TASKS.md`; also the `/phase` skill the owner added
+    (`.claude/skills/phase/SKILL.md`, `.agents/skills/phase`, `CLAUDE.md`, `parent/CLAUDE.md`).
+  - Done when: the spec is approved and the build and acceptance sub-tasks are added from it.
+  - Handover: P9 spec approved on the owner's `/phase 9` (self-review: demo `fetch_offers` is a dry run, `compare`/`explain`
+    nulls, transcription tools in the check-in test); plan rev 18, D1 rev 10, D2 rev 3. Watch: tools run the CLI as children.
+
+#### P9.2 Build ⬜
+- ⬜ **P9.2.1** Read commands: `datasets`, `usage`, `compare`, `explain`.
+  - `services/{datasets,usage_summary,compare,explain}.py` with `datasets_result`, `usage_result`, `compare_result`,
+    `explain_result` v1 (golden schemas); the four commands (`explain` gets the stale stages from the CLI as `status`
+    does); no identifier, file name, note or raw row in any result.
+  - Refs: the P9 spec §3, §8 (`test_datasets`, `test_usage_summary`, `test_compare`, `test_explain`), §9; D1 §8, §11.4;
+    the P6 spec §6, §7; the P7 spec §4.
+  - Files: `src/energatron/services/{datasets,usage_summary,compare,explain}.py`,
+    `src/energatron/adapters/cli/{app.py,commands/}`, `tests/unit/services/test_{datasets,usage_summary,compare,explain}.py`,
+    `tests/unit/adapters/` (CLI checks), `tests/fixtures/schemas/`, `CHANGELOG.md`.
+  - Done when: the standard checks pass; each command runs in a scratch demo workspace and prints one envelope.
+- ⬜ **P9.2.2** Gas bill transcription with validators and `extracted_by`.
+  - `gas_bill_record` v2 (`extracted_by`) and its v1 → v2 migration; the skeleton at v2; the parser's
+    `extra.extracted_by` (version +1); `gas-bill new --extracted-by`, `gas-bill check`, `gas-bill write`, `gas-bill
+    text`; `gas_bill_check_result` and `gas_bill_text_result` v1; the demo's records at v2.
+  - Refs: the P9 spec §4, §8, §9; the P5 spec §3, §6; D1 §5, §8.8.
+  - Files: `src/energatron/core/models/gas.py`, `src/energatron/services/{gas_bill,demo}.py`,
+    `src/energatron/adapters/sources/gas_bill_record.py`, `src/energatron/adapters/cli/commands/gas_bill.py`,
+    `tests/unit/` (gas bill record, check, text, parser), `tests/fixtures/` (generators, schemas), `CHANGELOG.md`.
+  - Done when: the standard checks pass; a record failing a check is refused with exit 6 and nothing written; a written
+    record lands; landed v1 records still read.
+- ⬜ **P9.2.3** The MCP server: `energatron mcp`.
+  - `adapters/mcp/{protocol,tools,runner,server}.py`, the `mcp` command with `--allow-documents`, the `mcp-via-cli`
+    import contract; tools per §6 running the CLI as child processes; fd 1 moved to stderr while serving.
+  - Refs: the P9 spec §5, §6, §8 (`test_mcp_protocol`, `test_mcp_tools`, `test_mcp_server`), §10 (D1 §3, §8.4);
+    D1 §7, §8.
+  - Files: `src/energatron/adapters/mcp/`, `src/energatron/adapters/cli/{app.py,commands/mcp.py}`, `.importlinter`,
+    `tests/unit/adapters/mcp/`, `tests/integration/test_mcp_server.py`, `CHANGELOG.md`.
+  - Done when: the standard checks pass; a real `energatron mcp` child answers `initialize`, `tools/list` and a tool
+    call over pipes.
+- ⬜ **P9.2.4** Workspace skills, `.mcp.json` and template v2.
+  - The four skills (§7.1), their `.agents/skills` links and `.mcp.json` in the template (`TEMPLATE_VERSION` 2);
+    `upgrade` adds missing links and seed files; the guard (and its template copy) allows `.mcp.json`; the template
+    `CLAUDE.md` "Agents" paragraph; README "Agents" (checked by `test_readme`); `test_mcp_check_in`.
+  - Refs: the P9 spec §7, §8 (`test_mcp_check_in`, template additions), §10 (D2 §7.4); the P8 spec §3, §6.
+  - Files: `src/energatron/templates/workspace/`, `src/energatron/core/workspace_template.py`,
+    `src/energatron/services/upgrade.py`, `scripts/privacy_guard.py`, `README.md`, `CHANGELOG.md`, `tests/` (template,
+    upgrade, guard, readme, `tests/integration/test_mcp_check_in.py`).
+  - Done when: the standard checks pass; `init --demo` writes the skills, links and `.mcp.json`; the scripted check-in
+    passes its privacy checks.
+
+#### P9.3 Acceptance ⬜
+- ⬜ **P9.3.1** P9 acceptance (agent part).
+  - The P9 spec §11 checks 1-4: the scripted check-in in a fresh demo workspace (`fetch_offers` as a dry run); the
+    read-only tools in the owner's workspace through the server, denylist-checked; the owner's workspace gains
+    `.mcp.json` and the four tool-aware skills (replacing its own), committed as one workspace commit; `upgrade
+    --dry-run` from a v1 demo workspace lists the new files as `added`.
+  - Refs: the P9 spec §11; plan §15 (P9).
+  - Files: `TASKS.md`; (`demq-elektric/`) `.mcp.json`, `.claude/skills/*/SKILL.md`, `.agents/skills/*`.
+  - Done when: checks 1-4 pass; `TASKS.md` gets counts and pass/fail only.
+  - On /done: commit the workspace files as one workspace commit; report the pending backup.
+- ⬜ **P9.3.2** Owner: a real agent check-in, push, backup.
+  - Why: a real agent session, approving the MCP server, pushing and backups are the owner's.
+  - Refs: the P9 spec §11 checks 5-7.
+  - Files: none.
+  - Done when: the owner reports a monthly check-in done through the `energatron` tools in Claude Code, the push with
+    CI green, and the backup.
+
 ## Log (newest first)
 
+- 2026-11-14 · P9.1.1 · P9 agent interface spec drafted and approved on the owner's `/phase 9` (self-review); plan rev 18, D1 rev 10, D2 rev 3; P9.2-P9.3 added from its §2; the owner's `/phase` skill committed with it · energatron-5000 `P9.1.1: approve the P9 agent interface spec and apply plan rev 18, D1 rev 10 and D2 rev 3`
 - 2026-11-14 · P8.3.2 · owner acceptance: workspace config-rewrite dry run clean, history audit clean, pushed, CI `check` and `demo` green, repo public, private vulnerability reporting on; clean-Mac check waived, no release yet; P8 ticked and archived · energatron-5000 `P8.3.2: record the owner's P8 acceptance and close P8`
 - 2026-11-14 · P8.3.1 · P8 acceptance (agent part): quickstart through `uvx --from git+file://` to a recommendation in about a minute, demo checks clean, one tool fix (`/private` in the template's ignore), real workspace `diagnose` clean and untouched; its config-rewrite dry run left to the owner · energatron-5000 `P8.3.1: keep /private in the template's .gitignore`, `P8.3.1: record P8 acceptance (agent part)`
 - 2026-11-14 · P8.2.5 · README quickstart and P8 sections (checked by `test_readme`, incl. `uvx` lines), CONTRIBUTING, SECURITY, bug-report template, CI `demo` job on macOS, `release.yml`, CHANGELOG (3689 tests); self-review; P8.2 ticked · energatron-5000 `P8.2.5: add the README quickstart, CONTRIBUTING, SECURITY, the CI demo job and the release workflow`
