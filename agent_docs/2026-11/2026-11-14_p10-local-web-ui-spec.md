@@ -276,6 +276,10 @@ with their own CSP (§5.4's table). A missing file → 404 with a page saying to
 - `--open` opens the URL in the default browser (`webbrowser`).
 - uvicorn runs on the bound socket, `log_config=None`, access log off (a URL can hold the token), its loggers on the
   redacting stderr handler at WARNING (INFO with `-v`).
+- Built so in P10.2.4: from the moment the socket listens until uvicorn installs its own handlers, SIGINT and SIGTERM
+  only set a stop flag (so a signal right after the address is printed still exits 0), and uvicorn's server is
+  subclassed so it doesn't re-raise a caught signal after shutting down (which made Ctrl-C exit 130 and SIGTERM a
+  kill). A bind failure other than a busy port is `E_USAGE` with `reason: "bind_failed"`.
 
 ---
 

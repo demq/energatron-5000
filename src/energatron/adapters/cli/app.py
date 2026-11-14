@@ -36,6 +36,7 @@ from energatron.adapters.cli.commands import (
     pipeline,
     run,
     schedule,
+    serve,
     stage,
     status,
     upgrade,
@@ -92,6 +93,7 @@ app.command("usage")(usage.usage)
 app.command("compare")(compare.compare)
 app.command("explain")(explain.explain)
 app.command("mcp")(mcp.mcp)
+app.command("serve")(serve.serve)
 app.command("watch")(watch.watch)
 app.add_typer(schedule.app, name="schedule")
 

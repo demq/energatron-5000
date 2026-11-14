@@ -13,7 +13,7 @@ from energatron.core.errors import UsageError
 # `reads.READS` or here (P10 spec §3.2).
 NOT_READ = frozenset({
     "init", "demo", "upgrade", "migrate", "denylist", "backup", "fingerprint", "stage", "pipeline sync", "verify",
-    "land", "fetch-offers", "gas-bill new", "gas-bill write", "run", "decide", "landing clear", "mcp", "watch",
+    "land", "fetch-offers", "gas-bill new", "gas-bill write", "run", "decide", "landing clear", "mcp", "serve", "watch",
     "schedule install", "schedule remove",
 })  # fmt: skip
 

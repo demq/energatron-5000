@@ -98,18 +98,18 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P10.2.3
-- Last commit: energatron-5000 `P10.2.3: add the web pages and reports over the shared read paths`
-- Checks: pytest -q 3981 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P10.2.4
+- Last commit: energatron-5000 `P10.2.4: add energatron serve, the local read-only web UI`
+- Checks: pytest -q 3993 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P10.2.4 (`energatron serve`); P9.3.2 (owner) is still open
+- Next: P10.3.1 (P10 acceptance, agent part); P9.3.2 (owner) is still open
 
 ## Hand-over (rewritten by every `/done`)
 
 **Where we are**
 - P0-P8 are done and archived; the tool repo is public. P9 is done but for P9.3.2, the owner's (a real agent
   check-in, push, backup). P10 (local web UI) runs under the owner's `/phase 10` (2026-11-14): spec approved; P10.2.1-
-  P10.2.4 build it (P10.2.1-P10.2.3 done: shared read paths, JSON API, pages), P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
+  P10.2.4 build it (P10.2 done: shared read paths, JSON API, pages, `serve`), P10.3.1 is the agent's acceptance, P10.3.2 the owner's.
 
 **Read first** (for the next session)
 - The P10 spec (`agent_docs/2026-11/2026-11-14_p10-local-web-ui-spec.md`), the sections the sub-task names; D1 rev 11
@@ -122,7 +122,8 @@ Then clear the context and type `/next`.
 - `adapters/http/`: `create_app(paths, access=Access(host, port, token), allow_documents)`; `Reader.answer(path, values|args)`
   → `Answer(status, redacted document)`; `security.middleware` (Host, methods, token/cookie `energatron_session_<port>`,
   origin) and `secure()` headers (`/reports/` gets the sandbox CSP); tests use `tests/unit/adapters/http/_client.py`.
-- `create_app` includes `api.router` and `views.router`; P10.2.4 only binds a socket, makes the token and runs uvicorn on it.
+- `energatron serve [--host] [--port 0] [--open] [--allow-documents] --json` prints one `serve_result` line (its `url` holds
+  the token), then serves until SIGINT/SIGTERM (exit 0). Scripts use `Authorization: Bearer <token>`.
 - `denylist --check` takes the lock, so it isn't a read path; `backup --status`, `fingerprint --check`, `pipeline sync
   --check`, `schedule status`, `landing list` and `version` are.
 - The reports are `data/reports/{usage,recommendations}/index.html`, self-contained, no `<script>`.
@@ -626,7 +627,7 @@ CLI read path is available in the browser with no new logic outside the adapters
   - Handover: P10 spec approved on the owner's `/phase 10` (self-review: cookie name per port, access checks as §5.4, pages render
     from redacted documents only); plan rev 19, D1 rev 11. Watch: no script frontend, so no Node; `serve` is read-only.
 
-#### P10.2 Build 🔄
+#### P10.2 Build ✅
 - ✅ **P10.2.1** Shared read paths and envelope.
   - `adapters/envelope.py` (`CliResult`, `CliError` moved from `cli/output.py`, `success`, `failure`, `redacted`);
     `adapters/reads.py` (`open_context`, `ReadPath`, `READS`: each read path's args model and body, moved from its
@@ -656,7 +657,7 @@ CLI read path is available in the browser with no new logic outside the adapters
     answers.
   - Handover: `http/{views,pages,style}.py`: 7 read pages, gas bill form, two reports, `/style.css`; `http-pages-format-only` (3981 tests).
     Decision: one generic escaping renderer + per-page parts; routes in `views.py` (spec noted). Watch: `/health` is 409/422 where a check fails.
-- ⬜ **P10.2.4** `energatron serve`.
+- ✅ **P10.2.4** `energatron serve`.
   - `adapters/http/server.py` (bound socket, uvicorn, signals), `cli/commands/serve.py`, `serve_result` v1 (golden
     schema), README "Web UI" (checked by `test_readme`), CHANGELOG.
   - Refs: the P10 spec §7, §8 (`test_serve_cli`, `test_serve`), §9; D1 §8.4, §8.8.
@@ -665,6 +666,8 @@ CLI read path is available in the browser with no new logic outside the adapters
     `tests/` (readme), `CHANGELOG.md`.
   - Done when: the standard checks pass; a real `energatron serve --port 0` child serves a page with its token and
     stops with exit 0 on SIGINT.
+  - Handover: `http/server.py` (bind, prepare, stop_signals, run), `serve` command, `serve_result` v1, README "Web UI" (3993 tests).
+    Decision: uvicorn subclassed so SIGINT/SIGTERM exit 0 (spec noted). Watch: the token is in the printed URL only; no access log.
 
 #### P10.3 Acceptance ⬜
 - ⬜ **P10.3.1** P10 acceptance (agent part).
@@ -682,6 +685,7 @@ CLI read path is available in the browser with no new logic outside the adapters
 
 ## Log (newest first)
 
+- 2026-11-14 · P10.2.4 · `energatron serve`: loopback socket, per-launch token, uvicorn without access log, clean exit 0 on SIGINT/SIGTERM, `serve_result` v1, README "Web UI" (3993 tests); self-review; P10.2 ticked · energatron-5000 `P10.2.4: add energatron serve, the local read-only web UI`
 - 2026-11-14 · P10.2.3 · web pages: overview, recommendation, usage, datasets, offers, inbox, health, gas bill check form, the two reports; generic escaping renderer over redacted documents; `http-pages-format-only` contract (3981 tests); self-review · energatron-5000 `P10.2.3: add the web pages and reports over the shared read paths`
 - 2026-11-14 · P10.2.2 · JSON API: `GET /api/v1/<read>` answers the CLI's envelope (parity-tested per route), gas bill check `POST`, opt-in bill text, loopback Host/token/origin checks and security headers; `fastapi`, `uvicorn`, `httpx2` (dev) (3950 tests); self-review · energatron-5000 `P10.2.2: add the local JSON API over every read path, behind loopback access checks`
 - 2026-11-14 · P10.2.1 · shared read paths (`adapters/reads.py`, 15 entries) and envelope (`adapters/envelope.py`); CLI read commands call them, output unchanged; `test_reads` classifies every command (3899 tests); self-review · energatron-5000 `P10.2.1: share every read path and the envelope between the CLI and the coming web UI`

@@ -1,0 +1,8 @@
+{
+  "allow_documents": false,
+  "host": "127.0.0.1",
+  "kind": "serve_result",
+  "port": 8765,
+  "schema_version": 1,
+  "url": "http://127.0.0.1:8765/?token=<token>"
+}

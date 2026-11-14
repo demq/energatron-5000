@@ -70,3 +70,8 @@ def test_every_readme_command_parses() -> None:
         arguments = [parameter for parameter in command.params if parameter.param_type_name == "argument"]
         if arguments and arguments[0].required:
             assert any(not word.startswith("-") for word in rest), f"{' '.join(words)}: missing an argument"
+
+
+def test_the_readme_shows_the_p10_commands() -> None:
+    commands = readme_commands()
+    assert ["serve", "--open"] in commands and ["serve", "--port", "0"] in commands

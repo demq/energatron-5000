@@ -291,6 +291,29 @@ Errors a cycle can meet:
 
 Add `-v` (progress) or `--debug` (with tracebacks) to any command.
 
+## Web UI
+
+Look at a workspace in a browser instead of the terminal:
+
+```bash
+uv run energatron serve --open
+uv run energatron serve --port 0
+```
+
+It prints an address such as `http://127.0.0.1:8765/?token=…` and serves until Ctrl-C. Open that address (`--open`
+does it for you); the token in it signs this browser in for the session, and a new one is made at every start. The pages
+show where things stand, the recommendation and the plans ranked behind it, usage, datasets, offer changes, the inbox,
+the workspace's health, a gas bill record check, and the pipeline's usage and recommendation reports. Every section links
+to its JSON: `GET /api/v1/<read>` answers exactly what `energatron <command> --json` prints (`/api/v1` lists them;
+scripts send `Authorization: Bearer <token>`).
+
+- It is read-only: nothing is written, landed, run or committed from the browser, and it takes no lock, so it can stay
+  open while you run commands. Reload a page to see what changed.
+- It listens on this machine only (`--host` takes `127.0.0.1`, `localhost` or `::1`), and refuses requests without the
+  token or from other sites. Nothing leaves the machine.
+- `--allow-documents` also serves a landed gas bill's text (`/gas-bill/text/<dataset id>`), personal details included.
+- The port is taken: pick another with `--port`, or `--port 0` for any free one.
+
 ## Agents
 
 Claude Code and Codex read the same instructions (`CLAUDE.md`, with `AGENTS.md` linked to it) and skills. A workspace
