@@ -18,6 +18,7 @@ from energatron.adapters import wiring
 from energatron.adapters.cli.commands import (
     backup,
     decide,
+    demo,
     denylist,
     fetch_offers,
     fingerprint,
@@ -60,6 +61,7 @@ app = typer.Typer(
 )
 app.command("version")(version.version)
 app.command("init")(init.init)
+app.command("demo")(demo.demo)
 app.command("denylist")(denylist.denylist)
 app.command("backup")(backup.backup)
 app.command("fingerprint")(fingerprint.fingerprint)

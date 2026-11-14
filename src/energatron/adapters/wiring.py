@@ -21,6 +21,7 @@ import yaml
 from energatron import __version__
 from energatron.adapters.notify.macos import Notifier
 from energatron.adapters.offers.cdr import DEFAULT_ROOT, CdrProvider
+from energatron.adapters.offers.frozen import FrozenProvider
 from energatron.adapters.pipeline.dvc_runner import REPRO_LOG_ENV as REPRO_LOG_ENV  # for the CLI's main()
 from energatron.adapters.pipeline.dvc_runner import DvcRunner
 from energatron.adapters.pipeline.fingerprint import (
@@ -234,3 +235,15 @@ def running_tool_source() -> tuple[Literal["path", "git", "index"], str | None, 
     if isinstance(directory, dict) and url.startswith("file://"):
         return "path", urllib.parse.unquote(urllib.parse.urlparse(url).path), None
     return "index", None, None
+
+
+def demo_provider(clock: Clock, region: RegionProfile) -> FrozenProvider:
+    """The demo's frozen offer set as an offer provider (P8 spec §5.3)."""
+    from energatron.services import demo
+
+    plans = demo.demo_plans(region)
+    return FrozenProvider(
+        clock=clock,
+        lists={demo.DEMO_BASE: demo.list_body(plans)},
+        details={(demo.DEMO_BASE, plan["planId"]): demo.detail_body(plan) for plan in plans},
+    )

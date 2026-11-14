@@ -172,8 +172,6 @@ def _check(options: InitOptions, setup: WorkspaceSetup) -> None:
         raise UsageError("The workspace path holds a quote, backslash or control character.", reason="path_characters")
     if root.exists() and (not root.is_dir() or any(root.iterdir())):
         raise UsageError("The target exists and isn't an empty folder.", reason="not_empty")
-    if options.demo and options.private is not None:
-        raise UsageError("--demo uses synthetic private values; leave out --nmi, --meter-serial and --postcode.")
     missing = setup.missing_tools()
     if missing:
         raise SubprocessError(f"init needs {' and '.join(missing)} on PATH.", step="check", tools=missing)

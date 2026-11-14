@@ -121,7 +121,8 @@ hooks (it wasn't made by `init`; §6).
 ### 3.4 `template_state` v1 (`.energatron/template.json`, git-tracked)
 
 `{"kind": "template_state", "schema_version": 1, "template_version": 1, "files": {"<path>": "<sha256 of the bytes
-written>"}}` for the managed files only. Written by `init` and `upgrade`; a workspace without it wasn't made by `init`.
+written>"}}` for the managed files only. Written by `init` and `upgrade`; a workspace without it wasn't made by `init`. The privacy guard's
+workspace mode allows this one JSON path, as it allows `.energatron/code_fingerprint.json` (built in P8.2.1).
 
 ---
 
@@ -190,8 +191,9 @@ its own writes; `land` and `run` take it in turn. Steps:
 2. `land` the meter file, the usage export and the gas bill PDFs (`--source gas_bill`); then generate the gas bill
    records naming the landed PDF IDs and `land` them.
 3. Fetch the frozen offers: `fetch_offers` with the frozen provider in place of `cdr` and `retailers = ["demo"]`.
-4. Set `analysis.reference_months` to the demo's whole months, and commit `params.yaml` (`demo: params`).
-5. `run` (not a draft), and return the run ID, the recommendation ID and the report paths.
+4. `run` (not a draft), and return the run ID, the recommendation ID and the report paths. The meter data spans 14
+   whole months, so the default twelve-month reference window fits and `params.yaml` stays as `pipeline sync` wrote
+   it (built so in P8.2.2; no `demo: params` commit). The demo's own generated copies are removed from the inbox.
 
 `demo_result` v1: `landed` (count), `offers` (count), `run_id`, `recommendation_id`, `reports` (relative paths of the
 two HTML pages), `commits` (count).
@@ -202,8 +204,8 @@ two HTML pages), `commits` (count).
   shape (morning and evening peaks), named as SAPN names its downloads with `DEMO_NMI`.
 - A retailer usage export with monthly reads, computed from the meter file under `nem_aest` with the region's TOU
   windows, so `validate_timebase` confirms the configured basis and `localise` runs.
-- Three monthly gas bill PDFs (one text page each, with an issue date) and their `gas_bill_record` YAML, consistent so
-  every `gas_bills` check passes.
+- Twelve monthly gas bill PDFs (one page each, dated by their creation date) and their `gas_bill_record` YAML,
+  consistent so every `gas_bills` check passes.
 - A frozen offer set: three electricity plans (single rate, time of use, one with a fee) and two gas plans, from two
   made-up brands, for the region's distributors, with fixed `lastUpdated` dates. Plan IDs end in `@DEMO`.
 
@@ -342,7 +344,8 @@ To be applied on `/done` of P8.1.1, as plan rev 17 and D1 rev 9.
 
 **D1 (rev 9)**
 - §2: core gains `workspace_template.py`, `toml_text.py`; services gain `init.py`, `demo.py`, `upgrade.py`,
-  `migrate.py`, `diagnose.py` (`compare.py`, `explain.py` move to P9+); adapters gain `setup/` (git, uv, DVC and
+  `migrate.py`, `diagnose.py` (`compare.py`, `explain.py` move to P9+); ports gain `setup.py` (`WorkspaceSetup`, the
+  set-up subprocesses as `init` needs them; added in P8.2.1); adapters gain `setup/` (git, uv, DVC and
   pre-commit set-up subprocesses) and `offers/frozen.py`; `templates/workspace/` holds `.tmpl` files.
 - §8.3: `init` works outside a workspace. §8.8: `demo`, `upgrade` take the lock; `diagnose` doesn't.
 - §9.5: the template has no `dvc.yaml`; `init` runs `pipeline sync` (replaces "templates/workspace/dvc.yaml must

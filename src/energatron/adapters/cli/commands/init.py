@@ -14,6 +14,7 @@ import typer
 from energatron.adapters import wiring
 from energatron.adapters.cli.common import DebugFlag, DryRunFlag, JsonFlag, VerboseFlag, WorkspaceOption, begin
 from energatron.adapters.cli.output import CommandOutput, Invocation
+from energatron.core.canonical import JSONValue
 from energatron.core.errors import UsageError
 from energatron.core.models.private import PrivateConfig
 from energatron.core.models.workspace import WorkspacePaths
@@ -21,6 +22,7 @@ from energatron.core.privacy import DenyEntry, derive_denylist
 from energatron.core.workspace_template import tool_source_line
 from energatron.services import init as init_service
 from energatron.services.context import ServiceContext
+from energatron.services.demo import demo_private_values
 from energatron.services.init import InitOptions, InitResult, PrivateValues, private_document
 
 COMMAND = "init"
@@ -46,6 +48,7 @@ SerialOption = Annotated[
     list[str] | None, typer.Option("--meter-serial", help="A meter serial; repeat for more.", show_default=False)
 ]
 PostcodeOption = Annotated[str | None, typer.Option("--postcode", help="Your postcode.", show_default=False)]
+DemoFlag = Annotated[bool, typer.Option("--demo", help="Fill the workspace with synthetic data and run it.")]
 NoSyncFlag = Annotated[bool, typer.Option("--no-sync", help="Skip `uv sync` and `pre-commit install`.")]
 
 
@@ -58,6 +61,7 @@ def init(
     nmi: NmiOption = None,
     meter_serial: SerialOption = None,
     postcode: PostcodeOption = None,
+    demo: DemoFlag = False,
     no_sync: NoSyncFlag = False,
     dry_run: DryRunFlag = False,
     json_output: JsonFlag = False,
@@ -70,7 +74,9 @@ def init(
     cwd = Path.cwd()
     root = (cwd / Path(directory).expanduser()).resolve() if directory else cwd.resolve()
     serials = tuple(meter_serial or ())
-    private = _private(invocation, nmi, serials, postcode, ask=not dry_run)
+    if demo and (nmi or serials or postcode):
+        raise UsageError("--demo uses synthetic private values; leave out --nmi, --meter-serial and --postcode.")
+    private = demo_private_values() if demo else _private(invocation, nmi, serials, postcode, ask=not dry_run)
     kind, line = _tool_source(tool_source, cwd)
     options = InitOptions(
         root=root,
@@ -82,17 +88,28 @@ def init(
         sources=wiring.template_sources(),
         remote=(cwd / Path(remote).expanduser()).resolve() if remote else None,
         private=private,
+        demo=demo,
         sync=not no_sync,
         dry_run=dry_run,
     )
     if private is not None:
         invocation.denylist = _denylist(private)
-    result = init_service.init(options, setup=wiring.workspace_setup(), open_context=_open_context)
+    setup = wiring.workspace_setup()
+    result = init_service.init(
+        options, setup=setup, open_context=_open_context, run_demo=_demo_in_process if no_sync else setup.run_demo
+    )
     return CommandOutput(COMMAND, result, text(result))
 
 
 def _open_context(paths: WorkspacePaths, dvc: Path | None) -> ServiceContext:
     return wiring.build_context(paths, dvc=dvc)
+
+
+def _demo_in_process(root: Path) -> JSONValue:
+    """With `--no-sync` the running venv already has DVC and the tool: run the demo here (P8 spec §4.3 step 11)."""
+    from energatron.adapters.cli.commands.demo import run_demo
+
+    return run_demo(WorkspacePaths(root=root))
 
 
 def _private(

@@ -157,6 +157,7 @@ src/energatron/
 │   └── workspace_template.py  toml_text.py  (P8 spec §3.2, §7)                                   P8
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
+│       setup.py  (`WorkspaceSetup`: `init`'s git, uv, DVC and pre-commit steps)                  P8
 ├── services/                use cases; local file I/O only at paths passed in
 │   ├── context.py           ServiceContext (§4.8)                                                 P0
 │   ├── files.py             atomic writes; JSON, JSONL and Parquet helpers (§12)                  P0

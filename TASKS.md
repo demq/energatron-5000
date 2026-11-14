@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P8.2.1
-- Last commit: energatron-5000 `P8.2.1: add the workspace template and energatron init`
-- Checks: pytest -q 3655 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P8.2.2
+- Last commit: energatron-5000 `P8.2.2: add energatron demo and init --demo`
+- Checks: pytest -q 3661 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P8.2.2 (the demo: `energatron demo` and `init --demo`)
+- Next: P8.2.3 (`energatron upgrade` and `energatron migrate`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,8 +110,8 @@ Then clear the context and type `/next`.
   invoices, pushed the tool, ran (`REC-20261110-982097a0`, switch, robust) and passed the restore drill (recorded).
 - The tool repo's `main` matches origin. The workspace is backed up; `status` shows no reminders.
 - No weekly schedule: the owner removed the launchd agent (2026-11-14) and doesn't want it.
-- P8 (open-source readiness): spec approved (agent, on the owner's instruction); P8.2.1 (template + `init`) done;
-  P8.2.2 (the demo) is next.
+- P8 (open-source readiness): spec approved (agent, on the owner's instruction); P8.2.1 (template + `init`) and
+  P8.2.2 (`demo`, `init --demo`) done; P8.2.3 (`upgrade`, `migrate`) is next.
   P9-P11 are not scheduled.
 
 **Read first** (for the next session)
@@ -121,6 +121,8 @@ Then clear the context and type `/next`.
 - `init` writes the template (`src/energatron/templates/workspace/*.tmpl`; `core/workspace_template.py` lists them),
   runs git/uv/DVC/pre-commit through `adapters/setup/subprocesses.py`, then the denylist, `pipeline sync` and one commit.
   `--no-sync` (tests) uses the running venv's DVC. `build_context(paths, dvc=…)` picks the DVC executable.
+- `energatron demo` (services/demo.py) refuses any workspace whose NMI isn't `DEMO_NMI11`; `init --demo` runs it via
+  `uv run --frozen energatron demo --json` in the new venv. Tests fake a clean tool (`wiring.code_fingerprint`).
 - The template's hook scripts are byte copies of `scripts/` (`test_template_scripts`): copy both when a script changes.
 - `status` is the starting point of every check-in; `watch` is the manual weekly check (no schedule installed).
 - The drill clones the tool from origin and checks out the last run's tool commit: push before a drill
@@ -561,7 +563,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
     the privacy guard passes.
   - Handover: template (`.tmpl`, seed/managed), `render`, `template_state`/`init_result` v1, `WorkspaceSetup` port + `adapters/setup`, `init`
     (21 s with a real `uv sync`); 3655 tests. Decision: the guard allows `.energatron/template.json`. Watch: `--demo` is P8.2.2's.
-- ⬜ **P8.2.2** The demo: `energatron demo` and `init --demo`.
+- ✅ **P8.2.2** The demo: `energatron demo` and `init --demo`.
   - `services/demo.py` (generators, the build), `adapters/offers/frozen.py`, `demo_result` v1, the `demo` command and
     `init --demo`, `test_demo`, `test_frozen_provider`.
   - Refs: the P8 spec §5, §11.
@@ -569,6 +571,8 @@ GitHub repo public, pushing and publishing a release stay the owner's.
     `src/energatron/services/init.py`, `src/energatron/adapters/cli/`, `tests/integration/test_demo.py`,
     `tests/unit/adapters/test_frozen_provider.py`, `tests/fixtures/schemas/`.
   - Done when: the standard checks pass; `test_demo` reaches a recommendation, both reports and a passing `verify`.
+  - Handover: `services/demo.py` (14 months NEM12, usage export on NEM time, 12 gas bills, 5 frozen plans), `FrozenProvider`, `demo`,
+    `init --demo` (in-process with `--no-sync`); 3661 tests. Decision: no reference-window change needed. Watch: `test_demo` takes ~33 s.
 - ⬜ **P8.2.3** `energatron upgrade` and `energatron migrate`.
   - `services/upgrade.py`, `services/migrate.py`, `core/toml_text.py`, `upgrade_result` and `migrate_result` v1,
     `W_TEMPLATE_MODIFIED`, the commands.
@@ -607,6 +611,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
 
 ## Log (newest first)
 
+- 2026-11-14 · P8.2.2 · demo generators and build, `FrozenProvider`, `demo_result` v1, `energatron demo` and `init --demo`, `test_demo` end to end with `verify` (3661 tests); self-review (only the demo's own files removed, commit count) · energatron-5000 `P8.2.2: add energatron demo and init --demo`
 - 2026-11-14 · P8.2.1 · workspace template, `template_state`/`init_result` v1, `WorkspaceSetup` port and adapter, `energatron init` (real init in 21 s), guard allows `.energatron/template.json` (3655 tests); self-review · energatron-5000 `P8.2.1: add the workspace template and energatron init`
 - 2026-11-14 · P8.1.1 · P8 open-source readiness spec drafted and approved on the owner's instruction (self-review); plan rev 17, D1 rev 9; P8.2-P8.3 added from its §2 · energatron-5000 `P8.1.1: approve the P8 open-source readiness spec and apply plan rev 17 and D1 rev 9`
 - 2026-11-14 · P7.3.2 · owner acceptance: new SAPN download and invoices landed, tool pushed, full `run`, drill passed and recorded; no weekly schedule (agent removed); P7 ticked and archived · energatron-5000 `P7.3.2: record the owner's P7 acceptance and close P7`
