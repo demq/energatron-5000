@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Gas bill transcription with validators (P9): `gas_bill_record` v2 says who extracted it (`extracted_by: manual` or
+  `agent:<model id>`; v1 records are upgraded when read, and the catalog carries it in `extra.extracted_by`);
+  `energatron gas-bill check` and `gas-bill write` recompute a record from its own reads and lines before it is
+  written or landed, `gas-bill text` prints a landed bill's text, and `gas-bill new --extracted-by` fills the skeleton.
 - Read commands for agents and people (P9): `energatron datasets` (the landed datasets, newest first, no file names),
   `usage` (the usage aggregates behind the costs), `compare` (the recommendation's ranked options and plans) and
   `explain` (what the current recommendation says, how sure it is and where it came from). All read-only.

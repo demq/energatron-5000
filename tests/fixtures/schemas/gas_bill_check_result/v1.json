@@ -1,0 +1,20 @@
+{
+  "checks": {
+    "days_match": true,
+    "lines_recompute": true,
+    "reads_recompute": true,
+    "totals_recompute": true,
+    "usage_matches_reads": true
+  },
+  "dry_run": false,
+  "extracted_by": "agent:test-model",
+  "kind": "gas_bill_check_result",
+  "path": "data/landing/gas_bill_record-gas_bill-20261101T000000-0123abcd.yaml",
+  "pdf_dataset_id": "gas_bill-20261101T000000-0123abcd",
+  "period_end": "2026-09-30",
+  "period_start": "2026-09-01",
+  "printed_total": "80.00",
+  "recomputed_total": "80.00",
+  "schema_version": 1,
+  "written": true
+}

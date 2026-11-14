@@ -42,7 +42,7 @@ from energatron.services.stages.raw_zone import catalog_records, read_raw_zone
 from energatron.services.stages.runner import StageRun, StageSpec
 from energatron.services.stages.tables import GAS_BILL_SCHEMA, GAS_LINE_SCHEMA, GAS_READ_SCHEMA
 
-KNOWN_DETECTOR_VERSIONS: Final = frozenset({1})
+KNOWN_DETECTOR_VERSIONS: Final = frozenset({1, 2})  # 2 adds `extra.extracted_by` (P9 spec §4.1)
 CHECKS: Final = (
     "blobs_match_catalog",
     "detector_known",

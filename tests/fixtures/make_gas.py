@@ -53,6 +53,7 @@ def record(
     pdf_dataset_id: str = PDF_ID,
     extra_lines: Sequence[Mapping[str, Any]] = (),
     mj_places: int = 2,
+    extracted_by: str = "agent:test-model",
 ) -> dict[str, Any]:
     """A consistent record: one read per volume (m³), the last on the period's end, usage at one rate, supply per day,
     GST at 10% of the subtotal; `extra_lines` (each with its `amount`) are added to the subtotal, or after GST when
@@ -93,9 +94,9 @@ def record(
     total = subtotal + gst + sum((Decimal(line["amount"]) for line in after_gst), Decimal(0))
     return {
         "kind": "gas_bill_record",
-        "schema_version": 1,
+        "schema_version": 2,
         "pdf_dataset_id": pdf_dataset_id,
-        "transcribed_by": "agent",
+        "extracted_by": extracted_by,
         "retailer": "Test Gas Co",
         "plan_name": "Test Gas Saver",
         "issue_date": (period_end + timedelta(days=4)).isoformat(),

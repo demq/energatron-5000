@@ -173,8 +173,9 @@ no field: their `detector` (name and version) already says which parser read the
 - `gas-bill check SOURCE`: `SOURCE` is a workspace path or `-` (stdin), YAML or JSON (JSON is YAML). Read-only, no
   lock. Parses the record (`E_INVALID_INPUT` with the field, never the value, when it doesn't validate), checks that
   `pdf_dataset_id` names a landed gas bill PDF, and runs `check_record` with `validation.gas_bills.tolerance` and the
-  GST rate as the `gas_bills` stage does. Exit 0 when every check passes, else `E_CHECK_FAILED` (exit 6) with the
-  result in `data` and the failing check names in `details.failed`.
+  GST rate as the `gas_bills` stage does. Exit 0 when every check passes, else `E_CHECK_FAILED` (exit 7) with the
+  failing check names in `details.failed` and the two totals in `details` (built so in P9.2.2: D1 §8.5 keeps `data`
+  null on any failure but exit 8, and `E_CHECK_FAILED` is exit 7).
 - `gas-bill write SOURCE [--force] [--dry-run]`: the same checks, then writes the record as canonical YAML
   (`kind`, `schema_version` first; `yaml.safe_dump`, no comments) to `data/landing/gas_bill_record-<pdf id>.yaml`. A
   failing check → `E_CHECK_FAILED` and nothing written; an existing file needs `--force` (`E_CONFIRMATION_REQUIRED`).
@@ -361,7 +362,7 @@ client timeout. `test_readme` checks the command lines.
   `E_INVALID_INPUT` naming the path, `not_current`; no original file name, note or synthetic identifier in any result.
 - `test_gas_bill_record` additions: v2 validation of `extracted_by`; the v1 → v2 migration of both values; golden
   schemas.
-- `test_gas_bill_check` (unit): a consistent record passes; a wrong total or MJ fails the named check (exit 6, nothing
+- `test_gas_bill_check` (unit): a consistent record passes; a wrong total or MJ fails the named check (exit 7, nothing
   written); `write` writes canonical YAML that `land --dry-run` accepts; `--force`; stdin; a non-landed PDF ID.
 - `test_gas_bill_text` (unit, a generated PDF).
 - `test_mcp_protocol` (unit, the server over in-memory streams and a fake runner): `initialize` version negotiation;

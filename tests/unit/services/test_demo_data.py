@@ -48,7 +48,7 @@ def test_gas_bills_land_and_their_records_add_up() -> None:
     parser(SourceType.GAS_BILL).inspect("bill.pdf", pdf)
     record = demo.gas_bill_record(periods[0], 1000, "gas_bill-20251204T120000-0123abcd")
     text = demo.record_yaml(record)
-    assert text.startswith(b"kind: gas_bill_record\nschema_version: 1\n")
+    assert text.startswith(b"kind: gas_bill_record\nschema_version: 2\n")
     assert yaml.safe_load(text) == record
     parser(SourceType.GAS_BILL_RECORD).inspect("gas_bill_record-202511.yaml", text)
     lines = sum((Decimal(line["amount"]) for line in record["lines"]), Decimal(0))

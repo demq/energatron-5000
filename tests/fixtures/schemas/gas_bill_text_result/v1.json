@@ -1,0 +1,7 @@
+{
+  "kind": "gas_bill_text_result",
+  "pages": 2,
+  "pdf_dataset_id": "gas_bill-20261101T000000-0123abcd",
+  "schema_version": 1,
+  "text": "Synthetic gas bill, page one\fpage two"
+}

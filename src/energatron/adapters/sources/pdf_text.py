@@ -1,8 +1,8 @@
 """What a PDF's text says: its kind (electricity bill, gas bill, SAPN summary) and its issue date (bill PDF spec).
 
 Pure: bytes in, values out. The text comes from pypdf, first `MAX_PAGES` pages only; a PDF pypdf can't read, or an
-encrypted one, has no text (""). Nothing here keeps or returns the text beyond the call: callers get a source type or
-a date, never content.
+encrypted one, has no text (""). Nothing here keeps the text: callers get a source type or a date, and only
+`pdf_pages` returns content, for `energatron gas-bill text` (P9 spec §4.2).
 """
 
 import functools
@@ -57,6 +57,17 @@ def pdf_text(data: bytes) -> str:
         return "\n".join(pages[number].extract_text() or "" for number in range(min(len(pages), MAX_PAGES)))
     except Exception:  # a malformed PDF can raise almost anything inside pypdf; it just has no usable text
         return ""
+
+
+def pdf_pages(data: bytes) -> list[str]:
+    """Every page's text, for transcription (P9 spec §4.2); [] when pypdf can't read the PDF or it is encrypted."""
+    try:
+        reader = PdfReader(io.BytesIO(data))
+        if reader.is_encrypted:
+            return []
+        return [page.extract_text() or "" for page in reader.pages]
+    except Exception:  # as in `pdf_text`: a malformed PDF has no usable text
+        return []
 
 
 def pdf_kind(text: str) -> SourceType | None:

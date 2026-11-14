@@ -1,4 +1,5 @@
-"""`gas_bill_record` v1 (P5 spec §3.2): the model's rules and conventions, and the skeleton. Synthetic values."""
+"""`gas_bill_record` v2 (P5 spec §3.2, P9 spec §4.1): the model's rules, `extracted_by`, the v1 migration and the
+skeleton. Synthetic values."""
 
 import copy
 from datetime import date
@@ -49,7 +50,8 @@ def test_a_consistent_record_validates_and_keeps_its_printed_places() -> None:
         doc(reads=[]),
         doc(lines=[]),
         doc(pdf_dataset_id="offer_manual-20261101T000000-0123abcd"),
-        doc(transcribed_by="someone"),
+        doc(extracted_by="someone"),
+        doc(transcribed_by="agent"),  # the v1 field is gone
         doc(retailer=" padded"),
         doc(total=12.5),  # a YAML number, not a quoted string
         doc(subtotal="1,000.00"),
@@ -90,9 +92,10 @@ def test_the_skeleton_names_its_pdf_reads_as_yaml_and_does_not_validate() -> Non
     document = yaml.safe_load(text)
     assert (document["kind"], document["schema_version"], document["pdf_dataset_id"]) == (
         "gas_bill_record",
-        1,
+        2,
         gas.PDF_ID,
     )
+    assert document["extracted_by"] == ""
     assert [line["line"] for line in document["lines"]] == ["usage", "supply"]
     with pytest.raises(InvalidInputError):
         GasBillRecord.from_document(document)
@@ -103,3 +106,40 @@ def test_reads_listed_newest_first_are_refused() -> None:
     document["reads"] = list(reversed(document["reads"]))
     with pytest.raises(InvalidInputError):
         GasBillRecord.from_document(document)
+
+
+@pytest.mark.parametrize(
+    "value", ["manual", "agent:test-model", "agent:org/model-1.2", "agent:a:b_c", "agent:" + "m" * 80]
+)
+def test_extracted_by_accepts_manual_or_an_agent_model(value: str) -> None:
+    assert GasBillRecord.from_document(doc(extracted_by=value)).extracted_by == value
+
+
+@pytest.mark.parametrize(
+    "value", ["", "owner", "agent", "agent:", "agent: model", "agent:-model", "Manual", "agent:" + "m" * 81, 7]
+)
+def test_extracted_by_refuses_anything_else(value: object) -> None:
+    with pytest.raises(InvalidInputError):
+        GasBillRecord.from_document(doc(extracted_by=value))
+
+
+@pytest.mark.parametrize(("v1", "v2"), [("owner", "manual"), ("agent", "agent:unknown")])
+def test_a_v1_record_upgrades_to_v2(v1: str, v2: str) -> None:
+    document = doc()
+    del document["extracted_by"]
+    document |= {"schema_version": 1, "transcribed_by": v1}
+    record = GasBillRecord.from_document(document)
+    assert (record.schema_version, record.extracted_by) == (2, v2)
+
+
+@pytest.mark.parametrize("v1", ["someone", "", ["agent"], None])
+def test_a_v1_record_with_a_bad_transcriber_stays_invalid(v1: object) -> None:
+    document = doc()
+    del document["extracted_by"]
+    document |= {"schema_version": 1, "transcribed_by": v1}
+    with pytest.raises(InvalidInputError):
+        GasBillRecord.from_document(document)
+
+
+def test_the_skeleton_can_name_who_extracts_it() -> None:
+    assert yaml.safe_load(skeleton(gas.PDF_ID, extracted_by="agent:test-model"))["extracted_by"] == "agent:test-model"

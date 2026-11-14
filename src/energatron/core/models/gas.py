@@ -17,9 +17,10 @@ from typing import Annotated, ClassVar, Final, Literal, Self
 
 from pydantic import AfterValidator, BeforeValidator, ConfigDict, Field, model_validator
 
+from energatron.core.canonical import JSONValue
 from energatron.core.errors import InvalidInputError
 from energatron.core.models._common import DatasetId, FrozenModel, trimmed_text
-from energatron.core.persisted import Persisted
+from energatron.core.persisted import Persisted, migration
 
 GAS_BILL_PREFIX: Final = "gas_bill-"
 _DECIMAL: Final = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
@@ -27,7 +28,9 @@ _DECIMAL: Final = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
 type ReadType = Literal["actual", "estimate"]
 type GasLineKind = Literal["usage", "supply", "discount", "credit", "fee", "other"]
 type GasUnit = Literal["MJ", "day"]
-type Transcriber = Literal["owner", "agent"]
+_EXTRACTED_BY: Final = re.compile(r"manual|agent:[A-Za-z0-9][A-Za-z0-9._:/-]{0,79}")
+UNKNOWN_AGENT: Final = "agent:unknown"
+"""What a v1 record's `transcribed_by: agent` becomes: v1 didn't say which model (P9 spec §4.1)."""
 
 
 def _decimal_text(value: object) -> Decimal:
@@ -60,6 +63,13 @@ def _non_negative(value: Decimal) -> Decimal:
 def _positive(value: Decimal) -> Decimal:
     if value <= 0:
         raise ValueError("must be more than 0")
+    return value
+
+
+def extracted_by(value: str) -> str:
+    """`manual`, or `agent:<model id>` (P9 spec §4.1); anything else is refused."""
+    if _EXTRACTED_BY.fullmatch(value) is None:
+        raise ValueError("manual, or agent:<model id>")
     return value
 
 
@@ -124,15 +134,16 @@ class GasLine(FrozenModel):
 
 
 class GasBillRecord(Persisted):
-    """`gas_bill_record` v1: one gas bill transcribed from its PDF (P5 spec §3.2)."""
+    """`gas_bill_record` v2: one gas bill transcribed from its PDF (P5 spec §3.2), saying who extracted it (P9 spec
+    §4.1)."""
 
     KIND: ClassVar[str] = "gas_bill_record"
-    SCHEMA_VERSION: ClassVar[int] = 1
+    SCHEMA_VERSION: ClassVar[int] = 2
     kind: Literal["gas_bill_record"] = "gas_bill_record"
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
 
     pdf_dataset_id: Annotated[DatasetId, AfterValidator(_gas_bill_id)]
-    transcribed_by: Transcriber
+    extracted_by: Annotated[str, Field(strict=True), AfterValidator(extracted_by)]
     retailer: Annotated[str, AfterValidator(trimmed_text("retailer"))]
     plan_name: Annotated[str, AfterValidator(trimmed_text("plan_name"))]
     issue_date: date
@@ -166,9 +177,9 @@ SKELETON: Final = """\
 # (credits negative). Transcribe only this period's charges: `total` includes GST, never a carried balance. A line
 # applied after GST (a concession) gets `gst_free: true`. Never add an account, MIRN, invoice or reference number.
 kind: gas_bill_record
-schema_version: 1
+schema_version: 2
 pdf_dataset_id: {pdf_dataset_id}
-transcribed_by: ""          # owner | agent
+extracted_by: "{extracted_by}"{pad}# manual | agent:<model id>
 retailer: ""                # as printed
 plan_name: ""               # as printed
 issue_date: ""              # YYYY-MM-DD
@@ -201,9 +212,23 @@ total: ""                   # $ including GST
 """
 
 
-def skeleton(pdf_dataset_id: str) -> str:
-    """The record skeleton for the PDF `pdf_dataset_id`: every value empty, so it can't land until it is filled."""
-    return SKELETON.format(pdf_dataset_id=pdf_dataset_id)
+def skeleton(pdf_dataset_id: str, *, extracted_by: str = "") -> str:
+    """The record skeleton for the PDF `pdf_dataset_id`: every value empty, so it can't land until it is filled.
+    `extracted_by`, when given, is filled in (the caller validates it)."""
+    pad = " " * max(1, 26 - len(f'extracted_by: "{extracted_by}"'))
+    return SKELETON.format(pdf_dataset_id=pdf_dataset_id, extracted_by=extracted_by, pad=pad)
+
+
+@migration("gas_bill_record", from_version=1)
+def _gas_bill_record_v1_to_v2(doc: dict[str, JSONValue]) -> dict[str, JSONValue]:
+    """`transcribed_by` becomes `extracted_by`: `owner` → `manual`, `agent` → `agent:unknown` (P9 spec §4.1). Any other
+    value is carried over as it is, and v2's validation refuses it."""
+    upgraded = {key: value for key, value in doc.items() if key != "transcribed_by"}
+    who = doc.get("transcribed_by")
+    mapped = {"owner": "manual", "agent": UNKNOWN_AGENT}
+    upgraded["extracted_by"] = mapped.get(who, who) if isinstance(who, str) else who
+    upgraded["schema_version"] = 2
+    return upgraded
 
 
 # The gas tables (P5 spec §6, §7): kinds and columns; their pyarrow schemas live in `services/stages/tables.py`.

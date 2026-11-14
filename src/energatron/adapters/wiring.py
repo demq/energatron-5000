@@ -35,6 +35,7 @@ from energatron.adapters.pipeline.fingerprint import refresh_fingerprint as refr
 from energatron.adapters.pipeline.fingerprint import stage_code as _stage_code
 from energatron.adapters.schedule.launchd import Launchd as Launchd  # for the CLI
 from energatron.adapters.setup.subprocesses import SubprocessSetup, tool_version
+from energatron.adapters.sources.pdf_text import pdf_pages as pdf_pages  # for the CLI (P9 spec §4.2)
 from energatron.adapters.sources.registry import parsers_for
 from energatron.adapters.storage.fs_blobs import FsBlobStore
 from energatron.adapters.storage.jsonl_catalog import JsonlCatalog

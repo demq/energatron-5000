@@ -1,8 +1,9 @@
-"""`gas_bill_record`: one gas bill transcribed as YAML from its landed PDF (P5 spec §3.2), version 1.
+"""`gas_bill_record`: one gas bill transcribed as YAML from its landed PDF (P5 spec §3.2; v2, P9 spec §4.1).
 
 Loaded with `yaml.safe_load`; an unquoted date is refused (`unquoted_date`), as for `offer_manual`. `source_ts` is the
 issue date at midnight UTC and `coverage` the bill period. The record holds no identifier, so the premises check warns
-`W_PREMISES_UNCHECKED`. A corrected transcription lands as a new dataset; `gas_bills` keeps the newest per PDF. Pure.
+`W_PREMISES_UNCHECKED`. A corrected transcription lands as a new dataset; `gas_bills` keeps the newest per PDF. A v1
+record is upgraded when read. Parser version 2 adds `extra.extracted_by` (P9 spec §4.1). Pure.
 """
 
 import re
@@ -26,7 +27,7 @@ class GasBillRecordParser:
     """The `SourceParser` for `gas_bill_record` (D1 §4.3; P5 spec §3.2)."""
 
     source: SourceType = _SOURCE
-    version: int = 1
+    version: int = 2
 
     def detect(self, filename: str, head: bytes) -> Detection | None:
         text = head.decode("utf-8", errors="replace").removeprefix(BOM)
@@ -46,6 +47,7 @@ class GasBillRecordParser:
         record = read_record(document)
         extra: dict[str, JSONValue] = {
             "pdf_dataset_id": record.pdf_dataset_id,
+            "extracted_by": record.extracted_by,
             "period_start": record.period_start.isoformat(),
             "period_end": record.period_end.isoformat(),
             "source_ts_from": "content",
@@ -64,7 +66,7 @@ def read_record(document: dict[str, JSONValue]) -> GasBillRecord:
     try:
         return GasBillRecord.from_document(document)
     except InvalidInputError, SchemaTooNewError:
-        raise fail(_SOURCE, "The document doesn't match gas_bill_record v1.", "invalid_gas_bill_record") from None
+        raise fail(_SOURCE, "The document doesn't match gas_bill_record.", "invalid_gas_bill_record") from None
 
 
 GAS_BILL_RECORD: Final = GasBillRecordParser()

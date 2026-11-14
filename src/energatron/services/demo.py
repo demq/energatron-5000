@@ -229,9 +229,9 @@ def gas_bill_record(period: tuple[date, date], start_index: int, pdf_dataset_id:
     gst = _money(subtotal * _GST)
     return {
         "kind": "gas_bill_record",
-        "schema_version": 1,
+        "schema_version": 2,
         "pdf_dataset_id": pdf_dataset_id,
-        "transcribed_by": "agent",
+        "extracted_by": "manual",  # made by code, not by an agent (P9 spec §4.3)
         "retailer": "Demo Gas Co",
         "plan_name": "Demo Gas Everyday",
         "issue_date": (end + timedelta(days=4)).isoformat(),

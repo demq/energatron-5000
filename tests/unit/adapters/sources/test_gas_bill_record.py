@@ -16,8 +16,8 @@ from tests.fixtures import make_gas as gas
 TEXT = gas.record_text(gas.record())
 
 
-def test_the_parser_is_registered_for_gas_bill_record_version_1() -> None:
-    assert (GAS_BILL_RECORD.source, GAS_BILL_RECORD.version) == (SourceType.GAS_BILL_RECORD, 1)
+def test_the_parser_is_registered_for_gas_bill_record_version_2() -> None:
+    assert (GAS_BILL_RECORD.source, GAS_BILL_RECORD.version) == (SourceType.GAS_BILL_RECORD, 2)
     assert GAS_BILL_RECORD in PARSERS
 
 
@@ -33,12 +33,21 @@ def test_inspect_gives_the_issue_date_the_period_and_no_identifier() -> None:
     assert info.coverage == Coverage(start=date(2026, 9, 1), end=date(2026, 9, 30))
     assert info.extra == {
         "pdf_dataset_id": gas.PDF_ID,
+        "extracted_by": "agent:test-model",
         "period_start": "2026-09-01",
         "period_end": "2026-09-30",
         "source_ts_from": "content",
     }
     assert info.identifiers == {}
     assert info.extension == ".yaml"
+
+
+def test_a_v1_record_is_read_as_v2() -> None:
+    document = gas.record()
+    del document["extracted_by"]
+    document |= {"schema_version": 1, "transcribed_by": "owner"}
+    info = GAS_BILL_RECORD.inspect("bill.yaml", gas.record_bytes(document))
+    assert info.extra["extracted_by"] == "manual"
 
 
 @pytest.mark.parametrize(
