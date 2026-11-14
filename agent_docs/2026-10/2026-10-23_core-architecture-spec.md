@@ -1,7 +1,7 @@
 # Core architecture spec (D1)
 
 - **Created:** 2026-10-23
-- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec)
+- **Status:** Approved by the owner, 2026-10-23; rev 2 approved 2026-10-30; rev 3 approved 2026-10-30 (with the P2 spec); rev 4 approved 2026-11-03 (with the P3 spec); rev 5 approved 2026-11-04 (with the P4 spec); rev 6 approved 2026-11-05 (with the P5 spec); rev 7 approved 2026-11-10 (with the P6 spec); rev 8 approved 2026-11-10 (with the P7 spec); rev 9 approved 2026-11-14 (with the P8 spec)
 - **Revisions:** 2026-10-30 rev 2 (P1.1.1): the changes D2 §1 and D3 §1 made to this spec, D4's decisions
   on `verify`, what P0 recorded, the owner's decisions of 2026-10-29 on redaction and the envelope's
   `command`, and the third review's nits, all edited in place (listed in §1)
@@ -22,6 +22,9 @@
   2026-11-10 rev 8 (P7.1.1): the additive changes the P7 spec (`2026-11-10_p7-operations-spec.md`) §12 lists: the P7
   modules and commands, the notifier and launchd adapters in wiring, the six P7 warnings and two git-ignored workspace
   files, edited in place
+  2026-11-14 rev 9 (P8.1.1): the changes the P8 spec (`2026-11-14_p8-open-source-readiness-spec.md`) §12 lists: the
+  P8 modules and commands (`init`, `demo`, `upgrade`, `migrate`, `diagnose`), the `setup` and frozen-offer adapters,
+  `.tmpl` templates without `dvc.yaml`, the locks and `W_TEMPLATE_MODIFIED`, edited in place
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -151,6 +154,7 @@ src/energatron/
 │   ├── gas_tariff.py  cdr_gas_tariff.py  gas_engine.py  gas_bill.py  models/gas.py               P5
 │   ├── ranking.py  bundle_rules.py  recommendation_report.py  models/recommend.py                 P6
 │   └── operations.py  (reminders, the cheaper-plan test, notifications, the launchd plist)          P7
+│   └── workspace_template.py  toml_text.py  (P8 spec §3.2, §7)                                   P8
 ├── ports/                   typing.Protocol definitions only (§4)
 │   └── catalog.py  blobs.py  sources.py  vcs.py  pipeline.py  offers.py  clock.py                P0
 ├── services/                use cases; local file I/O only at paths passed in
@@ -166,11 +170,13 @@ src/energatron/
 │   ├── gas_bill.py  stages/{gas_bills,gas_profile,normalise_gas_offers,cost_gas,backtest_gas}.py   P5
 │   ├── run.py  decide.py  stages/{sensitivity,bundles,recommend,outcomes}.py                      P6
 │   ├── status.py  landing.py  watch.py                                                           P7
-│   └── compare.py  explain.py  migrate.py                                                        P8+
+│   ├── init.py  demo.py  upgrade.py  migrate.py  diagnose.py  (P8 spec §4-§8)                    P8
+│   └── compare.py  explain.py                                                                    P9+
 ├── adapters/
 │   ├── wiring.py            composition root: build_context() (P0), code_fingerprint() (P1)       P0
 │   │                        notifier(), launchd() (P7)
 │   ├── notify.py  schedule/launchd.py  (P7 spec §7, §8)                                       P7
+│   ├── setup/  offers/frozen.py  (P8 spec §4, §5.3: set-up subprocesses, the demo's offers)    P8
 │   ├── workspace.py         find the workspace root; read workspace and private config files      P0
 │   ├── storage/             jsonl_catalog.py, fs_blobs.py                                         P1
 │   ├── sources/             registry.py, plus one module per source type                          P1
@@ -182,7 +188,7 @@ src/energatron/
 ├── regions/                 package data: sa.yaml                                                 P1
 ├── offer_rules/             package data: curated public offer rules                              P4
 ├── bundle_rules/            package data: curated dual-fuel bundle rules (P6 spec §5.1)           P6
-└── templates/workspace/     package data: files `energatron init` writes                          P8
+└── templates/workspace/     package data: `.tmpl` files `energatron init` writes (P8 spec §3)    P8
 ```
 
 \* Created in P0 ahead of its phase, because the ports' signatures name these models: the shapes §4 and D3
@@ -751,6 +757,7 @@ class EnergatronError(Exception):
     §11).
   - Warnings added in P7: `W_LANDING_NEW`, `W_LANDING_LANDED`, `W_RUN_BEHIND`, `W_OFFERS_STALE`, `W_RECHECK_DUE`,
     `W_DRILL_DUE` (P7 spec §11).
+  - Warning added in P8: `W_TEMPLATE_MODIFIED` (P8 spec §11).
 
 | Exit | Category | Meaning | Codes needed in P0–P1 |
 |---|---|---|---|
@@ -789,7 +796,7 @@ Mutating commands also accept `--dry-run` and `--yes`. The environment variables
 3. Otherwise, walk up from the current directory to the first directory that contains
    `.energatron/workspace.toml`.
 
-Not found → `E_NOT_A_WORKSPACE`. Only `version` and `--help` (and `init`, from P8) work outside a workspace.
+Not found → `E_NOT_A_WORKSPACE`. Only `version`, `--help` and `init` (P8) work outside a workspace.
 
 ### 8.4 Output streams
 - **stdout** carries the result only: human text, or exactly one JSON document followed by a newline.
@@ -868,7 +875,7 @@ Commands that change the workspace take an exclusive, non-blocking lock on `.ene
 
 | Takes the lock | Never takes the lock |
 |---|---|
-| `land`, `fetch-offers`, `fingerprint` (it writes the file), `backup`, `run`, `decide`, `migrate`, `verify` (§11.4), and any later command that writes under `data/`, `.energatron/` or `private/` or commits | `stage`, `version`, read-only commands (`status`, `fingerprint --check`, `offers diff`, `explain`, `compare`), `stage --emit-dvc-yaml` |
+| `land`, `fetch-offers`, `fingerprint` (it writes the file), `backup`, `run`, `decide`, `migrate`, `upgrade`, `demo`, `verify` (§11.4), and any later command that writes under `data/`, `.energatron/` or `private/` or commits | `stage`, `version`, read-only commands (`status`, `diagnose`, `fingerprint --check`, `offers diff`, `explain`, `compare`), `init` (no workspace yet), `stage --emit-dvc-yaml` |
 
 - `energatron stage` never locks. `dvc repro` runs it as a child process, normally of `energatron run`, which
   already holds the lock; a child that tried to take it would fail with `E_LOCKED`. Its only writes under
@@ -1074,7 +1081,7 @@ STAGES: dict[str, StageSpec] = {...}  # registry.py, built from each stage modul
 - The workspace's `dvc.yaml` is written from this output (P1).
   - In the tool repo, a test compares the output with a golden file, `tests/fixtures/golden/dvc.yaml`. Changing
     the golden file is a deliberate part of any change to `STAGES`.
-  - From P8, `templates/workspace/dvc.yaml` must equal the same golden file.
+  - The workspace template has no `dvc.yaml`: `energatron init` runs `pipeline sync`, which writes it (P8 spec §3.1).
   - `energatron pipeline sync --check` detects a workspace `dvc.yaml` that has drifted from the generated one;
     it runs as a workspace pre-commit hook and as a `land` precondition (D3 §10.1).
 - DVC runs inside the workspace venv, and `DvcRunner` puts the venv's `bin` first on the child's `PATH`
@@ -1385,7 +1392,7 @@ If any of these fails, stop and ask the owner. Don't silently fall back to whole
 - Tariff and engine models, money rounding, the GST convention → P4 spec
 - `Fetched` header allow-list, CDR paging details → P4 spec
 - Recommendation payload, run manifest, decision schema → settled by the P6 spec (§7.3, §8.2, §9.2; rev 7)
-- `energatron migrate` CLI → P8 (the migration hook exists from P0); `params.yaml` is rewritten earlier, by
+- `energatron migrate` CLI → settled by the P8 spec §7 (rev 9); `params.yaml` is rewritten earlier, by
   `pipeline sync` (§5)
 - MCP and HTTP adapters → P9 and P10 (they reuse the service result models and the error codes)
 

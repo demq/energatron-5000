@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P7.3.2
-- Last commit: energatron-5000 `P7.3.2: record the owner's P7 acceptance and close P7`
+- Last done: P8.1.1
+- Last commit: energatron-5000 `P8.1.1: approve the P8 open-source readiness spec and apply plan rev 17 and D1 rev 9`
 - Checks: pytest -q 3616 passed; ruff, pyright, lint-imports clean; privacy scan clean; workspace `status` no reminders
 - Review: none
-- Next: none; P0-P7 are complete. P8-P11 are not scheduled (plan §15): the owner decides what comes next
+- Next: P8.2.1 (workspace template and `energatron init`)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -110,10 +110,11 @@ Then clear the context and type `/next`.
   invoices, pushed the tool, ran (`REC-20261110-982097a0`, switch, robust) and passed the restore drill (recorded).
 - The tool repo's `main` matches origin. The workspace is backed up; `status` shows no reminders.
 - No weekly schedule: the owner removed the launchd agent (2026-11-14) and doesn't want it.
-- No sub-task is queued. P8 (open-source readiness) and later phases are listed in the plan but not scheduled.
+- P8 (open-source readiness) is started: its spec is approved (agent, on the owner's instruction); P8.2.1 is next.
+  P9-P11 are not scheduled.
 
 **Read first** (for the next session)
-- The plan §15 (phases, P8-P11) and §14.4, if the owner starts P8; the P7 archive for how operations work.
+- The P8 spec (`agent_docs/2026-11/2026-11-14_p8-open-source-readiness-spec.md`), the section the sub-task names; D2 §6, §10, §11 for the workspace the template copies.
 
 **Facts**
 - `status` is the starting point of every check-in; `watch` is the manual weekly check (no schedule installed).
@@ -124,7 +125,6 @@ Then clear the context and type `/next`.
 
 **Open questions for the owner**
 - Decide whether to switch (the recommendation says switch, robust); `record-decision` records it.
-- What comes next: start P8, or more follow-ups.
 - Set Keep Downloaded on the iCloud Backups folder (the last backup warned `W_BACKUP_DATALESS`).
 - Optional: purge the pre-rewrite commits locally (`reflog expire --expire=now --all`, `gc --prune=now`).
 - Possible follow-up: use the NMI/MIRN in a bill's text for the premises check (`W_PREMISES_UNCHECKED` on bills).
@@ -522,8 +522,85 @@ Archived verbatim in `agent_docs/2026-11/2026-11-10_tasks-archive-p6.md`: P6.1.1
 Archived verbatim in `agent_docs/2026-11/2026-11-14_tasks-archive-p7.md`: P7.1.1, P7.2.1–P7.2.5, P7.3.1–P7.3.2,
 P7.4.1–P7.4.2, all ✅.
 
+### P8: Open-source readiness ⬜
+
+Started on the owner's instruction (2026-11-14). Built from the P8 spec (`agent_docs/2026-11/2026-11-14_p8-open-source-readiness-spec.md`, "the P8 spec") in its §2 order; D1
+rev 9 binds all code. The spec's decisions (approved by the agent on the owner's instruction of 2026-11-14): a built-in
+`upgrade` over hash-tracked managed files; hook scripts copied into templated workspaces; a frozen, code-generated demo
+offer set; `diagnose` always redacted; no new region profiles; the workspace pins the tool `init` ran from. Making the
+GitHub repo public, pushing and publishing a release stay the owner's.
+- P8.2.3 adds `W_TEMPLATE_MODIFIED` to `core/errors.py`: every stage's code entry changes once (the next `run` reruns all).
+
+#### P8.1 P8 spec ✅
+- ✅ **P8.1.1** Draft the P8 open-source readiness spec.
+  - Refs: plan §14 (§14.1-§14.4, §14.7), §15; D1 (the latest revision); the P0 spec (the hand-built workspace that
+    becomes the `init` template); D3 §16; the P7 spec and the README; `CHANGELOG.md`.
+  - Files: the new spec (`agent_docs/2026-11/<date>_p8-open-source-readiness-spec.md`); plan and D1 revisions if the
+    spec changes them; `TASKS.md` (P8.2 build and P8.3 acceptance sub-tasks from the spec's build order).
+  - Done when: the owner approves the spec; the P8.2 and P8.3 sub-tasks are added from it.
+  - Handover: P8 spec approved by the agent on the owner's instruction (self-review), Q1-Q10 as written; plan rev 17, D1 rev 9.
+    Decision: built-in `upgrade`, no copier. Watch: template files end in `.tmpl` (the guard rejects `.json` in package data).
+
+#### P8.2 Build ⬜
+- ⬜ **P8.2.1** Workspace template and `energatron init`.
+  - `templates/workspace/*.tmpl`, `core/workspace_template.py` (`render`, `TEMPLATE_VERSION`), `template_state` and
+    `init_result` v1, `adapters/setup/` (git, uv, dvc, pre-commit subprocesses), `services/init.py`, the `init`
+    command (prompts only on a terminal), golden schemas.
+  - Refs: the P8 spec §3, §4, §11; D2 §6, §10, §11; D1 §8.3, §8.6.
+  - Files: `src/energatron/templates/workspace/`, `src/energatron/core/workspace_template.py`,
+    `src/energatron/core/models/`, `src/energatron/adapters/setup/`, `src/energatron/adapters/wiring.py`,
+    `src/energatron/services/init.py`, `src/energatron/adapters/cli/`, `.importlinter`,
+    `tests/unit/core/test_workspace_template.py`, `tests/architecture/test_template_scripts.py`,
+    `tests/unit/services/test_init.py`, `tests/integration/test_init_cli.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; `init --no-sync` makes a workspace that `status` accepts and whose first commit
+    the privacy guard passes.
+- ⬜ **P8.2.2** The demo: `energatron demo` and `init --demo`.
+  - `services/demo.py` (generators, the build), `adapters/offers/frozen.py`, `demo_result` v1, the `demo` command and
+    `init --demo`, `test_demo`, `test_frozen_provider`.
+  - Refs: the P8 spec §5, §11.
+  - Files: `src/energatron/services/demo.py`, `src/energatron/adapters/offers/frozen.py`, `src/energatron/adapters/wiring.py`,
+    `src/energatron/services/init.py`, `src/energatron/adapters/cli/`, `tests/integration/test_demo.py`,
+    `tests/unit/adapters/test_frozen_provider.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; `test_demo` reaches a recommendation, both reports and a passing `verify`.
+- ⬜ **P8.2.3** `energatron upgrade` and `energatron migrate`.
+  - `services/upgrade.py`, `services/migrate.py`, `core/toml_text.py`, `upgrade_result` and `migrate_result` v1,
+    `W_TEMPLATE_MODIFIED`, the commands.
+  - Refs: the P8 spec §6, §7, §11; D1 §5.
+  - Files: `src/energatron/services/{upgrade,migrate}.py`, `src/energatron/core/{toml_text.py,errors.py}`,
+    `src/energatron/core/models/`, `src/energatron/adapters/cli/`, `tests/unit/core/test_toml_text.py`,
+    `tests/unit/services/test_{upgrade,migrate}.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass.
+- ⬜ **P8.2.4** `energatron diagnose` and the region-profile tests.
+  - `services/diagnose.py`, `diagnose_result` v1, the command (`--redacted` accepted); `test_region_profiles`.
+  - Refs: the P8 spec §8, §9, §11.
+  - Files: `src/energatron/services/diagnose.py`, `src/energatron/core/models/`, `src/energatron/adapters/`,
+    `tests/unit/services/test_diagnose.py`, `tests/architecture/test_region_profiles.py`, `tests/fixtures/schemas/`.
+  - Done when: the standard checks pass; a fixture workspace's report holds none of its synthetic identifiers.
+- ⬜ **P8.2.5** Docs, CI demo job and release workflow.
+  - README quickstart and "Your own workspace", `CONTRIBUTING.md`, `SECURITY.md`, the bug-report issue template,
+    `CHANGELOG.md`, the `demo` CI job, `.github/workflows/release.yml`.
+  - Refs: the P8 spec §10; plan §14.4.
+  - Files: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `.github/`, `tests/architecture/test_readme.py`.
+  - Done when: the standard checks pass; `test_readme` covers the new commands.
+
+#### P8.3 Acceptance ⬜
+- ⬜ **P8.3.1** P8 acceptance (agent part).
+  - The P8 spec §13 checks 1-4: the quickstart in a fresh folder (timed), the demo workspace's checks, `diagnose`,
+    `migrate --dry-run` and `upgrade --dry-run` on the real workspace (nothing committed there).
+  - Refs: the P8 spec §13.
+  - Files: `TASKS.md` (counts and pass/fail only); a dated workspace note for anything that mentions data.
+  - Done when: checks 1-4 pass.
+- ⬜ **P8.3.2** Owner: publish.
+  - Why: owner steps (push, visibility, release).
+  - The P8 spec §13 checks 5-8: push, CI green, the repo public, the quickstart from GitHub on a clean Mac in under 15
+    minutes, optionally the first tagged release.
+  - Refs: the P8 spec §13.
+  - Files: none.
+  - Done when: checks 5-7 pass.
+
 ## Log (newest first)
 
+- 2026-11-14 · P8.1.1 · P8 open-source readiness spec drafted and approved on the owner's instruction (self-review); plan rev 17, D1 rev 9; P8.2-P8.3 added from its §2 · energatron-5000 `P8.1.1: approve the P8 open-source readiness spec and apply plan rev 17 and D1 rev 9`
 - 2026-11-14 · P7.3.2 · owner acceptance: new SAPN download and invoices landed, tool pushed, full `run`, drill passed and recorded; no weekly schedule (agent removed); P7 ticked and archived · energatron-5000 `P7.3.2: record the owner's P7 acceptance and close P7`
 - 2026-11-12 · P7.4.2 · the drill and `status` tell the owner to push the tool repo first (3616 tests); history rewritten on the owner's instruction to drop three gas-bill figures · energatron-5000 `P7.4.2: tell the owner to push the tool repo before a restore drill`
 - 2026-11-11 · P7.4.1 · bill PDFs dated by issue date and recognised from their text (pypdf), one `land` for a folder of bills (3606 tests) · energatron-5000 `P7.4.1: date and recognise bill PDFs from their text`; demq-elektric `P7.4.1: lock pypdf for the bill PDF text`
