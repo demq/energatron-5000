@@ -15,6 +15,8 @@ from energatron.adapters.cli.app import app
 
 README = Path(__file__).resolve().parents[2] / "README.md"
 _FENCE = re.compile(r"```[a-z]*\n(.*?)```", re.DOTALL)
+_COMMAND = re.compile(r"(?:uv run|uvx --from \S+) energatron ")
+"""A command line: `uv run energatron …` in a workspace, or `uvx --from <source> energatron …` (the quickstart's)."""
 
 
 def readme_commands() -> list[list[str]]:
@@ -22,8 +24,9 @@ def readme_commands() -> list[list[str]]:
     for block in _FENCE.findall(README.read_text(encoding="utf-8")):
         for line in block.splitlines():
             line = line.split("#", 1)[0].strip()
-            if line.startswith("uv run energatron "):
-                found.append(shlex.split(line.replace("<", "'<").replace(">", ">'"))[3:])
+            match = _COMMAND.match(line)
+            if match:
+                found.append(shlex.split(line[match.end() :].replace("<", "'<").replace(">", ">'")))
     return found
 
 
@@ -42,6 +45,12 @@ def test_the_readme_shows_the_p7_commands() -> None:
              for words in readme_commands()}  # fmt: skip
     assert {"status", "watch", "landing list", "landing clear", "schedule install", "schedule status", "run", "land",
             "fetch-offers", "decide", "gas-bill new", "pipeline sync", "verify"} <= paths  # fmt: skip
+
+
+def test_the_readme_shows_the_p8_commands() -> None:
+    paths = {words[0] for words in readme_commands()}
+    assert {"init", "upgrade", "migrate", "diagnose"} <= paths
+    assert ["init", "--demo", "~/energatron-demo"] in readme_commands()
 
 
 def test_every_readme_command_parses() -> None:

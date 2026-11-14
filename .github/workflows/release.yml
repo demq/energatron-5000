@@ -1,0 +1,37 @@
+name: release
+# On a `v<version>` tag: the checks, the tag against `project.version`, `uv build`, and a GitHub release with the
+# wheel, the source archive and the tag's CHANGELOG section (P8 spec §10). No PyPI. Tagging is the maintainer's.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2  # v10.3.3
+        with:
+          version: "0.12.19"
+      - run: uv sync --locked
+      - name: the tag names the package version
+        run: |
+          version=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          test "v$version" = "$GITHUB_REF_NAME"
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - run: uv run ruff check
+      - run: uv run ruff format --check
+      - run: uv run pyright
+      - run: uv run lint-imports
+      - run: uv run pytest -q
+      - run: uv run python scripts/privacy_guard.py --mode tool --tracked --no-denylist
+      - run: uv build
+      - name: release notes from CHANGELOG.md
+        run: |
+          awk -v head="## [$VERSION]" 'index($0, head) == 1 { found = 1; next } /^## \[/ { if (found) exit } found' \
+            CHANGELOG.md > notes.md
+          test -s notes.md
+      - run: gh release create "$GITHUB_REF_NAME" dist/* --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}

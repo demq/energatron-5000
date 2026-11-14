@@ -9,6 +9,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Open-source readiness (P8): `energatron init` creates a workspace from a template (git, uv, DVC, an optional local
+  backup remote, the private config, the hooks, one commit) and `init --demo` fills it with synthetic data and runs it
+  to a recommendation (`energatron demo`); `energatron upgrade` refreshes the template-managed files, `energatron
+  migrate` rewrites config written by an older version, and `energatron diagnose` prints a redacted support report.
+  README quickstart, `CONTRIBUTING.md`, `SECURITY.md`, a bug-report template, a CI job that runs the demo on macOS, and a
+  release workflow for `v*` tags. The privacy guard's workspace mode allows `.energatron/template.json`.
 - `energatron status` warns `W_TOOL_UNPUBLISHED` when the last run's tool commit isn't pushed, and the restore drill
   says to push the tool repo when that commit is missing from the clone; the README's drill section says so too.
 - Bill PDFs are dated by the issue date printed on them and recognised from their text (electricity bill, gas bill

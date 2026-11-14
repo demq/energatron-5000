@@ -97,11 +97,11 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P8.2.4
-- Last commit: energatron-5000 `P8.2.4: add energatron diagnose and the region-profile tests`
-- Checks: pytest -q 3688 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: P8.2.5
+- Last commit: energatron-5000 `P8.2.5: add the README quickstart, CONTRIBUTING, SECURITY, the CI demo job and the release workflow`
+- Checks: pytest -q 3689 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
-- Next: P8.2.5 (docs, CI demo job and release workflow)
+- Next: P8.3.1 (P8 acceptance, agent part)
 
 ## Hand-over (rewritten by every `/done`)
 
@@ -111,8 +111,8 @@ Then clear the context and type `/next`.
 - The tool repo's `main` matches origin. The workspace is backed up; `status` shows no reminders.
 - No weekly schedule: the owner removed the launchd agent (2026-11-14) and doesn't want it.
 - P8 (open-source readiness): spec approved (agent, on the owner's instruction); P8.2.1 (template + `init`) and
-  P8.2.2 (`demo`, `init --demo`) and P8.2.3 (`upgrade`, `migrate`) and P8.2.4 (`diagnose`) done; P8.2.5 (docs, CI,
-  release workflow) is next.
+  P8.2.2 (`demo`, `init --demo`) and P8.2.3 (`upgrade`, `migrate`), P8.2.4 (`diagnose`) and P8.2.5 (docs, CI demo job,
+  release workflow) done: P8.2 is complete. P8.3.1 (acceptance, agent part) is next; P8.3.2 is the owner's.
   P9-P11 are not scheduled.
 
 **Read first** (for the next session)
@@ -549,7 +549,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
   - Handover: P8 spec approved by the agent on the owner's instruction (self-review), Q1-Q10 as written; plan rev 17, D1 rev 9.
     Decision: built-in `upgrade`, no copier. Watch: template files end in `.tmpl` (the guard rejects `.json` in package data).
 
-#### P8.2 Build ⬜
+#### P8.2 Build ✅
 - ✅ **P8.2.1** Workspace template and `energatron init`.
   - `templates/workspace/*.tmpl`, `core/workspace_template.py` (`render`, `TEMPLATE_VERSION`), `template_state` and
     `init_result` v1, `adapters/setup/` (git, uv, dvc, pre-commit subprocesses), `services/init.py`, the `init`
@@ -592,12 +592,14 @@ GitHub repo public, pushing and publishing a release stay the owner's.
   - Done when: the standard checks pass; a fixture workspace's report holds none of its synthetic identifiers.
   - Handover: `services/diagnose.py` (versions, config kinds, counts, codes; failed blocks → `problems`), `diagnose [--redacted]`,
     `test_region_profiles`; 3688 tests. Decision: program versions keep the number only. Watch: on the real workspace it ran clean.
-- ⬜ **P8.2.5** Docs, CI demo job and release workflow.
+- ✅ **P8.2.5** Docs, CI demo job and release workflow.
   - README quickstart and "Your own workspace", `CONTRIBUTING.md`, `SECURITY.md`, the bug-report issue template,
     `CHANGELOG.md`, the `demo` CI job, `.github/workflows/release.yml`.
   - Refs: the P8 spec §10; plan §14.4.
   - Files: `README.md`, `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`, `.github/`, `tests/architecture/test_readme.py`.
   - Done when: the standard checks pass; `test_readme` covers the new commands.
+  - Handover: README quickstart (uvx … `init --demo`), own workspace, after-update, diagnose; CONTRIBUTING (regions), SECURITY, issue
+    template, CI `demo` job (macOS), `release.yml`; 3689 tests. Watch: the quickstart's git URL works only once the repo is public.
 
 #### P8.3 Acceptance ⬜
 - ⬜ **P8.3.1** P8 acceptance (agent part).
@@ -616,6 +618,7 @@ GitHub repo public, pushing and publishing a release stay the owner's.
 
 ## Log (newest first)
 
+- 2026-11-14 · P8.2.5 · README quickstart and P8 sections (checked by `test_readme`, incl. `uvx` lines), CONTRIBUTING, SECURITY, bug-report template, CI `demo` job on macOS, `release.yml`, CHANGELOG (3689 tests); self-review; P8.2 ticked · energatron-5000 `P8.2.5: add the README quickstart, CONTRIBUTING, SECURITY, the CI demo job and the release workflow`
 - 2026-11-14 · P8.2.4 · `energatron diagnose` (structure only: versions, config kinds, counts, stage names, codes; failed checks listed), `diagnose_result` v1, `test_region_profiles` (3688 tests); self-review · energatron-5000 `P8.2.4: add energatron diagnose and the region-profile tests`
 - 2026-11-14 · P8.2.3 · `energatron upgrade` (managed files by recorded hash, `--force`), `energatron migrate` (TOML/YAML config through the migration chain, private config then denylist), `core/toml_text.py`, `W_TEMPLATE_MODIFIED`, two result kinds (3681 tests); self-review · energatron-5000 `P8.2.3: add energatron upgrade and energatron migrate`
 - 2026-11-14 · P8.2.2 · demo generators and build, `FrozenProvider`, `demo_result` v1, `energatron demo` and `init --demo`, `test_demo` end to end with `verify` (3661 tests); self-review (only the demo's own files removed, commit count) · energatron-5000 `P8.2.2: add energatron demo and init --demo`

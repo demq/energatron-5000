@@ -5,10 +5,44 @@ recommends the best value. Every result is traceable to the data, the offers and
 
 ## Status
 
-Phases P0-P7 are built: landing and cataloguing files, the meter pipeline, the usage profile, offers and the
-electricity and gas engines, bundles, the recommendation, decisions, and the operations in this README. It runs for one
-household in South Australia (SA Power Networks). P8 brings `energatron init`, a demo workspace and a quickstart for
-other households; until then a workspace is set up by hand.
+Phases P0-P8 are built: landing and cataloguing files, the meter pipeline, the usage profile, offers and the
+electricity and gas engines, bundles, the recommendation, decisions, the operations in this README, and `energatron
+init` with a synthetic demo. It knows one region so far, South Australia (SA Power Networks and the Adelaide gas
+network); other regions come by contribution (see `CONTRIBUTING.md`). It runs on macOS; Linux should work, but the
+weekly schedule and notifications are macOS-only.
+
+## Quickstart: try the demo
+
+You need [uv](https://docs.astral.sh/uv/) and git. uv fetches Python 3.14 and everything else into the workspace's own
+virtual environment; nothing is installed globally.
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh        # only if you don't have uv yet
+uvx --from git+https://github.com/demq/energatron-5000 energatron init --demo ~/energatron-demo
+cd ~/energatron-demo
+uv run energatron status
+open data/reports/recommendations/index.html data/reports/usage/index.html
+```
+
+`init --demo` creates a workspace, fills it with synthetic data (fourteen months of half-hourly meter readings, a
+retailer usage export, twelve gas bills and a frozen set of made-up offers), lands it, and runs the whole pipeline to a
+recommendation. Every number in it is invented. The demo workspace is a normal one: try `uv run energatron verify` or
+`uv run energatron diagnose`.
+
+## Your own workspace
+
+```bash
+uvx --from git+https://github.com/demq/energatron-5000 energatron init ~/energy --remote ~/Backups/energy-dvc
+cd ~/energy
+uv run energatron status
+```
+
+`init` asks for your NMI and meter serial (both are in the name and header of your SA Power Networks meter-data
+download) and your postcode, and keeps them in `private/config.toml`, which DVC tracks and git never sees. They feed
+the privacy guard, a pre-commit hook that blocks any commit holding them. `--remote` is a local folder for the DVC
+backup of your data (an external disk, or a cloud-synced folder); leave it out and add one later with `uv run dvc
+remote add --local -d backup <folder>`. The workspace depends on the exact tool commit `init` ran from, so it doesn't
+change under you (see [After a tool update](#after-a-tool-update)). Then follow the monthly cycle below.
 
 ## Privacy model
 
@@ -26,7 +60,8 @@ other households; until then a workspace is set up by hand.
 └── demq-elektric/      your workspace: config, DVC pointers and data, private, never on a public host
 ```
 
-- The workspace is a git repo whose data is managed by [DVC](https://dvc.org) and backed up to iCloud Drive.
+- The workspace is a git repo whose data is managed by [DVC](https://dvc.org) and backed up to a folder you choose
+  (the owner's: iCloud Drive).
 - Files you download go into the workspace's inbox, `data/landing/`. `energatron land` copies each one into the
   raw zone (`data/raw/`) with an ID, a catalog record and a commit.
 - `energatron run` runs the pipeline (twenty stages: meter data, usage profile, offers, costs, backtests,
@@ -34,16 +69,13 @@ other households; until then a workspace is set up by hand.
 - The recommendation (`REC-…`) is at `data/reports/recommendations/` as JSON and an HTML page.
 - Every command takes `--json` (one JSON document on stdout) and returns an error code from `core/errors.py`.
 
-## Set up
+## The owner's workspace
 
-You need macOS, [uv](https://docs.astral.sh/uv/) and git. Nothing is installed globally: uv manages Python 3.14,
-DVC and the tool inside the workspace's virtual environment.
-
-1. Clone this repo next to your workspace, as in the tree above.
-2. Set up the workspace by hand, following the P0 spec (`agent_docs/2026-10/2026-10-23_p0-bootstrap-spec.md` §11):
-   git, uv with this repo as an editable dependency, DVC with an iCloud remote, `private/config.toml`, the hooks.
-   (`energatron init` replaces this in P8.)
-3. From the workspace, write the pipeline files and the redaction denylist, then commit what they list:
+The tool started as one household's, whose workspace was set up by hand before `init` existed (the P0 spec,
+`agent_docs/2026-10/2026-10-23_p0-bootstrap-spec.md` §11). It sits next to this repo, as in the tree above, and depends
+on it as an editable install; its backups go to iCloud Drive through `scripts/icloud_backup.py`. Everything below works
+the same in a workspace `init` made. After changing the private config, write the pipeline files and the redaction
+denylist, then commit what they list:
 
 ```bash
 cd ~/WorkSpace/Electricity/demq-elektric
@@ -163,8 +195,11 @@ commits like a manual one, so it needs a clean workspace: uncommitted config or 
 
 ## Backups and the restore drill
 
-Agents and the tool never touch iCloud themselves; you run the backup from a terminal that can reach iCloud Drive,
-following `agent_docs/2026-10/2026-10-23_icloud-backup-runbook.md`:
+In a workspace `init --remote` made, `uv run energatron backup` pushes the DVC data to that folder and writes a verified
+git bundle beside it (`backup --status` says whether one is pending). Back the folder up off the machine as you see fit.
+
+The owner's workspace backs up to iCloud Drive. Agents and the tool never touch iCloud themselves; the owner runs the
+backup from a terminal that can reach iCloud Drive, following `agent_docs/2026-10/2026-10-23_icloud-backup-runbook.md`:
 
 ```bash
 cd ~/WorkSpace/Electricity
@@ -193,13 +228,35 @@ reproduce byte for byte.
 
 ## After a tool update
 
+To move a workspace `init` made to a newer tool, change the `rev` (or the path) of `energatron-5000` in its
+`pyproject.toml`, run `uv sync`, and commit `pyproject.toml` and `uv.lock`. Then:
+
 ```bash
+uv run energatron upgrade --dry-run
+uv run energatron upgrade
+uv run energatron migrate --dry-run
+uv run energatron migrate
 uv run energatron pipeline sync
 uv run energatron run
 ```
 
-`pipeline sync` regenerates `dvc.yaml`, `params.yaml` and new empty catalogs; commit the files it lists (they are
-config), then run. `energatron status` shows whether the pipeline is in sync and which stages' code changed.
+- `upgrade` refreshes the files the template manages (the hooks, their scripts, `.gitignore`), leaves any you edited
+  alone (`W_TEMPLATE_MODIFIED`; `--force` replaces them), and commits. A hand-built workspace is upgraded by hand.
+- `migrate` rewrites config files an older version wrote (`workspace.toml`, `private/config.toml`, local rules) to the
+  current schema and commits them. Comments in those files are lost, so read the dry run first.
+- `pipeline sync` regenerates `dvc.yaml`, `params.yaml` and new empty catalogs; commit the files it lists (they are
+  config), then run. `energatron status` shows whether the pipeline is in sync and which stages' code changed.
+
+## Getting help without sharing data
+
+```bash
+uv run energatron diagnose --redacted
+uv run energatron diagnose --json
+```
+
+`diagnose` reports versions, the workspace's structure (config kinds and versions, catalog counts, stage names) and
+which checks fail, by error code. It never holds a file name, an identifier, a plan or a figure. Read it, then paste the
+JSON into a GitHub issue. Never attach your own data files to an issue.
 
 ## Reminders and troubleshooting
 
@@ -253,6 +310,7 @@ uv run pre-commit run --files <changed files>
 ```
 
 Design docs are in `agent_docs/`: the plan, the core architecture spec (binding for all code) and one spec per phase.
+`CONTRIBUTING.md` says how to contribute, including adding a region; `SECURITY.md` how to report a vulnerability.
 
 ## Licence
 
