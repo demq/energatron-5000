@@ -19,8 +19,10 @@ from energatron.ports.catalog import Catalog
 from energatron.ports.clock import Clock
 from energatron.ports.offers import OfferProvider
 from energatron.ports.pipeline import PipelineRunner
+from energatron.ports.progress import Progress
 from energatron.ports.sources import SourceParser
 from energatron.ports.vcs import VersionControl
+from energatron.services.progress import NullProgress
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,7 @@ class ServiceContext:
     runner: PipelineRunner
     clock: Clock
     offers: Mapping[str, OfferProvider] = field(default_factory=dict)  # P4
+    progress: Progress = field(default_factory=NullProgress)  # what a long service is doing (M.2); the CLI prints it
 
 
 class ServiceResult(Persisted):

@@ -1,7 +1,8 @@
 """`energatron run [--draft]`: run the pipeline, write its manifest and commit (P6 spec §8; plan §9.4).
 
 The command takes the workspace lock, computes the live code fingerprint (services can't, D1 §11.4) and passes the
-tool's state to the service, which refuses a dirty tool or dirty tracked config unless `--draft`.
+tool's state to the service, which refuses a dirty tool or dirty tracked config unless `--draft`. In human mode it
+prints its phases and each stage as it starts and ends on stderr (owner request M.2).
 """
 
 from typing import Annotated
@@ -18,6 +19,7 @@ from energatron.adapters.cli.common import (
     open_workspace,
 )
 from energatron.adapters.cli.output import CommandOutput
+from energatron.adapters.cli.progress import progress_for
 from energatron.adapters.workspace import workspace_lock
 from energatron.core.models.recommend import ToolState
 from energatron.services import run as run_service
@@ -35,8 +37,10 @@ def run(
 ) -> CommandOutput:
     """Run the pipeline, record the run in data/runs/ and commit it."""
     invocation = begin(ctx, verbose=verbose, debug=debug)
-    context = open_workspace(invocation, workspace)
+    progress = progress_for(invocation)
+    context = open_workspace(invocation, workspace, progress=progress)
     with workspace_lock(context.paths):
+        progress.step("Computing the tool's code fingerprint")
         live = wiring.code_fingerprint()
         tool = ToolState(
             energatron_version=live.energatron_version,

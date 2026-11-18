@@ -107,7 +107,9 @@ uv run energatron land data/landing/
 uv run energatron run
 ```
 
-   The first run after a tool update reruns every stage (a few minutes); later runs rerun only what changed.
+   The first run after a tool update reruns every stage (a few minutes); later runs rerun only what changed. While it
+   works, `run` prints each step and each stage as it starts and ends (with its time) on stderr; add `-v` to also see
+   DVC's own output.
 4. **Read** the result: open `data/reports/recommendations/index.html` (the recommendation, its options, the
    sensitivity checks and what it cites) and `data/reports/usage/index.html` (the usage report) in a browser.
 5. **Check** where things stand, and clear the inbox of what has landed:

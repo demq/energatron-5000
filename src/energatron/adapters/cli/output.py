@@ -141,6 +141,11 @@ def _write_envelope(invocation: Invocation, document: CliResult) -> None:
     sys.stdout.flush()
 
 
+def write_stderr(invocation: Invocation, text: str) -> None:
+    """Write redacted text to stderr, such as a progress line."""
+    _write(invocation, sys.stderr, text)
+
+
 def _write(invocation: Invocation, stream: TextIO, text: str) -> None:
     stream.write(redact(text, invocation.denylist))
     stream.flush()

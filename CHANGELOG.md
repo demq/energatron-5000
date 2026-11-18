@@ -9,6 +9,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- `energatron run` shows its progress on stderr: each step, and each pipeline stage as it starts and ends with its
+  position (`[ 7/20]`), its time and, on failure, its exit code. `--json` output is unchanged.
 - `energatron serve` (P10): the local web UI and JSON API for a workspace, read-only, on `127.0.0.1` (or `localhost`,
   `::1`) only, with a per-launch token in the printed address; `--open` opens it, `--port 0` picks a free port,
   `--allow-documents` adds a bill's text. It prints one result (`serve_result`) and serves until Ctrl-C or SIGTERM.

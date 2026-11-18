@@ -26,6 +26,7 @@ from energatron.services import run as run_service
 from energatron.services.context import ServiceContext
 from energatron.services.stages.dvc_yaml import emit_dvc_yaml
 from energatron.services.stages.registry import STAGES
+from tests.fixtures.progress import RecordingProgress
 from tests.unit.adapters._workspace import make_workspace, write
 from tests.unit.services.test_context import TEST_REGION, FakeRunner, FakeVcs, build
 
@@ -99,8 +100,17 @@ def paths(tmp_path: Path) -> WorkspacePaths:
     return paths
 
 
-def context(paths: WorkspacePaths, vcs: RunVcs, runner: RecRunner) -> ServiceContext:
-    return build(paths=paths, catalog=JsonlCatalog(paths), vcs=vcs, runner=runner, clock=StepClock())
+def context(
+    paths: WorkspacePaths, vcs: RunVcs, runner: RecRunner, progress: RecordingProgress | None = None
+) -> ServiceContext:
+    return build(
+        paths=paths,
+        catalog=JsonlCatalog(paths),
+        vcs=vcs,
+        runner=runner,
+        clock=StepClock(),
+        progress=progress or RecordingProgress(),
+    )
 
 
 def manifest_of(paths: WorkspacePaths, run_id: str) -> RunManifest:
@@ -190,3 +200,20 @@ def test_the_result_dumps_as_run_result_v1(paths: WorkspacePaths) -> None:
     dumped = run_service.run(context(paths, RunVcs(), RecRunner(paths.root)), tool=CLEAN).model_dump(mode="json")
     assert (dumped["kind"], dumped["schema_version"]) == ("run_result", 1)
     assert "warnings" not in dumped
+
+
+def test_a_run_announces_each_phase_in_order(paths: WorkspacePaths) -> None:
+    progress = RecordingProgress()
+    run_service.run(context(paths, RunVcs(), RecRunner(paths.root), progress), tool=CLEAN)
+    assert progress.steps() == [
+        "Checking that the pipeline files match this tool",
+        "Checking for uncommitted changes",
+        "Recording the run",
+        "Committing the run",
+    ]
+
+
+def test_a_draft_run_skips_the_uncommitted_changes_check(paths: WorkspacePaths) -> None:
+    progress = RecordingProgress()
+    run_service.run(context(paths, RunVcs(), RecRunner(paths.root), progress), tool=CLEAN, draft=True)
+    assert "Checking for uncommitted changes" not in progress.steps()

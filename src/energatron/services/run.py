@@ -3,7 +3,8 @@
 `run(ctx, tool=…, draft=…)` checks that the pipeline files are in sync, that no tracked config is dirty and the tool is
 clean (unless `draft`), runs `dvc repro` through the `PipelineRunner` (which refreshes the code fingerprint first),
 writes the run manifest `data/runs/<run_id>.json`, tracks `data/runs` and commits exactly the files a run changes. The
-run ID and the draft flag live only in the manifest (D1 §9.4): no stage sees them. The caller holds the workspace lock
+run ID and the draft flag live only in the manifest (D1 §9.4): no stage sees them. Each phase is announced through
+`ctx.progress`; the runner reports the stages. The caller holds the workspace lock
 and passes the live tool state (services can't compute code fingerprints, D1 §11.4).
 """
 
@@ -56,8 +57,10 @@ class RunResult(ServiceResult):
 
 def run(ctx: ServiceContext, *, tool: ToolState, draft: bool = False) -> RunResult:
     """Repro, record and commit one run (P6 spec §8.1)."""
+    ctx.progress.step("Checking that the pipeline files match this tool")
     pipeline_sync.check(ctx)
     if not draft:
+        ctx.progress.step("Checking for uncommitted changes")
         dirty = sorted(path for path in ctx.vcs.dirty_paths(list(CONFIG_PATHS)) if _is_config(path))
         if dirty:
             raise DirtyError("Tracked config has uncommitted changes: commit them, or run with --draft.", paths=dirty)
@@ -87,11 +90,13 @@ def run(ctx: ServiceContext, *, tool: ToolState, draft: bool = False) -> RunResu
         action=recommendation.action if recommendation else None,
         robust=recommendation.robust if recommendation else None,
     )
+    ctx.progress.step("Recording the run")
     write_json(ctx.paths.root / RUNS_DIR / f"{identifier}.json", manifest.model_dump(mode="json"))
     pointers = ctx.vcs.track([RUNS_DIR])
     ignores = [path for path in ctx.vcs.dirty_paths(["data"]) if path.endswith(".gitignore")]
     paths = sorted({*RUN_PATHS, *pointers, *ignores})
     message = f"run: {identifier}" + (f" {manifest.recommendation_id}" if manifest.recommendation_id else "")
+    ctx.progress.step("Committing the run")
     commit = ctx.vcs.commit(paths, message)
     status = ctx.vcs.backup_status()
     warning = ResultWarning(

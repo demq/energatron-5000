@@ -7,6 +7,9 @@
   empty file under `.energatron/tmp/`. `energatron stage` appends a `start` and an `end` record to it from `main()`.
   `ran` comes from those records; `restored` from the `dvc.lock` entries that changed without a run; `cached` is the
   rest of the stages in scope. DVC's human-readable output is only logged, never parsed.
+- While `dvc repro` runs, a watcher thread follows the repro log and reports each stage's start and end, with its
+  position among the stages in scope and its time, to the `Progress` it was given (owner request M.2). A stage that
+  started and never ended is reported as stopped (`exit_code` None) once the repro is over.
 - The child runs in the workspace root, stdin from `/dev/null`, stdout and stderr merged into one pipe whose lines go
   to the `energatron.adapters.pipeline` logger. It gets the parent's environment minus `ENERGATRON_JSON`, with
   `ENERGATRON_WORKSPACE` set to the root and the running interpreter's directory first on `PATH`, so `dvc.yaml`'s
@@ -21,6 +24,8 @@ import os
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -42,6 +47,8 @@ from energatron.core.errors import (
 from energatron.core.models.pipeline import ReproLogEntry, ReproReport, StageStatus
 from energatron.core.models.provenance import CodeFingerprint, stale_stages
 from energatron.core.models.workspace import WorkspacePaths
+from energatron.ports.progress import Progress
+from energatron.services.progress import NullProgress, duration
 from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 
 PIPELINE_LOGGER: Final = "energatron.adapters.pipeline"
@@ -52,6 +59,7 @@ _JSON_ENV: Final = "ENERGATRON_JSON"
 _WORKSPACE_ENV: Final = "ENERGATRON_WORKSPACE"
 _TAIL: Final = 50
 _CHECK_EXIT: Final = 7
+_POLL_SECONDS: Final = 0.2
 
 _log = logging.getLogger(PIPELINE_LOGGER)
 
@@ -66,13 +74,20 @@ class _Stage:
 
 
 class DvcRunner:
-    """Runs and inspects the workspace pipeline through DVC. `fingerprint` computes the live code fingerprint."""
+    """Runs and inspects the workspace pipeline through DVC. `fingerprint` computes the live code fingerprint;
+    `progress` hears what `repro()` is doing."""
 
     def __init__(
-        self, paths: WorkspacePaths, *, fingerprint: Callable[[], CodeFingerprint], bin_dir: Path | None = None
+        self,
+        paths: WorkspacePaths,
+        *,
+        fingerprint: Callable[[], CodeFingerprint],
+        bin_dir: Path | None = None,
+        progress: Progress | None = None,
     ) -> None:
         self.paths = paths
         self.fingerprint = fingerprint
+        self.progress: Progress = progress if progress is not None else NullProgress()
         self._bin = bin_dir if bin_dir is not None else Path(sys.executable).parent
         beside = self._bin / "dvc"
         self._dvc = str(beside) if beside.is_file() else "dvc"
@@ -158,6 +173,9 @@ class DvcRunner:
         unknown = sorted(set(targets) - set(names))
         if unknown:
             raise UsageError(f"Unknown stage: {', '.join(unknown)}.", known=names)
+        scope = _scope(stages, targets)
+        in_scope = [name for name in names if name in scope]
+        self.progress.step("Updating the code fingerprint")
         refresh_fingerprint(self.paths.root / CODE_FINGERPRINT_PATH, self.fingerprint())
         before = self._lock()
         tmp = self.paths.root / ".energatron" / "tmp"
@@ -165,8 +183,14 @@ class DvcRunner:
         handle, name = tempfile.mkstemp(prefix="repro-", suffix=".jsonl", dir=tmp)
         os.close(handle)
         log = Path(name)
+        self.progress.step(
+            f"Running the pipeline: {len(in_scope)} stages; those whose inputs, params and code are unchanged are "
+            "skipped"
+        )
+        began = time.monotonic()
         try:
-            exit_code = self._run_repro(targets, log)
+            with _StageWatcher(log, in_scope, self.progress):
+                exit_code = self._run_repro(targets, log)
             entries = _read_log(log)
             after = self._lock()
         finally:
@@ -174,10 +198,13 @@ class DvcRunner:
 
         ran = [stage for stage in names if any(_succeeded(entry, stage) for entry in entries)]
         restored = [stage for stage in names if after.get(stage) != before.get(stage) and stage not in ran]
-        scope = _scope(stages, targets)
         cached = [stage for stage in names if stage in scope and stage not in ran and stage not in restored]
         if exit_code != 0:
             raise _failure(entries, exit_code, ran, restored)
+        self.progress.step(
+            f"Pipeline done in {duration(time.monotonic() - began)}: {len(ran)} ran, {len(restored)} restored, "
+            f"{len(cached)} up to date"
+        )
         return ReproReport(ran=ran, restored=restored, cached=cached)
 
     def _run_repro(self, targets: Sequence[str], log: Path) -> int:
@@ -230,6 +257,71 @@ class DvcRunner:
     def _lock(self) -> dict[str, object]:
         document = _read_yaml(self.paths.root / "dvc.lock", "dvc.lock")
         return {} if document is None else dict(_mapping(document.get("stages")))
+
+
+class _StageWatcher:
+    """Follows the repro log from a thread while `dvc repro` runs, and reports each stage's start and end.
+
+    Only complete lines count; one that isn't a valid record is skipped here (`_read_log` warns about it later). On
+    exit the thread stops, the log is read one last time, and a stage still running is reported as stopped.
+    """
+
+    def __init__(self, log: Path, in_scope: Sequence[str], progress: Progress) -> None:
+        self._log = log
+        self._positions = {name: index for index, name in enumerate(in_scope, start=1)}
+        self._progress = progress
+        self._offset = 0
+        self._partial = b""
+        self._running: dict[str, float] = {}
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._follow, name="repro-progress", daemon=True)
+
+    def __enter__(self) -> _StageWatcher:
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self._stop.set()
+        self._thread.join()
+        self._poll()
+        for name, began in list(self._running.items()):
+            self._finished(name, None, began)
+
+    def _follow(self) -> None:
+        while not self._stop.wait(_POLL_SECONDS):
+            self._poll()
+
+    def _poll(self) -> None:
+        try:
+            with self._log.open("rb") as handle:
+                handle.seek(self._offset)
+                chunk = handle.read()
+        except OSError:
+            return
+        self._offset += len(chunk)
+        *lines, self._partial = (self._partial + chunk).split(b"\n")
+        for line in lines:
+            try:
+                entry = ReproLogEntry.from_document(json.loads(line))
+            except ValueError, ValidationError, InvalidInputError, TypeError:
+                continue
+            if entry.stage not in self._positions:
+                continue
+            if entry.event == "start":
+                self._running[entry.stage] = time.monotonic()
+                self._progress.stage_started(entry.stage, self._positions[entry.stage], len(self._positions))
+            elif entry.stage in self._running:
+                self._finished(entry.stage, entry.exit_code, self._running[entry.stage])
+
+    def _finished(self, name: str, exit_code: int | None, began: float) -> None:
+        del self._running[name]
+        self._progress.stage_finished(
+            name,
+            self._positions[name],
+            len(self._positions),
+            exit_code=exit_code,
+            seconds=time.monotonic() - began,
+        )
 
 
 def _read_yaml(path: Path, name: str) -> Mapping[str, object] | None:

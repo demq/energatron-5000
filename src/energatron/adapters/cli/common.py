@@ -11,6 +11,7 @@ from energatron.adapters.cli.output import Invocation, set_verbosity
 from energatron.adapters.workspace import find_workspace
 from energatron.core.errors import InternalError
 from energatron.core.privacy import DenyEntry
+from energatron.ports.progress import Progress
 from energatron.services.context import ServiceContext
 
 # Every command accepts these, after the command name (D1 §8.2). `--json` and `--debug` are also pre-scanned by
@@ -45,17 +46,18 @@ def begin(ctx: typer.Context, *, verbose: bool, debug: bool) -> Invocation:
     return invocation
 
 
-def open_workspace(invocation: Invocation, option: str | None) -> ServiceContext:
+def open_workspace(invocation: Invocation, option: str | None, *, progress: Progress | None = None) -> ServiceContext:
     """Find the workspace, load the redaction denylist as early as possible, then build the context.
 
     The denylist is `private/denylist.txt`'s entries first, then those derived from the private config once it's
-    read (D1 §8.7), so it never depends on the generated file being current.
+    read (D1 §8.7), so it never depends on the generated file being current. `progress` reaches the context and
+    its pipeline runner.
     """
     paths = find_workspace(option, cwd=Path.cwd(), env=os.environ)
 
     def hold(manual: tuple[DenyEntry, ...]) -> None:
         invocation.denylist = manual
 
-    context, denylist = reads.open_context(paths, on_manual=hold)
+    context, denylist = reads.open_context(paths, on_manual=hold, progress=progress)
     invocation.denylist = denylist
     return context

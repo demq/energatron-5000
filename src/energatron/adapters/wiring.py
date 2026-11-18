@@ -52,7 +52,9 @@ from energatron.core.models.provenance import CodeFingerprint, StageCode, stale_
 from energatron.core.models.region import RegionProfile
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.ports.clock import Clock
+from energatron.ports.progress import Progress
 from energatron.services.context import ServiceContext
+from energatron.services.progress import NullProgress
 from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 from energatron.services.stages.registry import STAGES, get_stage
 
@@ -64,16 +66,20 @@ class SystemClock:
         return datetime.now(UTC)
 
 
-def build_context(paths: WorkspacePaths, *, clock: Clock | None = None, dvc: Path | None = None) -> ServiceContext:
+def build_context(
+    paths: WorkspacePaths, *, clock: Clock | None = None, dvc: Path | None = None, progress: Progress | None = None
+) -> ServiceContext:
     """Read the workspace's config files and build every port for one run.
 
     `workspace.toml` gives the region, whose profile picks the parsers (D3 §10.3), and the backup policy;
     `local.toml` the bundle folder, `~` expanded and unchecked (None when unset; the real `backup` alone checks it,
     D2 §8.1 step 1); `private/config.toml` the private config, or None when it's missing. The CDR offer provider is
     `offers["cdr"]` (P4 spec §3.1). `dvc` names the DVC executable git and DVC use (`init` passes the new workspace's
-    venv's, P8 spec §4.3); by default the one beside the running interpreter.
+    venv's, P8 spec §4.3); by default the one beside the running interpreter. `progress` goes to both the context and
+    the runner (owner request M.2); by default nothing hears it.
     """
     clock = clock if clock is not None else SystemClock()
+    progress = progress if progress is not None else NullProgress()
     config = read_workspace_config(paths)
     bundle_dir = backup_bundle_dir(read_local_config(paths))
     private = read_private_config(paths)
@@ -89,9 +95,10 @@ def build_context(paths: WorkspacePaths, *, clock: Clock | None = None, dvc: Pat
         parsers=parsers,
         region=region,
         vcs=vcs,
-        runner=DvcRunner(paths, fingerprint=lambda: code_fingerprint()),
+        runner=DvcRunner(paths, fingerprint=lambda: code_fingerprint(), progress=progress),
         clock=clock,
         offers={"cdr": cdr_provider(clock)},
+        progress=progress,
     )
 
 

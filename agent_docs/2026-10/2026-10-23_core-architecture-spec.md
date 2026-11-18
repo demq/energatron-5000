@@ -31,6 +31,10 @@
   2026-11-14 rev 11 (P10.1.1): the changes the P10 spec (`2026-11-14_p10-local-web-ui-spec.md`) §10 lists: the shared
   envelope and read paths, the `http` adapter and its two import contracts, `serve` (stdout and locks), the FastAPI and
   uvicorn dependencies and the server-rendered UI under the languages rule, edited in place
+  2026-11-15 rev 12 (M.2, owner request): progress for people. The `Progress` port (`ports/progress.py`), with
+  `NullProgress` and `duration()` in `services/progress.py`; `ServiceContext.progress`; `DvcRunner` follows the
+  repro log and reports each stage's start and end; `run` prints its phases and stages on stderr in human mode
+  (§4.5, §4.8, §8.4), edited in place
 - **Deliverable:** D1 of [`2026-10-23_handover-next-planning-stage.md`](2026-10-23_handover-next-planning-stage.md) §8
 - **Builds on:** [`2026-10-23_data-pipeline-plan.md`](2026-10-23_data-pipeline-plan.md) rev 6, called "the plan"
 - **For:** the agent or person implementing P0 and P1, and every later phase spec
@@ -598,6 +602,12 @@ class ReproReport(BaseModel):         # core/models/pipeline.py; each list in dv
     their content equals what `dvc.lock` already records.
   - `dvc repro` has no JSON output, which is why the runner relies on the log and the `dvc.lock` diff, never on
     DVC's human-readable output.
+  - **Progress (rev 12):** `DvcRunner` takes an optional `progress: Progress` (`NullProgress` by default; wiring
+    passes the context's). `repro` announces its phases with `progress.step()` (refreshing the fingerprint, running
+    the pipeline, the summary when it succeeds). While `dvc repro` runs, a watcher thread polls the repro log every
+    0.2 s and calls `stage_started(name, position, total)` and `stage_finished(…, exit_code, seconds)`; `position`
+    and `total` count the stages in scope in `dvc.yaml` order. A stage with a `start` and no `end` when the repro
+    is over is reported with `exit_code=None`. Progress never changes `ReproReport` or the errors above.
 
 ### 4.6 `OfferProvider` (used from P4; signatures fixed now)
 
@@ -649,7 +659,13 @@ class ServiceContext:
     runner: PipelineRunner
     clock: Clock
     offers: Mapping[str, OfferProvider] = field(default_factory=dict)   # P4
+    progress: Progress = field(default_factory=NullProgress)          # rev 12: what a long service is doing
 ```
+
+- `Progress` (`ports/progress.py`, rev 12): `step(message)`, `stage_started(name, position, total)` and
+  `stage_finished(name, position, total, *, exit_code, seconds)`. Messages hold fixed text, stage names, positions
+  and times only (§8.9). `build_context(paths, progress=…)` gives the same object to the context and the runner;
+  `run` announces its phases through it.
 
 - Services are plain functions that take `ctx: ServiceContext` first, e.g.
   `land(ctx, paths, *, source=None, supersedes=None, note="", dry_run=False) -> LandResult` (D3 §7).
@@ -865,6 +881,9 @@ Not found → `E_NOT_A_WORKSPACE`. Only `version`, `--help` and `init` (P8) work
   - The second is `energatron serve` (P10 spec §7): it prints its one result once it listens, then nothing more on
     stdout while it serves.
 - **stderr** carries logs, progress, human-mode warnings and tracebacks.
+  - Progress (rev 12): in human mode `run` prints one plain line per phase and per stage start and end, such as
+    `  [ 7/20] usage_profile done in 12.3s`, through the redacting writer, at every log level. With `--json` it
+    prints none (`adapters/cli/progress.py`).
 
 ### 8.5 JSON envelope (kind `cli_result`, version 1)
 

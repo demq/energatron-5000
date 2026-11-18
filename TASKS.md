@@ -98,9 +98,9 @@ Then clear the context and type `/next`.
 ## State
 
 - Current: none
-- Last done: P10.3.2 (P10 closed)
-- Last commit: energatron-5000 `P10.3.2: record the owner's browser check and push; close P10`
-- Checks: pytest -q 3995 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
+- Last done: M.2
+- Last commit: energatron-5000 `M.2: show progress while energatron run works`
+- Checks: pytest -q 4015 passed; ruff, pyright, lint-imports clean; privacy scan clean; pre-commit passed
 - Review: none
 - Next: P9.3.2 (owner); P11 is not scheduled
 
@@ -130,6 +130,8 @@ Then clear the context and type `/next`.
 - `serve` imports the web stack lazily; a workspace whose uv.lock predates a tool dependency needs `uv lock` and
   `uv sync` there (P10.3.1).
 - Renaming a command, option or JSON field needs a deprecation (D1 §8.1).
+- `Progress` (`ports/progress.py`, D1 rev 12): `ServiceContext.progress` and `DvcRunner(progress=…)`; only `run` prints it
+  (`adapters/cli/progress.py`, human mode). `demo`, `watch` and `init --demo` keep `NullProgress`.
 
 **Open questions for the owner**
 - Optional: cut `v0.1.0`; decide whether to switch (`record-decision`); set Keep Downloaded on the iCloud Backups folder.
@@ -137,6 +139,9 @@ Then clear the context and type `/next`.
 **Watch out**
 - Never put a number or date read from a real bill into a test, docstring or doc, even as an example.
 - pytest takes ~3 minutes in parallel (`test_demo` ~33 s); don't edit files while it runs.
+- Known defect (M.2 review, not fixed): a progress write that fails, such as stderr closed mid-run, escapes
+  `_StageWatcher.__exit__` as `BrokenPipeError`, so `repro()` loses its result and the run isn't recorded. D1 §4.5 says
+  progress never changes the report or errors. Stage times also start when the 0.2 s poll sees the record.
 
 ## Current sub-task (filled by `/next` and `/examine`, reset by `/done`)
 
@@ -500,6 +505,16 @@ verdict, with no waiver of hand-over decision #11.
   - Done when: the standard checks pass and `uv run pytest -q` finishes in about a minute.
   - Handover: `pytest -q` runs in parallel via pytest-xdist (`-n auto --dist worksteal`), ~5 min → ~55 s; `make_scratch` copies a once-per-process template repo and writes `.dvc/config.local` itself. Decision: worksteal over the default `load` (60 s against 118 s).
     Watch: `-n0` runs serially (`-p no:xdist` fails while `-n` is in `addopts`); the run is now bound by its slowest tests (~13 s each).
+- ✅ **M.2** Show progress while `energatron run` works.
+  - A run on real data takes minutes and printed nothing until it ended. In human mode, `run` now prints its phases
+    and each stage as it starts and ends (position, name, time, failure) on stderr; `--json` prints nothing extra.
+  - Refs: owner request (2026-11-15); D1 §4.5 (repro log), §8.4 (stderr carries progress), §8.9.
+  - Files: `src/energatron/ports/progress.py`, `services/{context,run}.py`, `adapters/pipeline/dvc_runner.py`,
+    `adapters/{wiring,reads}.py`, `adapters/cli/{common,progress}.py`, `adapters/cli/commands/run.py`, their tests,
+    D1 (rev 12 line, §4.5, §4.8, §8.4), `TASKS.md`.
+  - Done when: the standard checks pass and a demo `run` shows its stages live.
+  - Handover: `run` prints its phases and stages on stderr through the `Progress` port; `--json` is unchanged. Decision: a watcher thread follows the repro log, so DVC's output is still never parsed.
+    Watch: a failed progress write (stderr closed mid-run) aborts the run after the repro; see **Watch out**.
 
 ### P3: Usage profile ✅
 
@@ -619,6 +634,7 @@ all ✅.
 
 ## Log (newest first)
 
+- 2026-11-18 · M.2 · `energatron run` shows its phases and stages on stderr (`Progress` port, repro-log watcher, D1 rev 12; 4015 tests); reviewed, one known defect recorded under **Watch out** · energatron-5000 `M.2: show progress while energatron run works`
 - 2026-11-14 · P10.3.2 · owner: workspace locked to the web dependencies, every page and both reports checked in a browser (no findings), push with CI green; P10 ticked and archived · energatron-5000 `P10.3.2: record the owner's browser check and push; close P10`
 - 2026-11-14 · P10.3.1 · P10 acceptance (agent part): fresh demo and the owner's workspace served read-only, 13/13 API routes equal to the CLI, every page answers, security spot checks pass, denylist 0 of 25 bodies each, workspaces unchanged; one tool fix (the CLI no longer needs the web stack outside `serve`) · energatron-5000 `P10.3.1: load the web stack only when serve runs`, `P10.3.1: record P10 acceptance (agent part)`
 - 2026-11-14 · P10.2.4 · `energatron serve`: loopback socket, per-launch token, uvicorn without access log, clean exit 0 on SIGINT/SIGTERM, `serve_result` v1, README "Web UI" (3993 tests); self-review; P10.2 ticked · energatron-5000 `P10.2.4: add energatron serve, the local read-only web UI`

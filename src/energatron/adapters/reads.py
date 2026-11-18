@@ -23,6 +23,7 @@ from energatron.core.models.recommend import Fuel
 from energatron.core.models.workspace import WorkspacePaths
 from energatron.core.operations import WATCH_LOG, Schedule, launchd_label, read_schedule
 from energatron.core.privacy import DenyEntry, derive_denylist
+from energatron.ports.progress import Progress
 from energatron.services import backup as backup_service
 from energatron.services import compare as compare_service
 from energatron.services import datasets as datasets_service
@@ -43,17 +44,20 @@ from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH
 
 
 def open_context(
-    paths: WorkspacePaths, on_manual: Callable[[tuple[DenyEntry, ...]], None] | None = None
+    paths: WorkspacePaths,
+    on_manual: Callable[[tuple[DenyEntry, ...]], None] | None = None,
+    progress: Progress | None = None,
 ) -> tuple[ServiceContext, tuple[DenyEntry, ...]]:
     """The workspace's context and the redaction denylist: `private/denylist.txt`'s entries, then those derived from
     the private config once it's read (D1 §8.7), so the denylist never depends on the generated file being current.
 
     `on_manual` lets a caller hold the manual entries before the context is built (the CLI redacts with them at once).
+    `progress` is passed to `wiring.build_context`.
     """
     manual = tuple(read_manual_denylist(paths))
     if on_manual is not None:
         on_manual(manual)
-    context = wiring.build_context(paths)
+    context = wiring.build_context(paths, progress=progress)
     derived = derive_denylist(context.private) if context.private is not None else ()
     return context, (*derived, *manual)
 

@@ -27,6 +27,7 @@ from energatron.services.stages.dvc_yaml import CODE_FINGERPRINT_PATH, emit_dvc_
 from energatron.services.stages.registry import STAGES
 from tests.fixtures.params_text import params_v6_text
 from tests.fixtures.pipeline_workspace import build_raw_zone
+from tests.fixtures.progress import RecordingProgress
 from tests.unit.adapters._workspace import make_workspace, write
 
 DVC = str(Path(sys.executable).parent / "dvc")
@@ -145,8 +146,8 @@ class Fake:
             stages={name: fake_code(self.labels[name]) for name in ORDER},
         )
 
-    def runner(self) -> DvcRunner:
-        return DvcRunner(self.paths, fingerprint=self.live)
+    def runner(self, progress: RecordingProgress | None = None) -> DvcRunner:
+        return DvcRunner(self.paths, fingerprint=self.live, progress=progress)
 
     def write(self, relative: str, text: str) -> None:
         write(self.root, relative, text)
@@ -352,6 +353,57 @@ def test_a_dvc_error_with_no_failed_stage_is_a_subprocess_error(built: Fake) -> 
     assert error.details["restored"] == []
     assert error.details["stage"] is None
     assert built.leftovers() == []
+
+
+# Progress (owner request M.2)
+
+
+def test_progress_reports_each_stage_that_runs_as_it_starts_and_ends(built: Fake) -> None:
+    built.write("in/up.txt", "up, changed\n")
+    progress = RecordingProgress()
+    assert built.runner(progress).repro() == report(ran=["up", "down"], cached=["side"])
+    assert progress.stage_events() == [
+        ("started", "up", 1, 3),
+        ("finished", "up", 1, 3, 0),
+        ("started", "down", 2, 3),
+        ("finished", "down", 2, 3, 0),
+    ]
+    assert all(seconds >= 0 for seconds in progress.seconds)
+    steps = progress.steps()
+    assert steps[0] == "Updating the code fingerprint"
+    assert steps[1].startswith("Running the pipeline: 3 stages")
+    assert steps[-1].startswith("Pipeline done in ")
+    assert steps[-1].endswith(": 2 ran, 0 restored, 1 up to date")
+
+
+def test_progress_numbers_only_the_stages_in_scope(built: Fake) -> None:
+    built.write("in/side.txt", "side, changed\n")
+    progress = RecordingProgress()
+    built.runner(progress).repro(["side"])
+    assert progress.stage_events() == [("started", "side", 1, 1), ("finished", "side", 1, 1, 0)]
+
+
+def test_progress_reports_nothing_per_stage_when_everything_is_current(built: Fake) -> None:
+    progress = RecordingProgress()
+    built.runner(progress).repro()
+    assert progress.stage_events() == []
+
+
+def test_progress_reports_a_failed_stage_with_its_exit_code(built: Fake) -> None:
+    built.write("in/side.txt", "side, changed\n")
+    built.control("side", "exit 3")
+    progress = RecordingProgress()
+    failure(built.runner(progress).repro)
+    assert progress.stage_events() == [("started", "side", 3, 3), ("finished", "side", 3, 3, 3)]
+    assert not any(step.startswith("Pipeline done") for step in progress.steps())
+
+
+def test_progress_reports_a_killed_stage_as_stopped(built: Fake) -> None:
+    built.write("in/up.txt", "up, changed\n")
+    built.control("up", "kill")
+    progress = RecordingProgress()
+    failure(built.runner(progress).repro)
+    assert progress.stage_events() == [("started", "up", 1, 3), ("finished", "up", 1, 3, None)]
 
 
 # The real `energatron stage`

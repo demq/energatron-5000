@@ -29,6 +29,7 @@ from energatron.ports.pipeline import PipelineRunner
 from energatron.ports.sources import SourceParser
 from energatron.ports.vcs import VersionControl
 from energatron.services.context import ServiceContext
+from energatron.services.progress import NullProgress
 from tests.architecture._support import import_all_modules
 
 
@@ -167,8 +168,10 @@ def test_the_context_holds_every_port_and_the_region_and_offers_default_to_empty
         "runner",
         "clock",
         "offers",
+        "progress",
     ]
     assert dict(context.offers) == {}
+    assert isinstance(context.progress, NullProgress)
     assert context.region is TEST_REGION
     assert context.private is None
     assert context.vcs.backup_status().refs_backed_up is False
@@ -212,7 +215,7 @@ def test_the_version_control_port_has_six_methods() -> None:
 def test_every_port_module_defines_only_protocols() -> None:
     import_all_modules()
     port_modules = sorted(name for name in dir(ports) if not name.startswith("_"))
-    assert port_modules == ["blobs", "catalog", "clock", "offers", "pipeline", "setup", "sources", "vcs"]
+    assert port_modules == ["blobs", "catalog", "clock", "offers", "pipeline", "progress", "setup", "sources", "vcs"]
     for module_name in port_modules:
         module = getattr(ports, module_name)
         own = [
