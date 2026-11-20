@@ -215,3 +215,9 @@ def test_bad_arguments_never_run_and_never_echo(
 def test_parse_envelope_wants_exactly_one_valid_document() -> None:
     assert parse_envelope(line(ENVELOPE)) == ENVELOPE
     assert parse_envelope(b"\xff\n") is None and parse_envelope(json.dumps(ENVELOPE).encode()) is None
+
+
+def test_land_file_names_a_source_only_for_an_ambiguous_file() -> None:
+    """Bill PDF spec §3: a bill PDF lands by detection; `source` is for `E_AMBIGUOUS_SOURCE`."""
+    description = next(tool for tool in TOOLS if tool.name == "land_file").listing()["description"]
+    assert "needs source" not in description and "E_AMBIGUOUS_SOURCE" in description

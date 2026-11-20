@@ -9,8 +9,9 @@ Use the `energatron` MCP tools when this session has them (`tool_name` below); o
 `uv run energatron <command> --json` from this folder. Identifiers (account, MIRN, invoice, reference and meter
 numbers, the address) stay out of the record: it has no field for them. Never copy anything from the bill elsewhere.
 
-1. **Land the PDF** if it isn't yet: `land_file` with `source: gas_bill` and `dry_run: true` (`energatron land
-   data/landing/<bill>.pdf --source gas_bill --dry-run`), then without. Note its dataset ID (`gas_bill-…`).
+1. **Land the PDF** if it isn't yet: `land_file` with `dry_run: true` (`energatron land data/landing/<bill>.pdf
+   --dry-run`), then without; `land` recognises a gas bill from its text. Only if it answers `E_AMBIGUOUS_SOURCE`
+   (a dual-fuel bill, say) pass `source: gas_bill` (`--source gas_bill`). Note its dataset ID (`gas_bill-…`).
 2. **Read the bill**: `read_gas_bill_text` (offered only when the owner started the server with `--allow-documents`;
    `energatron gas-bill text <ID>`), or ask the owner for the figures.
 3. **Fill the record** (`new_gas_bill_record` / `energatron gas-bill new <ID> --extracted-by agent:<your model id>`

@@ -212,8 +212,8 @@ TOOLS: Final[tuple[Tool, ...]] = (
     ),
     Tool(
         "land_file", "Land a file",
-        "Land a file or folder from data/landing/ into the raw zone (one commit). Dry-run first. A gas bill PDF needs "
-        "source gas_bill.",
+        "Land a file or folder from data/landing/ into the raw zone (one commit). Dry-run first. Bill PDFs are "
+        "recognised from their text; pass source only after E_AMBIGUOUS_SOURCE.",
         LandFile,
         lambda a: (
             ["land", *_opt("--source", a.source), *_opt("--supersedes", a.supersedes), *_flag("--dry-run", a.dry_run)],

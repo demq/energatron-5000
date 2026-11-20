@@ -138,7 +138,7 @@ def test_a_quote_in_a_tool_source_is_refused() -> None:
 def test_version_2_adds_the_skills_their_links_and_the_mcp_registration() -> None:
     """P9 spec §7.2: four managed skills, a link to each from `.agents/skills/`, and `.mcp.json` as a seed file."""
     rendered = {item.path: item for item in render(VALUES, sources())}
-    assert TEMPLATE_VERSION == 2
+    assert TEMPLATE_VERSION >= 2
     for name in SKILLS:
         skill = rendered[f".claude/skills/{name}/SKILL.md"]
         assert skill.managed and skill.data.decode().startswith(f"---\nname: {name}\n")
@@ -153,6 +153,16 @@ def test_version_2_adds_the_skills_their_links_and_the_mcp_registration() -> Non
     }
     assert rendered["AGENTS.md"].symlink_to == "CLAUDE.md"
     assert "## Agents" in rendered["CLAUDE.md"].data.decode()
+
+
+def test_version_3_lets_land_recognise_a_bill() -> None:
+    """Bill PDF spec §3: `land` recognises a bill from its text, so the skills name a source only after
+    `E_AMBIGUOUS_SOURCE`, never as a step every bill needs."""
+    assert TEMPLATE_VERSION == 3
+    for name in ("monthly-check-in", "transcribe-gas-bill"):
+        text = " ".join(by_path()[f".claude/skills/{name}/SKILL.md"].decode().split())
+        assert "--source gas_bill --dry-run" not in text and "needs `source" not in text, name
+        assert "E_AMBIGUOUS_SOURCE" in text, name
 
 
 def test_the_skills_name_no_agent_specific_tool() -> None:

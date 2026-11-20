@@ -1,17 +1,168 @@
 # energatron-5000
 
-A local-first tool that analyses household electricity and gas usage, prices retail energy offers against it and
-recommends the best value. Every result is traceable to the data, the offers and the code that produced it.
+<p align="center">
+  <img src="docs/images/hero.svg" alt="energatron-5000: your meter data, every published plan, one answer you can check" width="100%">
+</p>
 
-## Status
+<p align="center">
+  <a href="https://github.com/demq/energatron-5000/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/demq/energatron-5000/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="Python 3.14" src="https://img.shields.io/badge/python-3.14-3776ab?logo=python&logoColor=white">
+  <img alt="uv" src="https://img.shields.io/badge/managed%20by-uv-de5fe9">
+  <img alt="MCP server" src="https://img.shields.io/badge/AI%20agents-MCP%20server-6250d6">
+  <img alt="Local-first" src="https://img.shields.io/badge/data-stays%20local-1baf7a">
+  <a href="LICENSE"><img alt="Apache-2.0" src="https://img.shields.io/badge/licence-Apache--2.0-blue"></a>
+</p>
 
-Phases P0-P8 are built: landing and cataloguing files, the meter pipeline, the usage profile, offers and the
-electricity and gas engines, bundles, the recommendation, decisions, the operations in this README, and `energatron
-init` with a synthetic demo. It knows one region so far, South Australia (SA Power Networks and the Adelaide gas
-network); other regions come by contribution (see `CONTRIBUTING.md`). It runs on macOS; Linux should work, but the
-weekly schedule and notifications are macOS-only.
+<p align="center">
+  <b>Find the energy plan that is actually cheapest for <i>your</i> home:<br>
+  priced on your own half-hourly meter data and gas bills, against the retail plans published for your network,<br>
+  checked against the bills you really paid, with your data never leaving your machine.</b>
+</p>
 
-## Quickstart: try the demo
+<p align="center">
+  <a href="#-try-it-in-two-minutes">Try the demo</a> ·
+  <a href="#-use-it-with-an-ai-agent">Use it with an AI agent</a> ·
+  <a href="#-how-it-compares">How it compares</a> ·
+  <a href="#the-monthly-cycle-a-new-meter-download-to-a-recommendation">Manual</a>
+</p>
+
+---
+
+## ⚡ Why
+
+Retailer quotes and comparison sites price a plan for a *typical* household. But a time-of-use plan's cost depends
+on **when** you use energy, not just how much: two homes with the same yearly total can have different cheapest plans.
+Your smart meter already records every half hour, so there is no need to guess.
+
+<p align="center">
+  <img src="docs/images/estimate-vs-actual.svg" alt="Illustration: a typical-household profile and a measured half-hourly profile with the same total but a different shape; ranking three plans on each gives a different winner" width="100%">
+</p>
+
+energatron-5000 takes the data you can already download (your distributor's meter data, your retailer's usage export,
+your gas bills), pulls the plans retailers publish for your network through the Consumer Data Right (CDR) APIs, prices each one
+against your real usage, and recommends **switch** or **stay**, with the reasons and the evidence.
+
+## ✨ What you get
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🔒 Your data stays local**<br>
+Meter data, bills and results live in a private git + DVC workspace on your machine. The only data fetched from the
+internet is public plan data, and your postcode only filters it locally. A pre-commit privacy guard blocks your
+identifiers from being committed.
+
+</td>
+<td width="50%" valign="top">
+
+**📈 Priced on what you really use**<br>
+Every half-hour interval is priced against the plan's own tariff windows, supply charges, discounts and fees, for
+electricity and gas, as separate plans and as dual-fuel bundles.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🧾 Checked against your real bills**<br>
+The backtest re-bills your past billing periods with the plan you were on and compares the result to the invoices you
+actually paid, so you can see the engine is right before you trust it.
+
+</td>
+<td valign="top">
+
+**🧪 Robust, not just cheapest**<br>
+Sensitivity checks rerun the ranking with more usage, less usage, the previous year's usage, and conditional discounts missed.
+The recommendation says whether it holds up (`robust`) and when to check again.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🔁 Keeps watching**<br>
+A weekly check fetches new plans, reruns what changed and sends a macOS notification when a cheaper plan appears.
+Record your switch and later bills are tracked against what was projected.
+
+</td>
+<td valign="top">
+
+**🤖 Built for AI agents**<br>
+A local MCP server and ready-made skills let Claude Code, Codex or any MCP client land files, run the pipeline and
+explain the result in plain language, on top of commands that all speak `--json`.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+**🔍 Every number is traceable**<br>
+Each recommendation cites the datasets, plan snapshots and parameters behind it, and its run commit is recorded.
+`energatron verify` reruns everything from the committed inputs and fails if any result doesn't reproduce byte for byte.
+
+</td>
+<td valign="top">
+
+**🖥️ Terminal, browser or agent**<br>
+HTML reports for the recommendation and your usage, a read-only local web UI (`energatron serve`), and the same answers
+as JSON for scripts.
+
+</td>
+</tr>
+</table>
+
+## 🆚 How it compares
+
+[Energy Made Easy](https://www.energymadeeasy.gov.au/) (EME), the Australian Energy Regulator's free comparison site,
+is a good first stop: it is quick, covers Australia, and retailers must give it every generally available plan.
+energatron-5000 goes deeper for one household that is willing to do a little setup.
+
+| | Retailer quote | Energy Made Easy | **energatron-5000** |
+|---|:---:|:---:|:---:|
+| Electricity usage it prices | typical or average usage | your last 12 months of meter data via your NMI (only if you've been at the property 12 months), else benchmarks | **your half-hourly data: the latest 12 months to rank, the year before as a check, all of it for backtests** |
+| Gas usage | typical or average usage | typed in by hand | **transcribed from your bills, each checked against its own reads and charges** |
+| Checks its maths against bills you paid | ✗ | ✗ | **✓ backtest per billing period** |
+| Saving against your current plan | ✗ | ✗ (it says it can't tell you) | **✓ ongoing and first year, once you name your plan** |
+| Robustness checks | ✗ | ✗ | **✓ usage ±, previous year, discounts missed** |
+| Re-checks for you | ✗ | on demand | **✓ weekly, with notifications** |
+| Precision | – | rounded to the nearest ten dollars | **to the cent, every figure cited and reproducible** |
+| Where your usage data goes | the retailer | the EME site (via AEMO) | **nowhere: it stays on your machine**¹ |
+| AI agent access | ✗ | ✗ (no API) | **✓ MCP server and skills** |
+| Regions | one retailer's | Australia | Australia: the South Australia profile ships today ([add your region](CONTRIBUTING.md)) |
+| Solar feed-in | varies | ✓ | not priced yet |
+| Effort | none | minutes | a setup, then a download a month |
+
+**In short:** use EME for a quick look. Use energatron-5000 when you want an answer priced on
+everything your meter recorded, checked against the bills you actually paid, kept current every week, and kept private.
+
+¹ Unless you use an AI agent: then the aggregates its tools return go to your model provider (see [below](#-use-it-with-an-ai-agent)).
+
+EME details are from its own [plan search guide](https://www.energymadeeasy.gov.au/article/how-the-energy-made-easy-plan-search-works)
+and [FAQ](https://www.energymadeeasy.gov.au/frequently-asked-questions), as of November 2026.
+
+## 🧭 How it works
+
+```mermaid
+flowchart LR
+    subgraph web["🌐 Public internet"]
+        CDR["Retailers' published plans<br/>(Consumer Data Right APIs)"]
+    end
+    subgraph you["🔒 Your machine: a private workspace"]
+        direction LR
+        IN["📥 Inbox<br/>meter CSV · usage export<br/>gas bills · bill PDFs"] -->|energatron land| RAW["🗄️ Raw zone<br/>catalogued, git + DVC"]
+        RAW -->|energatron run| PIPE["⚙️ Pipeline<br/>usage profile · pricing<br/>backtest · sensitivity · bundles"]
+        PIPE --> REC["✅ Recommendation<br/>switch / stay · robust<br/>recheck date · citations"]
+        REC -->|energatron decide| DEC["📝 Decision"]
+        DEC --> OUT["📊 Outcomes<br/>projected vs actual bills"]
+    end
+    CDR -->|energatron fetch-offers| RAW
+    REC -.-> AG["🤖 Your AI agent<br/>(MCP, aggregates only)"]
+```
+
+Every step is a git commit in your workspace, so you can see exactly what changed and when. The pipeline reruns only the stages whose inputs changed.
+
+## 🚀 Try it in two minutes
 
 You need [uv](https://docs.astral.sh/uv/) and git. uv fetches Python 3.14 and everything else into the workspace's own
 virtual environment; nothing is installed globally.
@@ -26,10 +177,64 @@ open data/reports/recommendations/index.html data/reports/usage/index.html
 
 `init --demo` creates a workspace, fills it with synthetic data (fourteen months of half-hourly meter readings, a
 retailer usage export, twelve gas bills and a frozen set of made-up offers), lands it, and runs the whole pipeline to a
-recommendation. Every number in it is invented. The demo workspace is a normal one: try `uv run energatron verify` or
-`uv run energatron diagnose`.
+recommendation. Every number in it is invented. The demo workspace is a normal one: try `uv run energatron serve --open`
+to browse it, or `uv run energatron verify` and `uv run energatron diagnose`.
 
-## Your own workspace
+## 🤖 Use it with an AI agent
+
+energatron-5000 is designed to be driven by an AI agent. The agent runs the commands, reads the JSON and explains the
+result in plain language, while the tool does the arithmetic, the checks and the bookkeeping. That keeps the numbers
+deterministic and reproducible however the agent phrases things.
+
+**1. Make a workspace** (the demo above, or [your own](#-your-own-workspace)).
+
+**2. Open your agent in it.** Every workspace comes with a `.mcp.json` that registers the local MCP server, plus
+agent instructions (`CLAUDE.md`, `AGENTS.md`) and skills.
+
+```bash
+cd ~/energatron-demo
+claude                                   # Claude Code: approve the energatron server when asked
+codex mcp add energatron -- uv run --directory ~/energatron-demo --frozen energatron mcp   # Codex
+```
+
+Any other MCP client: run `uv run energatron mcp` in the workspace as a stdio server.
+
+**3. Ask.** For example:
+
+> *"Do my monthly check-in: land whatever is in the inbox, fetch new offers and run the pipeline."*
+>
+> *"Which electricity plan is cheapest for me, and how sure are you? Explain the recommendation."*
+>
+> *"How has my usage changed over the last 13 months, and how much of it falls in the peak window?"*
+>
+> *"Compare the top five gas plans, and tell me what changed in the offers since last month."*
+>
+> *"I've signed up to the recommended plans from the first of next month. Record the decision as a dry run."*
+
+The workspace skills cover the routine jobs: **monthly check-in**, **explain a recommendation**, **record a
+decision** and **transcribe a gas bill**.
+
+```mermaid
+sequenceDiagram
+    actor You
+    participant Agent as AI agent
+    participant MCP as energatron mcp (local)
+    participant WS as Your workspace
+    You->>Agent: "Which plan should I be on?"
+    Agent->>MCP: explain_recommendation
+    MCP->>WS: read the latest recommendation
+    WS-->>MCP: REC, options, checks, citations
+    MCP-->>Agent: JSON: plan names, aggregates, IDs
+    Agent-->>You: "Stay / switch to …, because …"
+    Note over MCP,WS: Raw intervals, identifiers and private/<br/>never leave the machine through a tool
+```
+
+**What the agent can and can't see.** Tools return aggregates, IDs, plan names and statuses: your usage and cost
+figures, but never `private/`, your identifiers or interval rows. Whatever a tool returns goes to your model provider,
+so that is the boundary. Nothing that backs up, deletes, installs or rewrites config is exposed as a tool; those stay
+yours. Full details in [Agents](#agents).
+
+## 🏠 Your own workspace
 
 ```bash
 uvx --from git+https://github.com/demq/energatron-5000 energatron init ~/energy --remote ~/Backups/energy-dvc
@@ -42,7 +247,23 @@ download) and your postcode, and keeps them in `private/config.toml`, which DVC 
 the privacy guard, a pre-commit hook that blocks any commit holding them. `--remote` is a local folder for the DVC
 backup of your data (an external disk, or a cloud-synced folder); leave it out and add one later with `uv run dvc
 remote add --local -d backup <folder>`. The workspace depends on the exact tool commit `init` ran from, so it doesn't
-change under you (see [After a tool update](#after-a-tool-update)). Then follow the monthly cycle below.
+change under you (see [After a tool update](#after-a-tool-update)). Then follow [the monthly
+cycle](#the-monthly-cycle-a-new-meter-download-to-a-recommendation), or ask your agent to.
+
+## 🗺️ Where it works
+
+- **Region:** South Australia (SA Power Networks electricity and the Adelaide gas network). Other regions come by
+  contribution: a region is mostly a profile of its network's tariff windows and retailers (see `CONTRIBUTING.md`).
+- **Platform:** macOS. Linux should work, but the weekly schedule and notifications are macOS-only.
+- **Fuels:** electricity (flat, time-of-use and demand tariffs) and gas, separately and as bundles.
+- **Built so far:** landing and cataloguing, the meter pipeline, the usage profile, offers and the electricity and gas
+  engines, bundles, recommendations, decisions, the weekly watch, `init` with a synthetic demo, the MCP server and the
+  local web UI. See [`CHANGELOG.md`](CHANGELOG.md).
+
+---
+
+# 📖 Manual
+
 
 ## Privacy model
 
@@ -71,6 +292,9 @@ change under you (see [After a tool update](#after-a-tool-update)). Then follow 
 
 ## The owner's workspace
 
+<details>
+<summary>How the original, hand-built workspace differs (only relevant to it)</summary>
+
 The tool started as one household's, whose workspace was set up by hand before `init` existed (the P0 spec,
 `agent_docs/2026-10/2026-10-23_p0-bootstrap-spec.md` §11). It sits next to this repo, as in the tree above, and depends
 on it as an editable install; its backups go to iCloud Drive through `scripts/icloud_backup.py`. Everything below works
@@ -83,6 +307,8 @@ uv run energatron pipeline sync
 uv run energatron denylist
 uv run energatron status
 ```
+
+</details>
 
 Every command below runs from the workspace folder.
 

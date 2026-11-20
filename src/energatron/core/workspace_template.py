@@ -18,9 +18,10 @@ from energatron.core.canonical import sha256_hex
 from energatron.core.errors import InternalError
 from energatron.core.persisted import Persisted
 
-TEMPLATE_VERSION: Final = 2
+TEMPLATE_VERSION: Final = 3
 """Bumped with any change to the template files or this module's list (P8 spec §3.2). Version 2 (P9 spec §7.2) adds the
-workspace skills, their `.agents/skills/` links and `.mcp.json`."""
+workspace skills, their `.agents/skills/` links and `.mcp.json`. Version 3: the check-in and gas bill skills let `land`
+recognise a bill PDF (bill PDF spec §3) and name a source only after `E_AMBIGUOUS_SOURCE`."""
 
 AGENTS_LINK: Final = "AGENTS.md"
 TEMPLATE_STATE_PATH: Final = ".energatron/template.json"

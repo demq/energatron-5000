@@ -634,6 +634,7 @@ all ✅.
 
 ## Log (newest first)
 
+- 2026-11-20 · ad hoc · README front page (hero and estimate-vs-measured SVGs, features, comparison with retailer quotes and Energy Made Easy, Mermaid diagrams, AI-agent quickstart; runbook unchanged under "Manual"); check-in and gas bill skills and `land_file` no longer say a bill needs a source (template v3; 4017 tests). Open: the owner's hand-built workspace still has the old two skills · energatron-5000 `Add a product front page to the README; let land recognise bills in the agent skills`
 - 2026-11-18 · M.2 · `energatron run` shows its phases and stages on stderr (`Progress` port, repro-log watcher, D1 rev 12; 4015 tests); reviewed, one known defect recorded under **Watch out** · energatron-5000 `M.2: show progress while energatron run works`
 - 2026-11-14 · P10.3.2 · owner: workspace locked to the web dependencies, every page and both reports checked in a browser (no findings), push with CI green; P10 ticked and archived · energatron-5000 `P10.3.2: record the owner's browser check and push; close P10`
 - 2026-11-14 · P10.3.1 · P10 acceptance (agent part): fresh demo and the owner's workspace served read-only, 13/13 API routes equal to the CLI, every page answers, security spot checks pass, denylist 0 of 25 bodies each, workspaces unchanged; one tool fix (the CLI no longer needs the web stack outside `serve`) · energatron-5000 `P10.3.1: load the web stack only when serve runs`, `P10.3.1: record P10 acceptance (agent part)`

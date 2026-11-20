@@ -14,8 +14,9 @@ copy them anywhere else.
    stale offers, a recheck date, a pending backup, the restore drill. Backups, the drill and clearing the inbox are the
    owner's: report them, never do them.
 2. **Land new files**: `list_inbox` (`energatron landing list`), then for each new file `land_file` with `dry_run:
-   true` (`energatron land <path> --dry-run`), then without. A bill PDF needs `source: elec_bill` or `gas_bill`; a gas
-   bill then needs the `transcribe-gas-bill` skill.
+   true` (`energatron land <path> --dry-run`), then without. `land` recognises a bill PDF (electricity or gas) from its
+   text; only if it answers `E_AMBIGUOUS_SOURCE` (a dual-fuel bill, say) ask the owner which it is and pass `source:
+   elec_bill` or `gas_bill`. A landed gas bill then needs the `transcribe-gas-bill` skill.
 3. **Refresh offers**: `fetch_offers` (`energatron fetch-offers`), then `offers_diff` (`energatron offers diff`) for
    what changed.
 4. **Run** when anything landed or the run is behind: `run_pipeline` (`energatron run`). It refuses uncommitted config

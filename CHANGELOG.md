@@ -7,8 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- The workspace's check-in and gas bill skills, and the MCP `land_file` description, no longer tell an agent that a bill
+  PDF needs a source: `land` recognises bills from their text, and a source is passed only after `E_AMBIGUOUS_SOURCE`.
+  Workspace template version 3; run `energatron upgrade` in a workspace to refresh its skills.
+
 ### Added
 
+- README front page: a hero banner and an estimate-versus-measured illustration (`docs/images/`, SVG, light and dark),
+  feature overview, a comparison with retailer quotes and Energy Made Easy, Mermaid diagrams of the pipeline and the
+  agent data flow, and a quickstart for using it through an AI agent. The runbook follows unchanged under "Manual".
 - `energatron run` shows its progress on stderr: each step, and each pipeline stage as it starts and ends with its
   position (`[ 7/20]`), its time and, on failure, its exit code. `--json` output is unchanged.
 - `energatron serve` (P10): the local web UI and JSON API for a workspace, read-only, on `127.0.0.1` (or `localhost`,
